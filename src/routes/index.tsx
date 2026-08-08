@@ -86,6 +86,10 @@ function MarcacaoPage() {
 
   async function save() {
     const slot = slots[Number(slotIdx)];
+    if (!employeeId || !productId || !slot) {
+      toast.error("Preencha colaborador, produto e horário.");
+      return;
+    }
     const rows = Object.entries(selected)
       .filter(([, v]) => Number(v) > 0)
       .map(([operation_id, v]) => ({
@@ -98,8 +102,8 @@ function MarcacaoPage() {
         entry_date: date,
       }));
 
-    if (!employeeId || !productId || !slot || rows.length === 0) {
-      toast.error("Preencha colaborador, produto, horário e ao menos uma quantidade.");
+    if (rows.length === 0) {
+      toast.error("Informe a quantidade de ao menos uma operação.");
       return;
     }
 
@@ -117,16 +121,23 @@ function MarcacaoPage() {
 
   async function remove(id: string) {
     const { error } = await supabase.from("production_entries").delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Marcação excluída.");
     qc.invalidateQueries({ queryKey: ["production_entries"] });
   }
 
   async function updateQty(id: string, quantity: number) {
     const { error } = await supabase.from("production_entries").update({ quantity }).eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     qc.invalidateQueries({ queryKey: ["production_entries"] });
   }
+
 
   const dayEntries = entries;
 
