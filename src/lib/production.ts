@@ -11,6 +11,7 @@ export type Product = {
   unit_value: number;
   entry_date: string | null;
   nf_number: string | null;
+  photo_url: string | null;
   status: string;
   created_at: string;
 };
@@ -26,6 +27,16 @@ export type Operation = {
   product_id: string;
   name: string;
   standard_time: number | null;
+  catalog_operation_id: string | null;
+};
+
+export type Sector = { id: string; name: string };
+
+export type CatalogOperation = {
+  id: string;
+  sector_id: string;
+  name: string;
+  expected_per_hour: number | null;
 };
 
 export type Employee = {
@@ -113,6 +124,39 @@ export const companiesQuery = {
   },
 };
 
+
+export const clientsQuery = {
+  queryKey: ["clients"],
+  queryFn: async (): Promise<Company[]> => {
+    const { data, error } = await supabase.from("clients").select("id,name").order("name");
+    if (error) throw error;
+    return data as Company[];
+  },
+};
+
+export const sectorsQuery = {
+  queryKey: ["sectors"],
+  queryFn: async (): Promise<Sector[]> => {
+    const { data, error } = await supabase
+      .from("sectors")
+      .select("id,name")
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return data as Sector[];
+  },
+};
+
+export const catalogOperationsQuery = {
+  queryKey: ["catalog_operations"],
+  queryFn: async (): Promise<CatalogOperation[]> => {
+    const { data, error } = await supabase
+      .from("catalog_operations")
+      .select("id,sector_id,name,expected_per_hour")
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return data as CatalogOperation[];
+  },
+};
 
 export const operationsQuery = {
   queryKey: ["operations"],
