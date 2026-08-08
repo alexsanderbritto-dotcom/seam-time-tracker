@@ -14,7 +14,183 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      employees: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          role: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          role?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          role?: string | null
+        }
+        Relationships: []
+      }
+      operations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          product_id: string
+          standard_time: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          product_id: string
+          standard_time?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          product_id?: string
+          standard_time?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_entries: {
+        Row: {
+          created_at: string
+          employee_id: string
+          entry_date: string
+          id: string
+          operation_id: string
+          product_id: string
+          quantity: number
+          slot_end: string
+          slot_start: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          entry_date?: string
+          id?: string
+          operation_id: string
+          product_id: string
+          quantity?: number
+          slot_end: string
+          slot_start: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          entry_date?: string
+          id?: string
+          operation_id?: string
+          product_id?: string
+          quantity?: number
+          slot_end?: string
+          slot_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_entries_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_entries_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          brand: string | null
+          created_at: string
+          id: string
+          name: string
+          op_number: string
+          reference: string
+          status: string
+          total_quantity: number
+          updated_at: string
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          op_number: string
+          reference: string
+          status?: string
+          total_quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          op_number?: string
+          reference?: string
+          status?: string
+          total_quantity?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      schedule_config: {
+        Row: {
+          breaks: Json
+          end_time: string
+          id: string
+          slot_minutes: number
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          breaks?: Json
+          end_time?: string
+          id?: string
+          slot_minutes?: number
+          start_time?: string
+          updated_at?: string
+        }
+        Update: {
+          breaks?: Json
+          end_time?: string
+          id?: string
+          slot_minutes?: number
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
