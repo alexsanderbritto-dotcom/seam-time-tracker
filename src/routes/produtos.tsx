@@ -25,7 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { entriesQuery, operationsQuery, productsQuery } from "@/lib/production";
+import { brl, companiesQuery, entriesQuery, operationsQuery, productsQuery } from "@/lib/production";
 import { Plus, Trash2, Settings2 } from "lucide-react";
 
 export const Route = createFileRoute("/produtos")({
