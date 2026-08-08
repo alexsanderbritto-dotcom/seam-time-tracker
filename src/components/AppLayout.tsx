@@ -7,11 +7,13 @@ import {
   Users,
   Package,
   Factory,
+  Scissors,
 } from "lucide-react";
 
 const nav = [
   { to: "/", label: "Marcação de Produção", icon: ClipboardList },
-  { to: "/produtos", label: "Produtos e Operações", icon: Package },
+  { to: "/produtos", label: "Produtos", icon: Package },
+  { to: "/operacoes", label: "Operações", icon: Scissors },
   { to: "/colaboradores", label: "Colaboradores", icon: Users },
   { to: "/horarios", label: "Horários", icon: Clock },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
