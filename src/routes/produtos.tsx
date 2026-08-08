@@ -272,8 +272,13 @@ function ProdutosPage() {
                   <TableHead>Produto</TableHead>
                   <TableHead>Referência</TableHead>
                   <TableHead>OP</TableHead>
-                  <TableHead>Marca</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Empresa</TableHead>
                   <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Vlr. unit.</TableHead>
+                  <TableHead className="text-right">Vlr. total</TableHead>
+                  <TableHead>Entrada</TableHead>
+                  <TableHead>NF</TableHead>
                   <TableHead className="text-right">Produzido</TableHead>
                   <TableHead>Operações</TableHead>
                   <TableHead>Status</TableHead>
@@ -283,7 +288,8 @@ function ProdutosPage() {
               <TableBody>
                 {products.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={14} className="py-10 text-center text-muted-foreground">
+
                       Nenhum produto cadastrado ainda.
                     </TableCell>
                   </TableRow>
