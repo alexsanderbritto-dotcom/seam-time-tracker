@@ -47,7 +47,17 @@ export const Route = createFileRoute("/produtos")({
   component: ProdutosPage,
 });
 
-const empty = { name: "", reference: "", op_number: "", brand: "", total_quantity: "" };
+const empty = {
+  name: "",
+  reference: "",
+  op_number: "",
+  cliente: "",
+  empresa: "",
+  total_quantity: "",
+  unit_value: "",
+  entry_date: "",
+  nf_number: "",
+};
 
 function ProdutosPage() {
   const qc = useQueryClient();
@@ -58,6 +68,7 @@ function ProdutosPage() {
   const { data: products = [] } = useQuery(productsQuery);
   const { data: operations = [] } = useQuery(operationsQuery);
   const { data: entries = [] } = useQuery(entriesQuery());
+  const { data: companies = [] } = useQuery(companiesQuery);
 
   const producedByProduct = useMemo(() => {
     const map: Record<string, number> = {};
@@ -65,10 +76,18 @@ function ProdutosPage() {
     return map;
   }, [entries]);
 
+  const totalValue =
+    (Number(form.total_quantity) || 0) * (Number(form.unit_value.replace(",", ".")) || 0);
+
   async function create() {
     if (!form.name || !form.reference || !form.op_number) {
       toast.error("Nome, referência e OP são obrigatórios.");
       return;
+    }
+    const empresa = form.empresa.trim();
+    if (empresa && !companies.some((c) => c.name.toLowerCase() === empresa.toLowerCase())) {
+      await supabase.from("companies").insert({ name: empresa });
+      qc.invalidateQueries({ queryKey: ["companies"] });
     }
     const { data, error } = await supabase
       .from("products")
@@ -76,8 +95,12 @@ function ProdutosPage() {
         name: form.name,
         reference: form.reference,
         op_number: form.op_number,
-        brand: form.brand || null,
+        cliente: form.cliente || null,
+        empresa: empresa || null,
         total_quantity: Number(form.total_quantity) || 0,
+        unit_value: Number(form.unit_value.replace(",", ".")) || 0,
+        entry_date: form.entry_date || null,
+        nf_number: form.nf_number || null,
       })
       .select()
       .single();
@@ -111,6 +134,7 @@ function ProdutosPage() {
     toast.success("Produto excluído.");
     qc.invalidateQueries({ queryKey: ["products"] });
   }
+
 
   return (
     <AppLayout title="Produtos" subtitle="Ordens de produção e suas operações.">
