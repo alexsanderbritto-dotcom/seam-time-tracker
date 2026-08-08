@@ -303,8 +303,18 @@ function ProdutosPage() {
                         <TableCell className="font-medium">{p.name}</TableCell>
                         <TableCell className="font-mono text-xs">REF {p.reference}</TableCell>
                         <TableCell className="font-mono text-xs">OP {p.op_number}</TableCell>
-                        <TableCell>{p.brand ?? "—"}</TableCell>
+                        <TableCell>{p.cliente ?? "—"}</TableCell>
+                        <TableCell>{p.empresa ?? "—"}</TableCell>
                         <TableCell className="text-right">{p.total_quantity}</TableCell>
+                        <TableCell className="text-right">{brl(p.unit_value ?? 0)}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          {brl((p.unit_value ?? 0) * p.total_quantity)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {p.entry_date ? p.entry_date.split("-").reverse().join("/") : "—"}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">{p.nf_number ?? "—"}</TableCell>
+
                         <TableCell className="text-right font-medium">{done}</TableCell>
                         <TableCell>
                           <Badge variant="secondary">{opCount}</Badge>
