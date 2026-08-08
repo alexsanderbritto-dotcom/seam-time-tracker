@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      companies: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           active: boolean
@@ -130,36 +148,48 @@ export type Database = {
       }
       products: {
         Row: {
-          brand: string | null
+          cliente: string | null
           created_at: string
+          empresa: string | null
+          entry_date: string | null
           id: string
           name: string
+          nf_number: string | null
           op_number: string
           reference: string
           status: string
           total_quantity: number
+          unit_value: number
           updated_at: string
         }
         Insert: {
-          brand?: string | null
+          cliente?: string | null
           created_at?: string
+          empresa?: string | null
+          entry_date?: string | null
           id?: string
           name: string
+          nf_number?: string | null
           op_number: string
           reference: string
           status?: string
           total_quantity?: number
+          unit_value?: number
           updated_at?: string
         }
         Update: {
-          brand?: string | null
+          cliente?: string | null
           created_at?: string
+          empresa?: string | null
+          entry_date?: string | null
           id?: string
           name?: string
+          nf_number?: string | null
           op_number?: string
           reference?: string
           status?: string
           total_quantity?: number
+          unit_value?: number
           updated_at?: string
         }
         Relationships: []

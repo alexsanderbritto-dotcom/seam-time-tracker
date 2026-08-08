@@ -25,7 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { entriesQuery, operationsQuery, productsQuery } from "@/lib/production";
+import { brl, companiesQuery, entriesQuery, operationsQuery, productsQuery } from "@/lib/production";
 import { Plus, Trash2, Settings2 } from "lucide-react";
 
 export const Route = createFileRoute("/produtos")({
@@ -47,7 +47,17 @@ export const Route = createFileRoute("/produtos")({
   component: ProdutosPage,
 });
 
-const empty = { name: "", reference: "", op_number: "", brand: "", total_quantity: "" };
+const empty = {
+  name: "",
+  reference: "",
+  op_number: "",
+  cliente: "",
+  empresa: "",
+  total_quantity: "",
+  unit_value: "",
+  entry_date: "",
+  nf_number: "",
+};
 
 function ProdutosPage() {
   const qc = useQueryClient();
@@ -58,6 +68,7 @@ function ProdutosPage() {
   const { data: products = [] } = useQuery(productsQuery);
   const { data: operations = [] } = useQuery(operationsQuery);
   const { data: entries = [] } = useQuery(entriesQuery());
+  const { data: companies = [] } = useQuery(companiesQuery);
 
   const producedByProduct = useMemo(() => {
     const map: Record<string, number> = {};
@@ -65,10 +76,18 @@ function ProdutosPage() {
     return map;
   }, [entries]);
 
+  const totalValue =
+    (Number(form.total_quantity) || 0) * (Number(form.unit_value.replace(",", ".")) || 0);
+
   async function create() {
     if (!form.name || !form.reference || !form.op_number) {
       toast.error("Nome, referência e OP são obrigatórios.");
       return;
+    }
+    const empresa = form.empresa.trim();
+    if (empresa && !companies.some((c) => c.name.toLowerCase() === empresa.toLowerCase())) {
+      await supabase.from("companies").insert({ name: empresa });
+      qc.invalidateQueries({ queryKey: ["companies"] });
     }
     const { data, error } = await supabase
       .from("products")
@@ -76,8 +95,12 @@ function ProdutosPage() {
         name: form.name,
         reference: form.reference,
         op_number: form.op_number,
-        brand: form.brand || null,
+        cliente: form.cliente || null,
+        empresa: empresa || null,
         total_quantity: Number(form.total_quantity) || 0,
+        unit_value: Number(form.unit_value.replace(",", ".")) || 0,
+        entry_date: form.entry_date || null,
+        nf_number: form.nf_number || null,
       })
       .select()
       .single();
@@ -111,6 +134,7 @@ function ProdutosPage() {
     toast.success("Produto excluído.");
     qc.invalidateQueries({ queryKey: ["products"] });
   }
+
 
   return (
     <AppLayout title="Produtos" subtitle="Ordens de produção e suas operações.">
@@ -156,13 +180,32 @@ function ProdutosPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label>Marca</Label>
+                    <Label>Cliente</Label>
                     <Input
                       placeholder="Sky"
-                      value={form.brand}
-                      onChange={(e) => setForm({ ...form, brand: e.target.value })}
+                      value={form.cliente}
+                      onChange={(e) => setForm({ ...form, cliente: e.target.value })}
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label>Empresa</Label>
+                    <Input
+                      list="empresas-list"
+                      placeholder="Digite ou selecione"
+                      value={form.empresa}
+                      onChange={(e) => setForm({ ...form, empresa: e.target.value })}
+                    />
+                    <datalist id="empresas-list">
+                      {companies.map((c) => (
+                        <option key={c.id} value={c.name} />
+                      ))}
+                    </datalist>
+                    <p className="text-xs text-muted-foreground">
+                      Empresas novas são salvas automaticamente para reuso.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1.5">
                     <Label>Quantidade total</Label>
                     <Input
@@ -172,7 +215,39 @@ function ProdutosPage() {
                       onChange={(e) => setForm({ ...form, total_quantity: e.target.value })}
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label>Valor unitário (R$)</Label>
+                    <Input
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={form.unit_value}
+                      onChange={(e) => setForm({ ...form, unit_value: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Valor total</Label>
+                    <Input readOnly tabIndex={-1} className="bg-muted" value={brl(totalValue)} />
+                  </div>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Data de entrada</Label>
+                    <Input
+                      type="date"
+                      value={form.entry_date}
+                      onChange={(e) => setForm({ ...form, entry_date: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>NF de entrada</Label>
+                    <Input
+                      placeholder="000123"
+                      value={form.nf_number}
+                      onChange={(e) => setForm({ ...form, nf_number: e.target.value })}
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-1.5">
                   <Label>Operações (uma por linha)</Label>
                   <textarea
@@ -197,8 +272,13 @@ function ProdutosPage() {
                   <TableHead>Produto</TableHead>
                   <TableHead>Referência</TableHead>
                   <TableHead>OP</TableHead>
-                  <TableHead>Marca</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Empresa</TableHead>
                   <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Vlr. unit.</TableHead>
+                  <TableHead className="text-right">Vlr. total</TableHead>
+                  <TableHead>Entrada</TableHead>
+                  <TableHead>NF</TableHead>
                   <TableHead className="text-right">Produzido</TableHead>
                   <TableHead>Operações</TableHead>
                   <TableHead>Status</TableHead>
@@ -208,7 +288,8 @@ function ProdutosPage() {
               <TableBody>
                 {products.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={14} className="py-10 text-center text-muted-foreground">
+
                       Nenhum produto cadastrado ainda.
                     </TableCell>
                   </TableRow>
@@ -222,8 +303,18 @@ function ProdutosPage() {
                         <TableCell className="font-medium">{p.name}</TableCell>
                         <TableCell className="font-mono text-xs">REF {p.reference}</TableCell>
                         <TableCell className="font-mono text-xs">OP {p.op_number}</TableCell>
-                        <TableCell>{p.brand ?? "—"}</TableCell>
+                        <TableCell>{p.cliente ?? "—"}</TableCell>
+                        <TableCell>{p.empresa ?? "—"}</TableCell>
                         <TableCell className="text-right">{p.total_quantity}</TableCell>
+                        <TableCell className="text-right">{brl(p.unit_value ?? 0)}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          {brl((p.unit_value ?? 0) * p.total_quantity)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {p.entry_date ? p.entry_date.split("-").reverse().join("/") : "—"}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">{p.nf_number ?? "—"}</TableCell>
+
                         <TableCell className="text-right font-medium">{done}</TableCell>
                         <TableCell>
                           <Badge variant="secondary">{opCount}</Badge>
