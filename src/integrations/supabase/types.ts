@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      catalog_operations: {
+        Row: {
+          created_at: string
+          expected_per_hour: number | null
+          id: string
+          name: string
+          sector_id: string
+        }
+        Insert: {
+          created_at?: string
+          expected_per_hour?: number | null
+          id?: string
+          name: string
+          sector_id: string
+        }
+        Update: {
+          created_at?: string
+          expected_per_hour?: number | null
+          id?: string
+          name?: string
+          sector_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_operations_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           created_at: string
@@ -58,6 +108,7 @@ export type Database = {
       }
       operations: {
         Row: {
+          catalog_operation_id: string | null
           created_at: string
           id: string
           name: string
@@ -65,6 +116,7 @@ export type Database = {
           standard_time: number | null
         }
         Insert: {
+          catalog_operation_id?: string | null
           created_at?: string
           id?: string
           name: string
@@ -72,6 +124,7 @@ export type Database = {
           standard_time?: number | null
         }
         Update: {
+          catalog_operation_id?: string | null
           created_at?: string
           id?: string
           name?: string
@@ -79,6 +132,13 @@ export type Database = {
           standard_time?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "operations_catalog_operation_id_fkey"
+            columns: ["catalog_operation_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_operations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "operations_product_id_fkey"
             columns: ["product_id"]
@@ -156,6 +216,7 @@ export type Database = {
           name: string
           nf_number: string | null
           op_number: string
+          photo_url: string | null
           reference: string
           status: string
           total_quantity: number
@@ -171,6 +232,7 @@ export type Database = {
           name: string
           nf_number?: string | null
           op_number: string
+          photo_url?: string | null
           reference: string
           status?: string
           total_quantity?: number
@@ -186,6 +248,7 @@ export type Database = {
           name?: string
           nf_number?: string | null
           op_number?: string
+          photo_url?: string | null
           reference?: string
           status?: string
           total_quantity?: number
@@ -218,6 +281,24 @@ export type Database = {
           slot_minutes?: number
           start_time?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      sectors: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
         }
         Relationships: []
       }
