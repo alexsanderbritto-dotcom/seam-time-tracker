@@ -104,6 +104,16 @@ export const productsQuery = {
   },
 };
 
+export const companiesQuery = {
+  queryKey: ["companies"],
+  queryFn: async (): Promise<Company[]> => {
+    const { data, error } = await supabase.from("companies").select("id,name").order("name");
+    if (error) throw error;
+    return data as Company[];
+  },
+};
+
+
 export const operationsQuery = {
   queryKey: ["operations"],
   queryFn: async (): Promise<Operation[]> => {
