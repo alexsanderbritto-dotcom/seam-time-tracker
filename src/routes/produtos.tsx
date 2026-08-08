@@ -180,13 +180,32 @@ function ProdutosPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label>Marca</Label>
+                    <Label>Cliente</Label>
                     <Input
                       placeholder="Sky"
-                      value={form.brand}
-                      onChange={(e) => setForm({ ...form, brand: e.target.value })}
+                      value={form.cliente}
+                      onChange={(e) => setForm({ ...form, cliente: e.target.value })}
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label>Empresa</Label>
+                    <Input
+                      list="empresas-list"
+                      placeholder="Digite ou selecione"
+                      value={form.empresa}
+                      onChange={(e) => setForm({ ...form, empresa: e.target.value })}
+                    />
+                    <datalist id="empresas-list">
+                      {companies.map((c) => (
+                        <option key={c.id} value={c.name} />
+                      ))}
+                    </datalist>
+                    <p className="text-xs text-muted-foreground">
+                      Empresas novas são salvas automaticamente para reuso.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1.5">
                     <Label>Quantidade total</Label>
                     <Input
@@ -196,7 +215,39 @@ function ProdutosPage() {
                       onChange={(e) => setForm({ ...form, total_quantity: e.target.value })}
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label>Valor unitário (R$)</Label>
+                    <Input
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={form.unit_value}
+                      onChange={(e) => setForm({ ...form, unit_value: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Valor total</Label>
+                    <Input readOnly tabIndex={-1} className="bg-muted" value={brl(totalValue)} />
+                  </div>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Data de entrada</Label>
+                    <Input
+                      type="date"
+                      value={form.entry_date}
+                      onChange={(e) => setForm({ ...form, entry_date: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>NF de entrada</Label>
+                    <Input
+                      placeholder="000123"
+                      value={form.nf_number}
+                      onChange={(e) => setForm({ ...form, nf_number: e.target.value })}
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-1.5">
                   <Label>Operações (uma por linha)</Label>
                   <textarea
