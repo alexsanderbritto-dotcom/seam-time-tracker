@@ -5,11 +5,21 @@ export type Product = {
   name: string;
   reference: string;
   op_number: string;
-  brand: string | null;
+  cliente: string | null;
+  empresa: string | null;
   total_quantity: number;
+  unit_value: number;
+  entry_date: string | null;
+  nf_number: string | null;
   status: string;
   created_at: string;
 };
+
+export type Company = { id: string; name: string };
+
+export const brl = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
 
 export type Operation = {
   id: string;
