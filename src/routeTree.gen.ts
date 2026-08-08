@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ColaboradoresRouteImport } from './routes/colaboradores'
+import { Route as HorariosRouteImport } from './routes/horarios'
 import { Route as ProdutosRouteImport } from './routes/produtos'
 import { Route as ProdutosProductIdRouteImport } from './routes/produtos.$productId'
 
@@ -22,6 +23,11 @@ const IndexRoute = IndexRouteImport.update({
 const ColaboradoresRoute = ColaboradoresRouteImport.update({
   id: '/colaboradores',
   path: '/colaboradores',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HorariosRoute = HorariosRouteImport.update({
+  id: '/horarios',
+  path: '/horarios',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProdutosRoute = ProdutosRouteImport.update({
@@ -38,12 +44,14 @@ const ProdutosProductIdRoute = ProdutosProductIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/colaboradores': typeof ColaboradoresRoute
+  '/horarios': typeof HorariosRoute
   '/produtos': typeof ProdutosRouteWithChildren
   '/produtos/$productId': typeof ProdutosProductIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/colaboradores': typeof ColaboradoresRoute
+  '/horarios': typeof HorariosRoute
   '/produtos': typeof ProdutosRouteWithChildren
   '/produtos/$productId': typeof ProdutosProductIdRoute
 }
@@ -51,20 +59,30 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/colaboradores': typeof ColaboradoresRoute
+  '/horarios': typeof HorariosRoute
   '/produtos': typeof ProdutosRouteWithChildren
   '/produtos/$productId': typeof ProdutosProductIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/colaboradores' | '/produtos' | '/produtos/$productId'
+  fullPaths:
+    '/' | '/colaboradores' | '/horarios' | '/produtos' | '/produtos/$productId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/colaboradores' | '/produtos' | '/produtos/$productId'
-  id: '__root__' | '/' | '/colaboradores' | '/produtos' | '/produtos/$productId'
+  to:
+    '/' | '/colaboradores' | '/horarios' | '/produtos' | '/produtos/$productId'
+  id:
+    | '__root__'
+    | '/'
+    | '/colaboradores'
+    | '/horarios'
+    | '/produtos'
+    | '/produtos/$productId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ColaboradoresRoute: typeof ColaboradoresRoute
+  HorariosRoute: typeof HorariosRoute
   ProdutosRoute: typeof ProdutosRouteWithChildren
 }
 
@@ -82,6 +100,13 @@ declare module '@tanstack/react-router' {
       path: '/colaboradores'
       fullPath: '/colaboradores'
       preLoaderRoute: typeof ColaboradoresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/horarios': {
+      id: '/horarios'
+      path: '/horarios'
+      fullPath: '/horarios'
+      preLoaderRoute: typeof HorariosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/produtos': {
@@ -116,6 +141,7 @@ const ProdutosRouteWithChildren = ProdutosRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ColaboradoresRoute: ColaboradoresRoute,
+  HorariosRoute: HorariosRoute,
   ProdutosRoute: ProdutosRouteWithChildren,
 }
 export const routeTree = rootRouteImport
