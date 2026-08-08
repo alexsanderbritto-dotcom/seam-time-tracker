@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.mark_product_in_production() FROM PUBLIC, anon, authenticated;
