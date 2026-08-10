@@ -40,6 +40,7 @@ export type CatalogOperation = {
   sector_id: string;
   name: string;
   expected_per_hour: number | null;
+  is_last_operation: boolean;
 };
 
 export type Employee = {
@@ -154,7 +155,7 @@ export const catalogOperationsQuery = {
   queryFn: async (): Promise<CatalogOperation[]> => {
     const { data, error } = await supabase
       .from("catalog_operations")
-      .select("id,sector_id,name,expected_per_hour")
+      .select("id,sector_id,name,expected_per_hour,is_last_operation")
       .order("created_at", { ascending: true });
     if (error) throw error;
     return data as CatalogOperation[];
