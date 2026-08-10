@@ -340,7 +340,6 @@ function ProdutosPage() {
                             {STATUS_LABEL[p.status] ?? p.status}
                           </Badge>
                         </TableCell>
-                        </TableCell>
                         <TableCell>
                           <div className="flex justify-end gap-1">
                             <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
