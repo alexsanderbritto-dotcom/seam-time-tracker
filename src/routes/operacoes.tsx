@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { catalogOperationsQuery, sectorsQuery, type CatalogOperation } from "@/lib/production";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Pencil, Trash2, Flag } from "lucide-react";
 
 export const Route = createFileRoute("/operacoes")({
   head: () => ({
