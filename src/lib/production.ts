@@ -12,6 +12,7 @@ export type Product = {
   entry_date: string | null;
   nf_number: string | null;
   photo_url: string | null;
+  pilot_photos: string[] | null;
   status: string;
   created_at: string;
   delivery_date: string | null;
