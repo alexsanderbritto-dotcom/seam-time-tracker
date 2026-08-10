@@ -1,0 +1,1 @@
+ALTER TABLE public.catalog_operations ADD COLUMN IF NOT EXISTS is_last_operation boolean NOT NULL DEFAULT false;
