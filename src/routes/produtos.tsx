@@ -247,8 +247,30 @@ function ProdutosPage() {
     qc.invalidateQueries({ queryKey: ["products"] });
   }
 
+  const statusTotals = useMemo(() => {
+    const acc = { em_estoque: 0, em_producao: 0, finalizado: 0 } as Record<string, number>;
+    for (const p of products) {
+      if (acc[p.status] === undefined) acc[p.status] = 0;
+      acc[p.status] = (acc[p.status] ?? 0) + p.total_quantity;
+    }
+    return acc;
+  }, [products]);
+
   return (
     <AppLayout title="Produtos" subtitle="Ordens de produção e suas operações.">
+      <div className="mb-5 grid gap-4 sm:grid-cols-3">
+        {(["em_estoque", "em_producao", "finalizado"] as const).map((s) => (
+          <Card key={s}>
+            <CardContent className="pt-6">
+              <p className="text-3xl font-semibold tabular-nums">{statusTotals[s] ?? 0}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Quantidade total · {STATUS_LABEL[s]}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
           <CardTitle className="text-base">Produtos cadastrados</CardTitle>
