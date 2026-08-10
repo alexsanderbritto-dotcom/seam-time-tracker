@@ -109,6 +109,58 @@ function DashboardPage() {
 
   const total = filtered.reduce((s, e) => s + e.quantity, 0);
 
+  const expectedPerHour = useMemo(() => {
+    const byCatalog = new Map(catalogOps.map((c) => [c.id, c.expected_per_hour]));
+    const map = new Map<string, number | null>();
+    for (const o of operations) {
+      map.set(o.id, o.catalog_operation_id ? (byCatalog.get(o.catalog_operation_id) ?? null) : null);
+    }
+    return map;
+  }, [operations, catalogOps]);
+
+  const slotHours = (config?.slot_minutes ?? 60) / 60;
+
+  const productivity = useMemo(() => {
+    const emps = employees.filter(
+      (e) => employeeFilter === "all" || e.id === employeeFilter,
+    );
+    return emps
+      .map((emp) => {
+        const empEntries = filtered.filter((e) => e.employee_id === emp.id);
+        const opIds = Array.from(new Set(empEntries.map((e) => e.operation_id)));
+        const rows = opIds.map((opId) => {
+          const perSlot = slots.map((s) => {
+            const worked = empEntries.filter(
+              (e) => e.operation_id === opId && fmt(e.slot_start) === fmt(s.start),
+            );
+            const produced = worked.reduce((a, e) => a + e.quantity, 0);
+            const eph = expectedPerHour.get(opId);
+            const estimated = worked.length > 0 && eph != null ? eph * slotHours : null;
+            return { produced, estimated, active: worked.length > 0 };
+          });
+          const totalProduced = perSlot.reduce((a, c) => a + c.produced, 0);
+          const totalEstimated = perSlot.reduce((a, c) => a + (c.estimated ?? 0), 0);
+          return {
+            opId,
+            name: operations.find((o) => o.id === opId)?.name ?? "Operação",
+            perSlot,
+            totalProduced,
+            totalEstimated,
+          };
+        });
+        return { emp, rows };
+      })
+      .filter((g) => g.rows.length > 0);
+  }, [employees, employeeFilter, filtered, slots, operations, expectedPerHour, slotHours]);
+
+  const perfClass = (produced: number, estimated: number | null) => {
+    if (estimated == null || estimated <= 0) return "";
+    const r = produced / estimated;
+    if (r >= 1) return "text-emerald-600 dark:text-emerald-400 font-semibold";
+    if (r >= 0.8) return "text-amber-600 dark:text-amber-400 font-medium";
+    return "text-destructive font-medium";
+  };
+
   const cell = (empId: string, slotStart: string) =>
     filtered.filter((e) => e.employee_id === empId && fmt(e.slot_start) === fmt(slotStart));
 
@@ -361,6 +413,79 @@ function DashboardPage() {
                   </div>
                 );
               })
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Produtividade por colaborador e operação</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Estimado (quantidade por hora esperada × horas trabalhadas) comparado ao produzido em
+              cada janela de horário. Verde: na meta ou acima · amarelo: perto da meta · vermelho:
+              abaixo.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {productivity.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Nenhuma produção registrada com estes filtros.
+              </p>
+            ) : (
+              productivity.map(({ emp, rows }) => (
+                <div key={emp.id} className="space-y-2">
+                  <p className="font-medium">{emp.name}</p>
+                  <div className="overflow-x-auto rounded-md border border-border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="sticky left-0 bg-card">Operação</TableHead>
+                          {slots.map((s) => (
+                            <TableHead
+                              key={s.start}
+                              className="whitespace-nowrap text-center font-mono text-xs"
+                            >
+                              {s.start}–{s.end}
+                            </TableHead>
+                          ))}
+                          <TableHead className="text-right">Total prod.</TableHead>
+                          <TableHead className="text-right">Total est.</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {rows.map((r) => (
+                          <TableRow key={r.opId}>
+                            <TableCell className="sticky left-0 bg-card">{r.name}</TableCell>
+                            {r.perSlot.map((c, i) => (
+                              <TableCell key={slots[i]!.start} className="text-center text-xs">
+                                {!c.active ? (
+                                  <span className="text-muted-foreground">–</span>
+                                ) : (
+                                  <span className={`tabular-nums ${perfClass(c.produced, c.estimated)}`}>
+                                    {c.produced}
+                                    <span className="text-muted-foreground">
+                                      {" / "}
+                                      {c.estimated != null ? Math.round(c.estimated) : "—"}
+                                    </span>
+                                  </span>
+                                )}
+                              </TableCell>
+                            ))}
+                            <TableCell
+                              className={`text-right tabular-nums ${perfClass(r.totalProduced, r.totalEstimated || null)}`}
+                            >
+                              {r.totalProduced}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums text-muted-foreground">
+                              {r.totalEstimated > 0 ? Math.round(r.totalEstimated) : "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              ))
             )}
           </CardContent>
         </Card>
