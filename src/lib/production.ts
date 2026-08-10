@@ -14,6 +14,9 @@ export type Product = {
   photo_url: string | null;
   status: string;
   created_at: string;
+  delivery_date: string | null;
+  forecast_date: string | null;
+  nf_out_number: string | null;
 };
 
 export type Company = { id: string; name: string };

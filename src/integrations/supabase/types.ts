@@ -210,11 +210,14 @@ export type Database = {
         Row: {
           cliente: string | null
           created_at: string
+          delivery_date: string | null
           empresa: string | null
           entry_date: string | null
+          forecast_date: string | null
           id: string
           name: string
           nf_number: string | null
+          nf_out_number: string | null
           op_number: string
           photo_url: string | null
           reference: string
@@ -226,11 +229,14 @@ export type Database = {
         Insert: {
           cliente?: string | null
           created_at?: string
+          delivery_date?: string | null
           empresa?: string | null
           entry_date?: string | null
+          forecast_date?: string | null
           id?: string
           name: string
           nf_number?: string | null
+          nf_out_number?: string | null
           op_number: string
           photo_url?: string | null
           reference: string
@@ -242,11 +248,14 @@ export type Database = {
         Update: {
           cliente?: string | null
           created_at?: string
+          delivery_date?: string | null
           empresa?: string | null
           entry_date?: string | null
+          forecast_date?: string | null
           id?: string
           name?: string
           nf_number?: string | null
+          nf_out_number?: string | null
           op_number?: string
           photo_url?: string | null
           reference?: string

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ColaboradoresRouteImport } from './routes/colaboradores'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as FaturamentoRouteImport } from './routes/faturamento'
 import { Route as HorariosRouteImport } from './routes/horarios'
 import { Route as OperacoesRouteImport } from './routes/operacoes'
 import { Route as ProdutosRouteImport } from './routes/produtos'
@@ -29,6 +30,11 @@ const ColaboradoresRoute = ColaboradoresRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaturamentoRoute = FaturamentoRouteImport.update({
+  id: '/faturamento',
+  path: '/faturamento',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HorariosRoute = HorariosRouteImport.update({
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/colaboradores': typeof ColaboradoresRoute
   '/dashboard': typeof DashboardRoute
+  '/faturamento': typeof FaturamentoRoute
   '/horarios': typeof HorariosRoute
   '/operacoes': typeof OperacoesRoute
   '/produtos': typeof ProdutosRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/colaboradores': typeof ColaboradoresRoute
   '/dashboard': typeof DashboardRoute
+  '/faturamento': typeof FaturamentoRoute
   '/horarios': typeof HorariosRoute
   '/operacoes': typeof OperacoesRoute
   '/produtos': typeof ProdutosRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/colaboradores': typeof ColaboradoresRoute
   '/dashboard': typeof DashboardRoute
+  '/faturamento': typeof FaturamentoRoute
   '/horarios': typeof HorariosRoute
   '/operacoes': typeof OperacoesRoute
   '/produtos': typeof ProdutosRoute
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
     | '/'
     | '/colaboradores'
     | '/dashboard'
+    | '/faturamento'
     | '/horarios'
     | '/operacoes'
     | '/produtos'
@@ -86,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/colaboradores'
     | '/dashboard'
+    | '/faturamento'
     | '/horarios'
     | '/operacoes'
     | '/produtos'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/colaboradores'
     | '/dashboard'
+    | '/faturamento'
     | '/horarios'
     | '/operacoes'
     | '/produtos'
@@ -103,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ColaboradoresRoute: typeof ColaboradoresRoute
   DashboardRoute: typeof DashboardRoute
+  FaturamentoRoute: typeof FaturamentoRoute
   HorariosRoute: typeof HorariosRoute
   OperacoesRoute: typeof OperacoesRoute
   ProdutosRoute: typeof ProdutosRoute
@@ -129,6 +142,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faturamento': {
+      id: '/faturamento'
+      path: '/faturamento'
+      fullPath: '/faturamento'
+      preLoaderRoute: typeof FaturamentoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/horarios': {
@@ -159,6 +179,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ColaboradoresRoute: ColaboradoresRoute,
   DashboardRoute: DashboardRoute,
+  FaturamentoRoute: FaturamentoRoute,
   HorariosRoute: HorariosRoute,
   OperacoesRoute: OperacoesRoute,
   ProdutosRoute: ProdutosRoute,
@@ -166,13 +187,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
