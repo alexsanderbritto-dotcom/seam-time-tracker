@@ -308,7 +308,6 @@ function ProdutosPage() {
                   </TableRow>
                 ) : (
                   products.map((p) => {
-                    const emProducao = (producedByProduct[p.id] ?? 0) > 0;
                     return (
                       <TableRow key={p.id}>
                         <TableCell>
