@@ -89,11 +89,7 @@ function ProdutosPage() {
   const { data: sectors = [] } = useQuery(sectorsQuery);
   const { data: catalogOps = [] } = useQuery(catalogOperationsQuery);
 
-  const producedByProduct = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const e of entries) map[e.product_id] = (map[e.product_id] ?? 0) + e.quantity;
-    return map;
-  }, [entries]);
+  void entries;
 
   const totalValue =
     (Number(form.total_quantity) || 0) * (Number(form.unit_value.replace(",", ".")) || 0);
