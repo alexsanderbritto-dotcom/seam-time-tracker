@@ -35,6 +35,7 @@ import {
   operationsQuery,
   productsQuery,
   sectorsQuery,
+  STATUS_LABEL,
   type Product,
 } from "@/lib/production";
 import { Plus, Trash2, Pencil } from "lucide-react";
@@ -88,11 +89,7 @@ function ProdutosPage() {
   const { data: sectors = [] } = useQuery(sectorsQuery);
   const { data: catalogOps = [] } = useQuery(catalogOperationsQuery);
 
-  const producedByProduct = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const e of entries) map[e.product_id] = (map[e.product_id] ?? 0) + e.quantity;
-    return map;
-  }, [entries]);
+  void entries;
 
   const totalValue =
     (Number(form.total_quantity) || 0) * (Number(form.unit_value.replace(",", ".")) || 0);
@@ -247,8 +244,30 @@ function ProdutosPage() {
     qc.invalidateQueries({ queryKey: ["products"] });
   }
 
+  const statusTotals = useMemo(() => {
+    const acc = { em_estoque: 0, em_producao: 0, finalizado: 0 } as Record<string, number>;
+    for (const p of products) {
+      if (acc[p.status] === undefined) acc[p.status] = 0;
+      acc[p.status] = (acc[p.status] ?? 0) + p.total_quantity;
+    }
+    return acc;
+  }, [products]);
+
   return (
     <AppLayout title="Produtos" subtitle="Ordens de produção e suas operações.">
+      <div className="mb-5 grid gap-4 sm:grid-cols-3">
+        {(["em_estoque", "em_producao", "finalizado"] as const).map((s) => (
+          <Card key={s}>
+            <CardContent className="pt-6">
+              <p className="text-3xl font-semibold tabular-nums">{statusTotals[s] ?? 0}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Quantidade total · {STATUS_LABEL[s]}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
           <CardTitle className="text-base">Produtos cadastrados</CardTitle>
@@ -285,7 +304,6 @@ function ProdutosPage() {
                   </TableRow>
                 ) : (
                   products.map((p) => {
-                    const emProducao = (producedByProduct[p.id] ?? 0) > 0;
                     return (
                       <TableRow key={p.id}>
                         <TableCell>
@@ -306,8 +324,16 @@ function ProdutosPage() {
                         </TableCell>
                         <TableCell className="font-mono text-xs">{p.nf_number ?? "—"}</TableCell>
                         <TableCell>
-                          <Badge variant={emProducao ? "default" : "outline"}>
-                            {emProducao ? "Em produção" : "Em estoque"}
+                          <Badge
+                            variant={
+                              p.status === "finalizado"
+                                ? "secondary"
+                                : p.status === "em_producao"
+                                  ? "default"
+                                  : "outline"
+                            }
+                          >
+                            {STATUS_LABEL[p.status] ?? p.status}
                           </Badge>
                         </TableCell>
                         <TableCell>
