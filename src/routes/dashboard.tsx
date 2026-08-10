@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import {
   buildSlots,
+  catalogOperationsQuery,
   employeesQuery,
   entriesQuery,
   fmt,
@@ -30,6 +31,7 @@ import {
   productCompletion,
   productsQuery,
   scheduleQuery,
+  sectorsQuery,
   todayISO,
 } from "@/lib/production";
 
@@ -202,6 +204,68 @@ function DashboardPage() {
                           })}
                           <TableCell className="text-right font-semibold tabular-nums">
                             {empTotal}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Produção por hora e por setor</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Total de peças concluídas por setor, com base nas operações marcadas como última
+              etapa.
+            </p>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="sticky left-0 bg-card">Setor</TableHead>
+                    {slots.map((s) => (
+                      <TableHead
+                        key={s.start}
+                        className="whitespace-nowrap text-center font-mono text-xs"
+                      >
+                        {s.start}–{s.end}
+                      </TableHead>
+                    ))}
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sectors.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={slots.length + 2}
+                        className="py-10 text-center text-muted-foreground"
+                      >
+                        Nenhum setor cadastrado.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    sectors.map((sec) => {
+                      const row = slots.map((s) => sectorSlotTotal(sec.id, s.start));
+                      const totalRow = row.reduce((a, b) => a + b, 0);
+                      return (
+                        <TableRow key={sec.id}>
+                          <TableCell className="sticky left-0 bg-card font-medium">
+                            {sec.name}
+                          </TableCell>
+                          {row.map((v, i) => (
+                            <TableCell key={slots[i]!.start} className="text-center tabular-nums">
+                              {v > 0 ? v : <span className="text-muted-foreground">–</span>}
+                            </TableCell>
+                          ))}
+                          <TableCell className="text-right font-semibold tabular-nums">
+                            {totalRow}
                           </TableCell>
                         </TableRow>
                       );
