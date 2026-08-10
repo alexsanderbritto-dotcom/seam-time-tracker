@@ -27,6 +27,7 @@ import {
   entriesQuery,
   fmt,
   operationsQuery,
+  productCompletion,
   productsQuery,
   scheduleQuery,
   todayISO,
