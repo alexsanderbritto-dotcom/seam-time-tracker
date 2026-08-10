@@ -35,6 +35,7 @@ import {
   operationsQuery,
   productsQuery,
   sectorsQuery,
+  STATUS_LABEL,
   type Product,
 } from "@/lib/production";
 import { Plus, Trash2, Pencil } from "lucide-react";
