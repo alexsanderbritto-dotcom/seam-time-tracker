@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS pilot_photos text[] NOT NULL DEFAULT '{}'::text[];

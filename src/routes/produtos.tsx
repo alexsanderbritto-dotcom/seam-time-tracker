@@ -25,7 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { ProductPhotoCell } from "@/components/ProductPhoto";
+import { ProductPhotoCell, PilotGallery } from "@/components/ProductPhoto";
 import {
   brl,
   catalogOperationsQuery,
@@ -38,7 +38,7 @@ import {
   STATUS_LABEL,
   type Product,
 } from "@/lib/production";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil, Copy } from "lucide-react";
 
 export const Route = createFileRoute("/produtos")({
   head: () => ({
@@ -79,6 +79,9 @@ function ProdutosPage() {
   const [selectedOps, setSelectedOps] = useState<string[]>([]);
   const [opSearch, setOpSearch] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [pilotFiles, setPilotFiles] = useState<File[]>([]);
+  const [pilotPaths, setPilotPaths] = useState<string[]>([]);
+  const [dupValue, setDupValue] = useState("");
   const [saving, setSaving] = useState(false);
 
   const { data: products = [] } = useQuery(productsQuery);
@@ -105,6 +108,9 @@ function ProdutosPage() {
     setSelectedOps([]);
     setOpSearch("");
     setFile(null);
+    setPilotFiles([]);
+    setPilotPaths([]);
+    setDupValue("");
     setOpen(true);
   }
 
@@ -128,7 +134,38 @@ function ProdutosPage() {
     );
     setOpSearch("");
     setFile(null);
+    setPilotFiles([]);
+    setPilotPaths(p.pilot_photos ?? []);
+    setDupValue("");
     setOpen(true);
+  }
+
+  const dupLabel = (p: Product) => `${p.reference} · ${p.name}`;
+
+  function applyDuplicate(value: string) {
+    setDupValue(value);
+    const src = products.find((p) => dupLabel(p) === value);
+    if (!src) return;
+    const ops = operations
+      .filter((o) => o.product_id === src.id && o.catalog_operation_id)
+      .map((o) => o.catalog_operation_id as string);
+    setSelectedOps(ops);
+    toast.success(`${ops.length} operação(ões) copiada(s) de ${src.reference}.`);
+  }
+
+  async function uploadPilotFiles(): Promise<string[]> {
+    const paths: string[] = [];
+    for (const f of pilotFiles) {
+      const ext = f.name.split(".").pop() ?? "jpg";
+      const path = `piloto/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("product-files").upload(path, f);
+      if (error) {
+        toast.error("Erro ao enviar foto da peça piloto: " + error.message);
+        continue;
+      }
+      paths.push(path);
+    }
+    return paths;
   }
 
   async function ensureName(table: "companies" | "clients", value: string, list: { name: string }[]) {
@@ -194,6 +231,8 @@ function ProdutosPage() {
       const empresa = await ensureName("companies", form.empresa, companies);
       const cliente = await ensureName("clients", form.cliente, clients);
       const photoPath = await uploadFile();
+      const newPilots = await uploadPilotFiles();
+      const allPilots = [...pilotPaths, ...newPilots];
 
       const payload = {
         name: form.name,
@@ -205,6 +244,7 @@ function ProdutosPage() {
         unit_value: Number(form.unit_value.replace(",", ".")) || 0,
         entry_date: form.entry_date || null,
         nf_number: form.nf_number || null,
+        pilot_photos: allPilots,
         ...(photoPath ? { photo_url: photoPath } : {}),
       };
 
@@ -225,6 +265,8 @@ function ProdutosPage() {
       setForm(empty);
       setSelectedOps([]);
       setFile(null);
+      setPilotFiles([]);
+      setPilotPaths([]);
       qc.invalidateQueries({ queryKey: ["products"] });
       qc.invalidateQueries({ queryKey: ["operations"] });
     } catch (e) {
@@ -362,6 +404,27 @@ function ProdutosPage() {
             <DialogTitle>{editing ? "Editar produto / OP" : "Novo produto / OP"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3">
+            {!editing ? (
+              <div className="space-y-1.5 rounded-md border border-dashed border-input p-3">
+                <Label className="flex items-center gap-2">
+                  <Copy className="h-4 w-4" /> Duplicar de um produto existente
+                </Label>
+                <Input
+                  list="duplicar-list"
+                  placeholder="Buscar por referência ou nome…"
+                  value={dupValue}
+                  onChange={(e) => applyDuplicate(e.target.value)}
+                />
+                <datalist id="duplicar-list">
+                  {products.map((p) => (
+                    <option key={p.id} value={dupLabel(p)} />
+                  ))}
+                </datalist>
+                <p className="text-xs text-muted-foreground">
+                  Copia apenas as operações. Você pode ajustar a seleção antes de salvar.
+                </p>
+              </div>
+            ) : null}
             <div className="space-y-1.5">
               <Label>Nome do produto</Label>
               <Input
@@ -477,6 +540,26 @@ function ProdutosPage() {
               {editing?.photo_url && !file ? (
                 <p className="text-xs text-muted-foreground">
                   Já existe um arquivo salvo. Escolha outro para substituir.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Fotos da peça piloto</Label>
+              <Input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => setPilotFiles(Array.from(e.target.files ?? []))}
+              />
+              <PilotGallery
+                paths={pilotPaths}
+                title={form.name || "peça piloto"}
+                onRemove={(path) => setPilotPaths((prev) => prev.filter((x) => x !== path))}
+              />
+              {pilotFiles.length > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  {pilotFiles.length} nova(s) foto(s) serão enviadas ao salvar.
                 </p>
               ) : null}
             </div>
