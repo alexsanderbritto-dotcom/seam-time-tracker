@@ -201,3 +201,39 @@ export const entriesQuery = (date?: string) => ({
     return data as ProductionEntry[];
   },
 });
+
+/* ---------- conclusão por operação ---------- */
+
+export type OperationProgress = {
+  operationId: string;
+  name: string;
+  produced: number;
+  target: number;
+  pct: number;
+  done: boolean;
+};
+
+export function productCompletion(
+  product: Pick<Product, "id" | "total_quantity">,
+  operations: Operation[],
+  entries: Pick<ProductionEntry, "product_id" | "operation_id" | "quantity">[],
+): { pct: number; done: boolean; perOperation: OperationProgress[] } {
+  const target = product.total_quantity ?? 0;
+  const ops = operations.filter((o) => o.product_id === product.id);
+  const perOperation: OperationProgress[] = ops.map((o) => {
+    const produced = entries
+      .filter((e) => e.operation_id === o.id)
+      .reduce((s, e) => s + e.quantity, 0);
+    const pct = target > 0 ? Math.min((produced / target) * 100, 100) : 0;
+    return { operationId: o.id, name: o.name, produced, target, pct, done: target > 0 && produced >= target };
+  });
+  if (perOperation.length === 0 || target <= 0) return { pct: 0, done: false, perOperation };
+  const pct = perOperation.reduce((s, o) => s + o.pct, 0) / perOperation.length;
+  return { pct, done: perOperation.every((o) => o.done), perOperation };
+}
+
+export const STATUS_LABEL: Record<string, string> = {
+  em_estoque: "Em estoque",
+  em_producao: "Em produção",
+  finalizado: "Finalizado",
+};
