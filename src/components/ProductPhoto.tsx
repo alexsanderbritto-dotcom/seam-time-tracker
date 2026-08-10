@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Eye } from "lucide-react";
+import { FileText, Eye, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -85,7 +85,7 @@ function PilotThumb({
 }: {
   path: string;
   title: string;
-  onRemove?: () => void;
+  onRemove?: (() => void) | undefined;
 }) {
   const [open, setOpen] = useState(false);
   const { data: url } = useSignedUrl(path);
