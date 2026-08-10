@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.recalc_product_status(uuid) FROM PUBLIC, anon, authenticated;
