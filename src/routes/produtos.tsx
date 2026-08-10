@@ -328,9 +328,18 @@ function ProdutosPage() {
                         </TableCell>
                         <TableCell className="font-mono text-xs">{p.nf_number ?? "—"}</TableCell>
                         <TableCell>
-                          <Badge variant={emProducao ? "default" : "outline"}>
-                            {emProducao ? "Em produção" : "Em estoque"}
+                          <Badge
+                            variant={
+                              p.status === "finalizado"
+                                ? "secondary"
+                                : p.status === "em_producao"
+                                  ? "default"
+                                  : "outline"
+                            }
+                          >
+                            {STATUS_LABEL[p.status] ?? p.status}
                           </Badge>
+                        </TableCell>
                         </TableCell>
                         <TableCell>
                           <div className="flex justify-end gap-1">
