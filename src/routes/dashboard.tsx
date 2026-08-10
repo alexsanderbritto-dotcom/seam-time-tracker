@@ -65,8 +65,32 @@ function DashboardPage() {
   const { data: config } = useQuery(scheduleQuery);
   const { data: dayEntries = [] } = useQuery(entriesQuery(date));
   const { data: allEntries = [] } = useQuery(entriesQuery());
+  const { data: sectors = [] } = useQuery(sectorsQuery);
+  const { data: catalogOps = [] } = useQuery(catalogOperationsQuery);
 
   const slots = useMemo(() => buildSlots(config), [config]);
+
+  // operação do produto -> setor, apenas quando é a última operação do setor
+  const opSector = useMemo(() => {
+    const lastBySector = new Map(
+      catalogOps.filter((c) => c.is_last_operation).map((c) => [c.id, c.sector_id]),
+    );
+    const map = new Map<string, string>();
+    for (const o of operations) {
+      const sectorId = o.catalog_operation_id ? lastBySector.get(o.catalog_operation_id) : undefined;
+      if (sectorId) map.set(o.id, sectorId);
+    }
+    return map;
+  }, [operations, catalogOps]);
+
+  const sectorSlotTotal = (sectorId: string, slotStart: string) =>
+    dayEntries
+      .filter(
+        (e) =>
+          opSector.get(e.operation_id) === sectorId && fmt(e.slot_start) === fmt(slotStart),
+      )
+      .reduce((s, e) => s + e.quantity, 0);
+
 
   const filtered = useMemo(
     () =>
