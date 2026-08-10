@@ -8,6 +8,7 @@ import {
   Package,
   Factory,
   Scissors,
+  Receipt,
 } from "lucide-react";
 
 const nav = [
@@ -16,6 +17,7 @@ const nav = [
   { to: "/operacoes", label: "Operações", icon: Scissors },
   { to: "/colaboradores", label: "Colaboradores", icon: Users },
   { to: "/horarios", label: "Horários", icon: Clock },
+  { to: "/faturamento", label: "Faturamento", icon: Receipt },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
 ] as const;
 
