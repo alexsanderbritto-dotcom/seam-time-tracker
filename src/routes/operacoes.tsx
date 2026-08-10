@@ -251,6 +251,20 @@ function OperacoesSetorPage() {
                 placeholder="60"
               />
             </div>
+            <label className="flex items-start gap-3 rounded-md border border-border p-3">
+              <Checkbox
+                checked={opLast}
+                onCheckedChange={(v) => setOpLast(v === true)}
+                className="mt-0.5"
+              />
+              <span className="text-sm">
+                <span className="font-medium">Esta é a última operação do setor?</span>
+                <span className="block text-xs text-muted-foreground">
+                  Usada para contar as peças concluídas do setor. O setor pode ter mais de uma
+                  última operação.
+                </span>
+              </span>
+            </label>
           </div>
           <DialogFooter>
             <Button onClick={saveOp}>Salvar</Button>
