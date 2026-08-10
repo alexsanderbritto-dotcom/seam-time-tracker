@@ -19,6 +19,7 @@ export type Database = {
           created_at: string
           expected_per_hour: number | null
           id: string
+          is_last_operation: boolean
           name: string
           sector_id: string
         }
@@ -26,6 +27,7 @@ export type Database = {
           created_at?: string
           expected_per_hour?: number | null
           id?: string
+          is_last_operation?: boolean
           name: string
           sector_id: string
         }
@@ -33,6 +35,7 @@ export type Database = {
           created_at?: string
           expected_per_hour?: number | null
           id?: string
+          is_last_operation?: boolean
           name?: string
           sector_id?: string
         }
