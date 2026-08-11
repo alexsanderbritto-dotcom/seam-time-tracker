@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +12,16 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-export type SearchableOption = { value: string; label: string };
+export type SearchableOption = {
+  value: string;
+  label: string;
+  /** extra text used for matching (ex: OP interna) */
+  searchText?: string;
+  /** custom rendering inside the list */
+  node?: ReactNode;
+  /** custom rendering in the trigger when selected */
+  triggerNode?: ReactNode;
+};
 
 export function SearchableSelect({
   options,
@@ -42,7 +51,9 @@ export function SearchableSelect({
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return options;
-    return options.filter((o) => o.label.toLowerCase().includes(term));
+    return options.filter((o) =>
+      `${o.label} ${o.searchText ?? ""}`.toLowerCase().includes(term),
+    );
   }, [options, search]);
 
   return (
@@ -55,7 +66,9 @@ export function SearchableSelect({
           className="h-11 w-full justify-between px-3 text-base font-normal md:h-10 md:text-sm"
           disabled={disabled}
         >
-          <span className="truncate">{selected ? selected.label : placeholder}</span>
+          <span className="min-w-0 truncate text-left">
+            {selected ? (selected.triggerNode ?? selected.label) : placeholder}
+          </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -88,7 +101,7 @@ export function SearchableSelect({
                         value === o.value ? "opacity-100" : "opacity-0",
                       )}
                     />
-                    <span className="truncate">{o.label}</span>
+                    <span className="min-w-0 flex-1 truncate">{o.node ?? o.label}</span>
                   </CommandItem>
                 ))}
               </CommandGroup>
