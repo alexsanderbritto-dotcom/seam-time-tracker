@@ -261,10 +261,11 @@ function DashboardPage() {
                   <TableRow>
                     <TableHead className="sticky left-0 bg-card">Colaborador</TableHead>
                     {slots.map((s) => (
-                      <TableHead key={s.start} className="whitespace-nowrap text-center font-mono text-xs">
-                        {s.start}–{s.end}
+                      <TableHead key={slotKey(s)} className="whitespace-nowrap text-center font-mono text-xs">
+                        <SlotHead s={s} />
                       </TableHead>
                     ))}
+
                     <TableHead className="text-right">Total</TableHead>
                   </TableRow>
                 </TableHeader>
