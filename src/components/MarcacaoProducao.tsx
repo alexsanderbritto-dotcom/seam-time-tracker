@@ -487,7 +487,13 @@ export function MarcacaoProducao({
                             <TableRow key={e.id}>
                               <TableCell className="whitespace-nowrap font-mono text-xs">
                                 {fmt(e.slot_start)}–{fmt(e.slot_end)}
+                                {e.is_overtime ? (
+                                  <span className="ml-1 text-[9px] text-muted-foreground">
+                                    (extra)
+                                  </span>
+                                ) : null}
                               </TableCell>
+
                               <TableCell>{emp?.name ?? "—"}</TableCell>
                               <TableCell className="text-sm text-muted-foreground">
                                 {p ? `${p.name} · OP ${p.op_number}` : "—"}
