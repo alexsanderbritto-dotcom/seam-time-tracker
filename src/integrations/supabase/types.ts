@@ -109,6 +109,30 @@ export type Database = {
         }
         Relationships: []
       }
+      marcadores: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          senha_hash: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          senha_hash: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          senha_hash?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       operations: {
         Row: {
           catalog_operation_id: string | null
