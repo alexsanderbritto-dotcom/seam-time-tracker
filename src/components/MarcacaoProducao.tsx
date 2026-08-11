@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
@@ -32,8 +32,12 @@ import {
   productsQuery,
   scheduleQuery,
   todayISO,
+  type Employee,
+  type Operation,
 } from "@/lib/production";
-import { Trash2, Check, LogOut } from "lucide-react";
+import { SearchableSelect } from "@/components/SearchableSelect";
+import { cn } from "@/lib/utils";
+import { Trash2, Check, LogOut, Search } from "lucide-react";
 
 export function MarcacaoProducao({
   marcadorNome,
@@ -49,6 +53,8 @@ export function MarcacaoProducao({
   const [slotIdx, setSlotIdx] = useState("");
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [opSearch, setOpSearch] = useState("");
+  const opInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
   const { data: employees = [] } = useQuery(employeesQuery);
   const { data: products = [] } = useQuery(productsQuery);
@@ -62,6 +68,20 @@ export function MarcacaoProducao({
     [operations, productId],
   );
 
+  const employeeOptions = useMemo(
+    () =>
+      employees
+        .filter((e: Employee) => e.active)
+        .map((e: Employee) => ({ value: e.id, label: e.name })),
+    [employees],
+  );
+
+  const filteredOps = useMemo(() => {
+    const term = opSearch.trim().toLowerCase();
+    if (!term) return productOps;
+    return productOps.filter((op: Operation) => op.name.toLowerCase().includes(term));
+  }, [productOps, opSearch]);
+
   const producedByOperation = useMemo(() => {
     const map: Record<string, number> = {};
     for (const e of entries) map[e.operation_id] = (map[e.operation_id] ?? 0) + e.quantity;
@@ -69,6 +89,18 @@ export function MarcacaoProducao({
   }, [entries]);
 
   const activeProduct = products.find((p) => p.id === productId);
+
+  function focusOp(opId: string, direction: "next" | "prev") {
+    const ids = filteredOps.map((o: Operation) => o.id);
+    const idx = ids.indexOf(opId);
+    if (idx === -1) return;
+    const nextIdx =
+      direction === "next"
+        ? Math.min(idx + 1, ids.length - 1)
+        : Math.max(idx - 1, 0);
+    const nextId = ids[nextIdx];
+    opInputRefs.current.get(nextId)?.focus();
+  }
 
   async function save() {
     const slot = slots[Number(slotIdx)];
@@ -102,6 +134,7 @@ export function MarcacaoProducao({
     }
     toast.success(`${rows.length} marcação(ões) registrada(s).`);
     setSelected({});
+    setOpSearch("");
     qc.invalidateQueries({ queryKey: ["production_entries"] });
   }
 
@@ -172,20 +205,14 @@ export function MarcacaoProducao({
 
             <div className="space-y-1.5">
               <Label>Colaborador</Label>
-              <Select value={employeeId} onValueChange={setEmployeeId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o colaborador" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees
-                    .filter((e) => e.active)
-                    .map((e) => (
-                      <SelectItem key={e.id} value={e.id}>
-                        {e.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={employeeOptions}
+                value={employeeId}
+                onChange={setEmployeeId}
+                placeholder="Selecione o colaborador"
+                searchPlaceholder="Digite para buscar colaborador..."
+                emptyMessage="Nenhum colaborador encontrado."
+              />
             </div>
 
             <div className="space-y-1.5">
@@ -195,6 +222,7 @@ export function MarcacaoProducao({
                 onValueChange={(v) => {
                   setProductId(v);
                   setSelected({});
+                  setOpSearch("");
                 }}
               >
                 <SelectTrigger>
@@ -219,31 +247,76 @@ export function MarcacaoProducao({
                   Este produto ainda não tem operações cadastradas.
                 </p>
               ) : (
-                <div className="divide-y divide-border rounded-md border border-border">
-                  {productOps.map((op) => {
-                    const done = producedByOperation[op.id] ?? 0;
-                    const over = activeProduct ? done > activeProduct.total_quantity : false;
-                    return (
-                      <div key={op.id} className="flex items-center gap-3 px-3 py-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">{op.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Hoje: {done}
-                            {over ? " · acima da OP" : ""}
-                          </p>
-                        </div>
-                        <Input
-                          type="number"
-                          min={0}
-                          inputMode="numeric"
-                          className="h-9 w-24"
-                          placeholder="Qtd"
-                          value={selected[op.id] ?? ""}
-                          onChange={(e) => setSelected((s) => ({ ...s, [op.id]: e.target.value }))}
-                        />
-                      </div>
-                    );
-                  })}
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar operação..."
+                      value={opSearch}
+                      onChange={(e) => setOpSearch(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "ArrowDown") {
+                          e.preventDefault();
+                          const first = filteredOps[0];
+                          if (first) opInputRefs.current.get(first.id)?.focus();
+                        }
+                      }}
+                      className="h-9 pl-9"
+                    />
+                  </div>
+                  {filteredOps.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Nenhuma operação corresponde à busca.
+                    </p>
+                  ) : (
+                    <div className="divide-y divide-border rounded-md border border-border">
+                      {filteredOps.map((op: Operation) => {
+                        const done = producedByOperation[op.id] ?? 0;
+                        const over = activeProduct ? done > activeProduct.total_quantity : false;
+                        return (
+                          <div
+                            key={op.id}
+                            className={cn(
+                              "flex items-center gap-3 px-3 py-2",
+                              selected[op.id] && Number(selected[op.id]) > 0 && "bg-muted/40",
+                            )}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium">{op.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Hoje: {done}
+                                {over ? " · acima da OP" : ""}
+                              </p>
+                            </div>
+                            <Input
+                              type="number"
+                              min={0}
+                              inputMode="numeric"
+                              className="h-9 w-24"
+                              placeholder="Qtd"
+                              value={selected[op.id] ?? ""}
+                              onChange={(e) =>
+                                setSelected((s) => ({ ...s, [op.id]: e.target.value }))
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "ArrowDown") {
+                                  e.preventDefault();
+                                  focusOp(op.id, "next");
+                                } else if (e.key === "ArrowUp") {
+                                  e.preventDefault();
+                                  focusOp(op.id, "prev");
+                                }
+                              }}
+                              ref={(el) => {
+                                if (el) opInputRefs.current.set(op.id, el);
+                                else opInputRefs.current.delete(op.id);
+                              }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
