@@ -383,75 +383,87 @@ export function MarcacaoProducao({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">
-              Marcações de {date.split("-").reverse().join("/")}
-              <Badge variant="secondary" className="ml-2">
-                {dayEntries.length}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Horário</TableHead>
-                    <TableHead>Colaborador</TableHead>
-                    <TableHead>Produto / OP</TableHead>
-                    <TableHead>Operação</TableHead>
-                    <TableHead className="w-28">Qtd</TableHead>
-                    <TableHead className="w-12" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {dayEntries.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                        Nenhuma marcação nesta data.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    dayEntries.map((e) => {
-                      const p = products.find((x) => x.id === e.product_id);
-                      const op = operations.find((x) => x.id === e.operation_id);
-                      const emp = employees.find((x) => x.id === e.employee_id);
-                      return (
-                        <TableRow key={e.id}>
-                          <TableCell className="whitespace-nowrap font-mono text-xs">
-                            {fmt(e.slot_start)}–{fmt(e.slot_end)}
-                          </TableCell>
-                          <TableCell>{emp?.name ?? "—"}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {p ? `${p.name} · OP ${p.op_number}` : "—"}
-                          </TableCell>
-                          <TableCell>{op?.name ?? "—"}</TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              className="h-8 w-20"
-                              defaultValue={e.quantity}
-                              onBlur={(ev) => {
-                                const v = Number(ev.target.value);
-                                if (v !== e.quantity) updateQty(e.id, v);
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="icon" onClick={() => remove(e.id)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+        <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer pb-3 select-none">
+                <CardTitle className="flex items-center justify-between text-base">
+                  <span className="flex items-center gap-2">
+                    Marcações de {date.split("-").reverse().join("/")}
+                    <Badge variant="secondary">{dayEntries.length}</Badge>
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      "h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-300",
+                      historyOpen && "rotate-180",
+                    )}
+                  />
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="overflow-hidden transition-all data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-up">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Horário</TableHead>
+                        <TableHead>Colaborador</TableHead>
+                        <TableHead>Produto / OP</TableHead>
+                        <TableHead>Operação</TableHead>
+                        <TableHead className="w-28">Qtd</TableHead>
+                        <TableHead className="w-12" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dayEntries.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                            Nenhuma marcação nesta data.
                           </TableCell>
                         </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                      ) : (
+                        dayEntries.map((e) => {
+                          const p = products.find((x) => x.id === e.product_id);
+                          const op = operations.find((x) => x.id === e.operation_id);
+                          const emp = employees.find((x) => x.id === e.employee_id);
+                          return (
+                            <TableRow key={e.id}>
+                              <TableCell className="whitespace-nowrap font-mono text-xs">
+                                {fmt(e.slot_start)}–{fmt(e.slot_end)}
+                              </TableCell>
+                              <TableCell>{emp?.name ?? "—"}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {p ? `${p.name} · OP ${p.op_number}` : "—"}
+                              </TableCell>
+                              <TableCell>{op?.name ?? "—"}</TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  className="h-8 w-20"
+                                  defaultValue={e.quantity}
+                                  onBlur={(ev) => {
+                                    const v = Number(ev.target.value);
+                                    if (v !== e.quantity) updateQty(e.id, v);
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Button variant="ghost" size="icon" onClick={() => remove(e.id)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       </div>
     </AppLayout>
   );
