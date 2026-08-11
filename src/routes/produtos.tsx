@@ -323,6 +323,8 @@ function ProdutosPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-16">Ficha</TableHead>
+                  <TableHead className="w-16">Peça piloto</TableHead>
+
                   <TableHead>Produto</TableHead>
                   <TableHead>Referência</TableHead>
                   <TableHead>OP</TableHead>
