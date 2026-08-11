@@ -70,6 +70,7 @@ export function MarcacaoProducao({
   const { data: config } = useQuery(scheduleQuery);
   const { data: entries = [] } = useQuery(entriesQuery(date));
   const { data: esteira = [] } = useQuery(esteiraQuery);
+  const { data: overtimeSlots = [] } = useQuery(overtimeSlotsQuery);
 
   const slots = useMemo(() => buildSlots(config), [config]);
   const productOps = useMemo(
