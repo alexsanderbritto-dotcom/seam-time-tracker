@@ -60,6 +60,9 @@ function DashboardPage() {
   const [date, setDate] = useState(todayISO());
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [productFilter, setProductFilter] = useState("all");
+  const [operationFilter, setOperationFilter] = useState("all");
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
 
   const { data: employees = [] } = useQuery(employeesQuery);
   const { data: products = [] } = useQuery(productsQuery);
