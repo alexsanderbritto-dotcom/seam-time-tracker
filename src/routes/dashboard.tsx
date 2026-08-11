@@ -401,59 +401,107 @@ function DashboardPage() {
               <p className="text-sm text-muted-foreground">Nenhum produto cadastrado.</p>
             ) : (
               products.map((p) => {
-                const { pct, done, perOperation } = productCompletion(p, operations, allEntries);
+                const { pct, done, perOperation } = productCompletion(
+                  p,
+                  visibleOperations,
+                  allEntries,
+                );
+                const isOpen = !!expanded[p.id];
                 return (
                   <div key={p.id} className="rounded-md border border-border p-4">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p className="font-medium">{p.name}</p>
-                      <p className="font-mono text-xs text-muted-foreground">
-                        OP {p.op_number} · REF {p.reference}
+                    <button
+                      type="button"
+                      className="w-full select-none text-left"
+                      onClick={() => setExpanded((s) => ({ ...s, [p.id]: !s[p.id] }))}
+                      aria-expanded={isOpen}
+                    >
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="font-medium">
+                          {p.op_interna ? (
+                            <span className="font-bold">{p.op_interna} — </span>
+                          ) : null}
+                          {p.name}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-mono text-xs text-muted-foreground">
+                            OP {p.op_number} · REF {p.reference}
+                          </p>
+                          <ChevronDown
+                            className={cn(
+                              "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
+                              isOpen && "rotate-180",
+                            )}
+                          />
+                        </div>
+                      </div>
+                      <Progress value={Math.min(pct, 100)} className="my-3" />
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">{pct.toFixed(0)}%</span>{" "}
+                        concluído · meta de {p.total_quantity} peças por operação
+                        {done ? " · finalizado" : ""}
                       </p>
-                    </div>
-                    <Progress value={Math.min(pct, 100)} className="my-3" />
-                    <p className="text-sm text-muted-foreground">
-                      <span className="font-medium text-foreground">{pct.toFixed(0)}%</span>{" "}
-                      concluído · meta de {p.total_quantity} peças por operação
-                      {done ? " · finalizado" : ""}
-                    </p>
+                    </button>
 
-                    {perOperation.length === 0 ? (
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        Nenhuma operação cadastrada para este produto.
-                      </p>
-                    ) : (
-                      <ul className="mt-3 space-y-1.5">
-                        {perOperation.map((op) => (
-                          <li key={op.operationId} className="flex items-center gap-2 text-xs">
-                            <span
-                              className={
-                                op.done
-                                  ? "h-2 w-2 shrink-0 rounded-full bg-primary"
-                                  : "h-2 w-2 shrink-0 rounded-full bg-muted-foreground/40"
-                              }
-                            />
-                            <span className="min-w-0 flex-1 truncate">{op.name}</span>
-                            <span className="tabular-nums text-muted-foreground">
-                              {op.produced}/{op.target}
-                            </span>
-                            <span
-                              className={
-                                op.done
-                                  ? "w-10 text-right font-semibold tabular-nums text-foreground"
-                                  : "w-10 text-right tabular-nums text-muted-foreground"
-                              }
-                            >
-                              {op.pct.toFixed(0)}%
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                    {isOpen ? (
+                      perOperation.length === 0 ? (
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          Nenhuma operação cadastrada para este produto.
+                        </p>
+                      ) : (
+                        <ul className="mt-3 space-y-1.5 animate-collapsible-down">
+                          {perOperation.map((op) => {
+                            const excess = op.target > 0 && op.produced > op.target;
+                            return (
+                              <li
+                                key={op.operationId}
+                                className={cn(
+                                  "flex items-center gap-2 rounded px-1 py-0.5 text-xs",
+                                  excess && "bg-destructive/10 text-destructive",
+                                )}
+                              >
+                                <span
+                                  className={cn(
+                                    "h-2 w-2 shrink-0 rounded-full",
+                                    excess
+                                      ? "bg-destructive"
+                                      : op.done
+                                        ? "bg-primary"
+                                        : "bg-muted-foreground/40",
+                                  )}
+                                />
+                                <span className="min-w-0 flex-1 truncate">{op.name}</span>
+                                <span
+                                  className={cn(
+                                    "tabular-nums",
+                                    excess ? "font-semibold" : "text-muted-foreground",
+                                  )}
+                                >
+                                  {op.produced}/{op.target}
+                                </span>
+                                <span
+                                  className={cn(
+                                    "w-10 text-right tabular-nums",
+                                    excess
+                                      ? "font-semibold"
+                                      : op.done
+                                        ? "font-semibold text-foreground"
+                                        : "text-muted-foreground",
+                                  )}
+                                >
+                                  {op.pct.toFixed(0)}%
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )
+                    ) : null}
                   </div>
                 );
               })
             )}
           </CardContent>
+
         </Card>
 
         <Card>
