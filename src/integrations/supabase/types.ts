@@ -109,6 +109,41 @@ export type Database = {
         }
         Relationships: []
       }
+      esteira_producao: {
+        Row: {
+          created_at: string
+          data_adicionado: string
+          id: string
+          produto_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_adicionado?: string
+          id?: string
+          produto_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_adicionado?: string
+          id?: string
+          produto_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "esteira_producao_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marcadores: {
         Row: {
           cargo: string
@@ -248,6 +283,7 @@ export type Database = {
           name: string
           nf_number: string | null
           nf_out_number: string | null
+          op_interna: string | null
           op_number: string
           photo_url: string | null
           pilot_photos: string[]
@@ -268,6 +304,7 @@ export type Database = {
           name: string
           nf_number?: string | null
           nf_out_number?: string | null
+          op_interna?: string | null
           op_number: string
           photo_url?: string | null
           pilot_photos?: string[]
@@ -288,6 +325,7 @@ export type Database = {
           name?: string
           nf_number?: string | null
           nf_out_number?: string | null
+          op_interna?: string | null
           op_number?: string
           photo_url?: string | null
           pilot_photos?: string[]

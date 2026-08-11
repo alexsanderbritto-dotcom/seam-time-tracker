@@ -19,6 +19,7 @@ import { clearSession, useMarcadorSession } from "@/lib/marcador-session";
 const nav = [
   { to: "/marcacao-producao", label: "Marcação de Produção", icon: ClipboardList, adminOnly: false },
   { to: "/produtos", label: "Produtos", icon: Package, adminOnly: true },
+  { to: "/esteira", label: "Esteira de Produção", icon: Factory, adminOnly: true },
   { to: "/operacoes", label: "Operações", icon: Scissors, adminOnly: true },
   { to: "/colaboradores", label: "Colaboradores", icon: Users, adminOnly: true },
   { to: "/marcadores", label: "Marcadores", icon: UserCheck, adminOnly: true },
