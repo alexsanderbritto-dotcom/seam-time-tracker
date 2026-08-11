@@ -25,7 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { ProductPhotoCell, PilotGallery } from "@/components/ProductPhoto";
+import { ProductPhotoCell, PilotGallery, PilotPhotoCell } from "@/components/ProductPhoto";
 import {
   brl,
   catalogOperationsQuery,
@@ -342,7 +342,7 @@ function ProdutosPage() {
               <TableBody>
                 {products.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={14} className="py-10 text-center text-muted-foreground">
                       Nenhum produto cadastrado ainda.
                     </TableCell>
                   </TableRow>
@@ -352,6 +352,9 @@ function ProdutosPage() {
                       <TableRow key={p.id}>
                         <TableCell>
                           <ProductPhotoCell path={p.photo_url} title={p.name} />
+                        </TableCell>
+                        <TableCell>
+                          <PilotPhotoCell paths={p.pilot_photos ?? []} title={p.name} />
                         </TableCell>
                         <TableCell className="font-medium">{p.name}</TableCell>
                         <TableCell className="font-mono text-xs">{p.reference}</TableCell>
