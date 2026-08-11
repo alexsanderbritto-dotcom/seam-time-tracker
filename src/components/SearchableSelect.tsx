@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +12,16 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-export type SearchableOption = { value: string; label: string };
+export type SearchableOption = {
+  value: string;
+  label: string;
+  /** extra text used for matching (ex: OP interna) */
+  searchText?: string;
+  /** custom rendering inside the list */
+  node?: ReactNode;
+  /** custom rendering in the trigger when selected */
+  triggerNode?: ReactNode;
+};
 
 export function SearchableSelect({
   options,
