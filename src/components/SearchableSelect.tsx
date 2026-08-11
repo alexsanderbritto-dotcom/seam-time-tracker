@@ -101,7 +101,7 @@ export function SearchableSelect({
                         value === o.value ? "opacity-100" : "opacity-0",
                       )}
                     />
-                    <span className="truncate">{o.label}</span>
+                    <span className="min-w-0 flex-1 truncate">{o.node ?? o.label}</span>
                   </CommandItem>
                 ))}
               </CommandGroup>
