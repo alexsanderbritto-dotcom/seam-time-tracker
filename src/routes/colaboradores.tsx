@@ -55,7 +55,7 @@ function ColaboradoresPage() {
       toast.error("Informe o nome do colaborador.");
       return;
     }
-    const { error } = await supabase
+    const { error } = await db
       .from("employees")
       .insert({ name: name.trim(), role: role.trim() || null });
     if (error) {

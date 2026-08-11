@@ -100,7 +100,7 @@ function FaturamentoPage() {
   const save = async () => {
     if (!editing) return;
     setSaving(true);
-    const { error } = await supabase
+    const { error } = await db
       .from("products")
       .update({
         delivery_date: form.delivery || null,

@@ -199,7 +199,7 @@ function ProdutosPage() {
       (o) => o.catalog_operation_id && !keep.has(o.catalog_operation_id) && !usedOpIds.has(o.id),
     );
     if (toRemove.length > 0) {
-      await supabase
+      await db
         .from("operations")
         .delete()
         .in("id", toRemove.map((o) => o.id));

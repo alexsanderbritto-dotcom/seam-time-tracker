@@ -31,7 +31,7 @@ export type EsteiraItem = {
 export const esteiraQuery = {
   queryKey: ["esteira_producao"],
   queryFn: async (): Promise<EsteiraItem[]> => {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("esteira_producao")
       .select("id,produto_id,data_adicionado,status")
       .eq("status", "ativo")
@@ -103,7 +103,7 @@ export type OvertimeSlot = {
 export const overtimeSlotsQuery = {
   queryKey: ["overtime_slots"],
   queryFn: async (): Promise<OvertimeSlot[]> => {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("overtime_slots")
       .select("id,start_time,end_time")
       .order("start_time", { ascending: true });
@@ -152,7 +152,7 @@ export const todayISO = () => {
 export const productsQuery = {
   queryKey: ["products"],
   queryFn: async (): Promise<Product[]> => {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("products")
       .select("*")
       .order("created_at", { ascending: false });
@@ -183,7 +183,7 @@ export const clientsQuery = {
 export const sectorsQuery = {
   queryKey: ["sectors"],
   queryFn: async (): Promise<Sector[]> => {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("sectors")
       .select("id,name")
       .order("created_at", { ascending: true });
@@ -195,7 +195,7 @@ export const sectorsQuery = {
 export const catalogOperationsQuery = {
   queryKey: ["catalog_operations"],
   queryFn: async (): Promise<CatalogOperation[]> => {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("catalog_operations")
       .select("id,sector_id,name,expected_per_hour,is_last_operation")
       .order("created_at", { ascending: true });
@@ -207,7 +207,7 @@ export const catalogOperationsQuery = {
 export const operationsQuery = {
   queryKey: ["operations"],
   queryFn: async (): Promise<Operation[]> => {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("operations")
       .select("*")
       .order("created_at", { ascending: true });

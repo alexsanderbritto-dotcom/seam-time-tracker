@@ -68,7 +68,7 @@ function HorariosPage() {
 
   async function save() {
     if (!config) return;
-    const { error } = await supabase
+    const { error } = await db
       .from("schedule_config")
       .update({
         start_time: start,
@@ -223,7 +223,7 @@ function OvertimeCard() {
       toast.error("Informe um intervalo válido de hora extra.");
       return;
     }
-    const { error } = await supabase
+    const { error } = await db
       .from("overtime_slots")
       .insert({ start_time: newStart, end_time: newEnd });
     if (error) {
