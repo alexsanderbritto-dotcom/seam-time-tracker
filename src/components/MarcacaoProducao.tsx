@@ -61,6 +61,7 @@ export function MarcacaoProducao({
   const { data: operations = [] } = useQuery(operationsQuery);
   const { data: config } = useQuery(scheduleQuery);
   const { data: entries = [] } = useQuery(entriesQuery(date));
+  const { data: esteira = [] } = useQuery(esteiraQuery);
 
   const slots = useMemo(() => buildSlots(config), [config]);
   const productOps = useMemo(
@@ -76,11 +77,44 @@ export function MarcacaoProducao({
     [employees],
   );
 
+  const productOptions = useMemo(() => {
+    const ids = new Set(esteira.map((i) => i.produto_id));
+    return products
+      .filter((p) => ids.has(p.id))
+      .map((p) => {
+        const op = p.op_interna?.trim();
+        return {
+          value: p.id,
+          label: p.name,
+          searchText: op ?? "",
+          node: (
+            <span className="flex min-w-0 items-baseline gap-2">
+              <span className="text-base font-bold tabular-nums md:text-sm">
+                {op ? `OP ${op}` : "OP —"}
+              </span>
+              <span className="truncate text-sm text-muted-foreground md:text-xs">{p.name}</span>
+            </span>
+          ),
+          triggerNode: (
+            <span className="flex min-w-0 items-baseline gap-2">
+              <span className="font-bold tabular-nums">{op ? `OP ${op}` : "OP —"}</span>
+              <span className="truncate text-sm text-muted-foreground">{p.name}</span>
+            </span>
+          ),
+        };
+      });
+  }, [products, esteira]);
+
   const filteredOps = useMemo(() => {
     const term = opSearch.trim().toLowerCase();
-    if (!term) return productOps;
-    return productOps.filter((op: Operation) => op.name.toLowerCase().includes(term));
-  }, [productOps, opSearch]);
+    const chosen = productOps.filter((op: Operation) => Number(selected[op.id]) > 0);
+    if (!term) return chosen;
+    const matches = productOps.filter(
+      (op: Operation) =>
+        op.name.toLowerCase().includes(term) && !chosen.some((c) => c.id === op.id),
+    );
+    return [...chosen, ...matches];
+  }, [productOps, opSearch, selected]);
 
   const producedByOperation = useMemo(() => {
     const map: Record<string, number> = {};
