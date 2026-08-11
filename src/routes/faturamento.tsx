@@ -81,6 +81,9 @@ function FaturamentoPage() {
     (sum, p) => sum + p.total_quantity * Number(p.unit_value ?? 0),
     0,
   );
+  const toInvoiceValue = filtered
+    .filter((p) => !p.delivery_date)
+    .reduce((sum, p) => sum + p.total_quantity * Number(p.unit_value ?? 0), 0);
   const invoicedValue = filtered
     .filter((p) => !!p.delivery_date)
     .reduce((sum, p) => sum + p.total_quantity * Number(p.unit_value ?? 0), 0);
@@ -131,6 +134,16 @@ function FaturamentoPage() {
               </p>
               <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
                 Valor total {hasFilters ? "(filtrado)" : "(todos os produtos)"}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-amber-500">
+            <CardContent className="p-5">
+              <p className="text-3xl font-semibold tracking-tight text-foreground">
+                {brl(toInvoiceValue)}
+              </p>
+              <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
+                Produtos a faturar (sem data efetiva de entrega)
               </p>
             </CardContent>
           </Card>
