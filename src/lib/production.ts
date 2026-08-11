@@ -91,9 +91,29 @@ export type ProductionEntry = {
   slot_end: string;
   quantity: number;
   entry_date: string;
+  is_overtime: boolean;
 };
 
-export type Slot = { start: string; end: string };
+export type OvertimeSlot = {
+  id: string;
+  start_time: string;
+  end_time: string;
+};
+
+export const overtimeSlotsQuery = {
+  queryKey: ["overtime_slots"],
+  queryFn: async (): Promise<OvertimeSlot[]> => {
+    const { data, error } = await supabase
+      .from("overtime_slots")
+      .select("id,start_time,end_time")
+      .order("start_time", { ascending: true });
+    if (error) throw error;
+    return data as OvertimeSlot[];
+  },
+};
+
+export type Slot = { start: string; end: string; overtime?: boolean };
+
 
 export const toMinutes = (t: string) => {
   const [h, m] = t.split(":");
