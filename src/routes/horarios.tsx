@@ -9,7 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { buildSlots, fmt, scheduleQuery, type Break } from "@/lib/production";
+import {
+  buildSlots,
+  fmt,
+  overtimeSlotsQuery,
+  scheduleQuery,
+  type Break,
+} from "@/lib/production";
 import { Plus, Save, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/horarios")({
