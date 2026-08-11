@@ -128,6 +128,7 @@ export function MarcacaoProducao({
 
   return (
     <AppLayout
+      requireAdmin={false}
       title="Marcação de Produção"
       subtitle="Registre o que cada colaborador produziu em cada janela de horário."
     >
