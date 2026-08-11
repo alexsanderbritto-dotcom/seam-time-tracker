@@ -196,7 +196,10 @@ function HorariosPage() {
             </div>
           </CardContent>
         </Card>
+
+        <OvertimeCard />
       </div>
+
     </AppLayout>
   );
 }
