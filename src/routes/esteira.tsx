@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/dialog";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { ProductPhotoCell, PilotPhotoCell } from "@/components/ProductPhoto";
-import { supabase } from "@/integrations/supabase/client";
+import { addToEsteira, removeFromEsteira } from "@/lib/esteira.functions";
+import { useMarcadorSession } from "@/lib/marcador-session";
 import { esteiraQuery, productsQuery, STATUS_LABEL, type Product } from "@/lib/production";
 import { Plus, Trash2 } from "lucide-react";
 
