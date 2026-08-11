@@ -478,10 +478,10 @@ function DashboardPage() {
                           <TableHead className="sticky left-0 bg-card">Operação</TableHead>
                           {slots.map((s) => (
                             <TableHead
-                              key={s.start}
+                              key={slotKey(s)}
                               className="whitespace-nowrap text-center font-mono text-xs"
                             >
-                              {s.start}–{s.end}
+                              <SlotHead s={s} />
                             </TableHead>
                           ))}
                           <TableHead className="text-right">Total prod.</TableHead>
@@ -493,7 +493,8 @@ function DashboardPage() {
                           <TableRow key={r.opId}>
                             <TableCell className="sticky left-0 bg-card">{r.name}</TableCell>
                             {r.perSlot.map((c, i) => (
-                              <TableCell key={slots[i]!.start} className="text-center text-xs">
+                              <TableCell key={slotKey(slots[i]!)} className="text-center text-xs">
+
                                 {!c.active ? (
                                   <span className="text-muted-foreground">–</span>
                                 ) : (
