@@ -51,7 +51,9 @@ export function SearchableSelect({
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return options;
-    return options.filter((o) => o.label.toLowerCase().includes(term));
+    return options.filter((o) =>
+      `${o.label} ${o.searchText ?? ""}`.toLowerCase().includes(term),
+    );
   }, [options, search]);
 
   return (
