@@ -213,12 +213,37 @@ export type Database = {
           },
         ]
       }
+      overtime_slots: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       production_entries: {
         Row: {
           created_at: string
           employee_id: string
           entry_date: string
           id: string
+          is_overtime: boolean
           operation_id: string
           product_id: string
           quantity: number
@@ -230,6 +255,7 @@ export type Database = {
           employee_id: string
           entry_date?: string
           id?: string
+          is_overtime?: boolean
           operation_id: string
           product_id: string
           quantity?: number
@@ -241,6 +267,7 @@ export type Database = {
           employee_id?: string
           entry_date?: string
           id?: string
+          is_overtime?: boolean
           operation_id?: string
           product_id?: string
           quantity?: number
