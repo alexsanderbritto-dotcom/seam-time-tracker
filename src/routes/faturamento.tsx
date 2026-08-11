@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db";
 import { brl, productsQuery, type Product } from "@/lib/production";
 
 export const Route = createFileRoute("/faturamento")({
@@ -100,7 +100,7 @@ function FaturamentoPage() {
   const save = async () => {
     if (!editing) return;
     setSaving(true);
-    const { error } = await supabase
+    const { error } = await db
       .from("products")
       .update({
         delivery_date: form.delivery || null,

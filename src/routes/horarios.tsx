@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db";
 import {
   buildSlots,
   fmt,
@@ -68,7 +68,7 @@ function HorariosPage() {
 
   async function save() {
     if (!config) return;
-    const { error } = await supabase
+    const { error } = await db
       .from("schedule_config")
       .update({
         start_time: start,
@@ -223,7 +223,7 @@ function OvertimeCard() {
       toast.error("Informe um intervalo válido de hora extra.");
       return;
     }
-    const { error } = await supabase
+    const { error } = await db
       .from("overtime_slots")
       .insert({ start_time: newStart, end_time: newEnd });
     if (error) {
@@ -235,7 +235,7 @@ function OvertimeCard() {
   }
 
   async function update(id: string, patch: { start_time?: string; end_time?: string }) {
-    const { error } = await supabase.from("overtime_slots").update(patch).eq("id", id);
+    const { error } = await db.from("overtime_slots").update(patch).eq("id", id);
     if (error) {
       toast.error(error.message);
       return;
@@ -244,7 +244,7 @@ function OvertimeCard() {
   }
 
   async function remove(id: string) {
-    const { error } = await supabase.from("overtime_slots").delete().eq("id", id);
+    const { error } = await db.from("overtime_slots").delete().eq("id", id);
     if (error) {
       toast.error(error.message);
       return;

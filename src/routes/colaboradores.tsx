@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db";
 import { employeesQuery } from "@/lib/production";
 import { Plus, Trash2, Search } from "lucide-react";
 
@@ -55,7 +55,7 @@ function ColaboradoresPage() {
       toast.error("Informe o nome do colaborador.");
       return;
     }
-    const { error } = await supabase
+    const { error } = await db
       .from("employees")
       .insert({ name: name.trim(), role: role.trim() || null });
     if (error) {
@@ -69,7 +69,7 @@ function ColaboradoresPage() {
   }
 
   async function toggle(id: string, active: boolean) {
-    const { error } = await supabase.from("employees").update({ active }).eq("id", id);
+    const { error } = await db.from("employees").update({ active }).eq("id", id);
     if (error) {
       toast.error(error.message);
       return;
@@ -78,7 +78,7 @@ function ColaboradoresPage() {
   }
 
   async function remove(id: string) {
-    const { error } = await supabase.from("employees").delete().eq("id", id);
+    const { error } = await db.from("employees").delete().eq("id", id);
     if (error) {
       toast.error(error.message);
       return;

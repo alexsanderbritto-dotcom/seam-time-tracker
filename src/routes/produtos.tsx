@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db";
 import { ProductPhotoCell, PilotGallery, PilotPhotoCell } from "@/components/ProductPhoto";
 import {
   brl,
@@ -158,7 +158,7 @@ function ProdutosPage() {
     for (const f of pilotFiles) {
       const ext = f.name.split(".").pop() ?? "jpg";
       const path = `piloto/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("product-files").upload(path, f);
+      const { error } = await db.storage.from("product-files").upload(path, f);
       if (error) {
         toast.error("Erro ao enviar foto da peça piloto: " + error.message);
         continue;
@@ -172,7 +172,7 @@ function ProdutosPage() {
     const name = value.trim();
     if (!name) return null;
     if (!list.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
-      await supabase.from(table).insert({ name });
+      await db.from(table).insert({ name });
       qc.invalidateQueries({ queryKey: [table] });
     }
     return name;
@@ -182,7 +182,7 @@ function ProdutosPage() {
     if (!file) return null;
     const ext = file.name.split(".").pop() ?? "bin";
     const path = `fichas/${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from("product-files").upload(path, file);
+    const { error } = await db.storage.from("product-files").upload(path, file);
     if (error) {
       toast.error("Erro ao enviar arquivo: " + error.message);
       return null;
@@ -199,7 +199,7 @@ function ProdutosPage() {
       (o) => o.catalog_operation_id && !keep.has(o.catalog_operation_id) && !usedOpIds.has(o.id),
     );
     if (toRemove.length > 0) {
-      await supabase
+      await db
         .from("operations")
         .delete()
         .in("id", toRemove.map((o) => o.id));
@@ -218,7 +218,7 @@ function ProdutosPage() {
           catalog_operation_id: id,
         };
       });
-    if (toAdd.length > 0) await supabase.from("operations").insert(toAdd);
+    if (toAdd.length > 0) await db.from("operations").insert(toAdd);
   }
 
   async function save() {
@@ -250,12 +250,12 @@ function ProdutosPage() {
 
       let productId = editing?.id;
       if (editing) {
-        const { error } = await supabase.from("products").update(payload).eq("id", editing.id);
+        const { error } = await db.from("products").update(payload).eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.from("products").insert(payload).select().single();
+        const { data, error } = await db.from("products").insert(payload).select().single();
         if (error) throw error;
-        productId = data.id;
+        productId = (data as { id: string }).id;
       }
 
       if (productId) await syncOperations(productId);
@@ -277,7 +277,7 @@ function ProdutosPage() {
   }
 
   async function removeProduct(id: string) {
-    const { error } = await supabase.from("products").delete().eq("id", id);
+    const { error } = await db.from("products").delete().eq("id", id);
     if (error) {
       toast.error(error.message);
       return;
