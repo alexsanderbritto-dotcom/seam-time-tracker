@@ -148,9 +148,15 @@ export function MarcacaoProducao({
   }
 
   async function save() {
-    const slot = slots[Number(slotIdx)];
+    const ot = overtimeSlots.find((o) => o.id === overtimeId);
+    const normal = slots[Number(slotIdx)];
+    const slot = ot
+      ? { start: fmt(ot.start_time), end: fmt(ot.end_time), overtime: true }
+      : normal
+        ? { ...normal, overtime: false }
+        : null;
     if (!employeeId || !productId || !slot) {
-      toast.error("Preencha colaborador, produto e horário.");
+      toast.error("Preencha colaborador, produto e horário (normal ou hora extra).");
       return;
     }
     const rows = Object.entries(selected)
@@ -161,9 +167,11 @@ export function MarcacaoProducao({
         operation_id,
         slot_start: slot.start,
         slot_end: slot.end,
+        is_overtime: slot.overtime,
         quantity: Number(v),
         entry_date: date,
       }));
+
 
     if (rows.length === 0) {
       toast.error("Informe a quantidade de ao menos uma operação.");
