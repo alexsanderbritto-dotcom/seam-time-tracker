@@ -401,7 +401,7 @@ export function MarcacaoProducao({
                 </CardTitle>
               </CardHeader>
             </CollapsibleTrigger>
-            <CollapsibleContent className="overflow-hidden transition-all data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-up">
+            <CollapsibleContent className="overflow-hidden transition-all data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <Table>
