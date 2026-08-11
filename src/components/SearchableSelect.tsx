@@ -52,7 +52,7 @@ export function SearchableSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between font-normal"
+          className="h-11 w-full justify-between px-3 text-base font-normal md:h-10 md:text-sm"
           disabled={disabled}
         >
           <span className="truncate">{selected ? selected.label : placeholder}</span>
@@ -66,7 +66,7 @@ export function SearchableSelect({
             value={search}
             onValueChange={setSearch}
           />
-          <CommandList>
+          <CommandList className="max-h-[45vh]">
             {filtered.length === 0 ? (
               <CommandEmpty>{emptyMessage}</CommandEmpty>
             ) : (
@@ -75,6 +75,7 @@ export function SearchableSelect({
                   <CommandItem
                     key={o.value}
                     value={o.value}
+                    className="min-h-11 py-2.5 text-base md:min-h-0 md:py-1.5 md:text-sm"
                     onSelect={() => {
                       onChange(o.value);
                       setSearch("");

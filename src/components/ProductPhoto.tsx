@@ -35,7 +35,7 @@ export function ProductPhotoCell({ path, title }: { path: string | null; title: 
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border border-border bg-muted"
+        className="group relative flex h-14 w-14 items-center justify-center md:h-10 md:w-10 justify-center overflow-hidden rounded-md border border-border bg-muted"
         aria-label={`Visualizar ficha de ${title}`}
       >
         {url && isImage(path) ? (
@@ -196,7 +196,7 @@ export function PilotPhotoCell({ paths, title }: { paths: string[]; title: strin
   if (count === 0) {
     return (
       <div
-        className="flex h-10 w-10 items-center justify-center rounded-md border border-dashed border-border bg-muted/40"
+        className="flex h-14 w-14 items-center justify-center rounded-md border border-dashed md:h-10 md:w-10 border-border bg-muted/40"
         aria-label="Sem foto de peça piloto"
         title="Sem foto de peça piloto"
       >
@@ -210,7 +210,7 @@ export function PilotPhotoCell({ paths, title }: { paths: string[]; title: strin
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border border-border bg-muted"
+        className="group relative flex h-14 w-14 items-center justify-center md:h-10 md:w-10 justify-center overflow-hidden rounded-md border border-border bg-muted"
         aria-label={`Visualizar fotos da peça piloto de ${title}`}
       >
         {thumbUrl ? (

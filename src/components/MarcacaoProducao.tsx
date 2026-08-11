@@ -160,6 +160,13 @@ export function MarcacaoProducao({
 
   const dayEntries = entries;
 
+  function keepVisible(e: React.FocusEvent<HTMLElement>) {
+    const el = e.currentTarget;
+    window.setTimeout(() => {
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 250);
+  }
+
   return (
     <AppLayout
       requireAdmin={false}
@@ -176,21 +183,27 @@ export function MarcacaoProducao({
         </Button>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+      <div className="grid gap-4 md:gap-5 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Nova marcação</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+          <CardContent className="space-y-4 pb-0 md:pb-6">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Data</Label>
-                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                <Input
+                  type="date"
+                  className="h-11 text-base md:h-10 md:text-sm"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  onFocus={keepVisible}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Horário</Label>
                 <Select value={slotIdx} onValueChange={setSlotIdx}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11 text-base md:h-10 md:text-sm">
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
@@ -226,7 +239,7 @@ export function MarcacaoProducao({
                   setOpSearch("");
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 text-base md:h-10 md:text-sm">
                   <SelectValue placeholder="Selecione o produto" />
                 </SelectTrigger>
                 <SelectContent>
@@ -262,7 +275,9 @@ export function MarcacaoProducao({
                           if (first) opInputRefs.current.get(first.id)?.focus();
                         }
                       }}
-                      className="h-9 pl-9"
+                      onFocus={keepVisible}
+                      inputMode="search"
+                      className="h-11 pl-9 text-base md:h-10 md:text-sm"
                     />
                   </div>
                   {filteredOps.length === 0 ? (
@@ -278,7 +293,7 @@ export function MarcacaoProducao({
                           <div
                             key={op.id}
                             className={cn(
-                              "flex items-center gap-3 px-3 py-2",
+                              "flex items-center gap-3 px-3 py-3 md:py-2",
                               selected[op.id] && Number(selected[op.id]) > 0 && "bg-muted/40",
                             )}
                           >
@@ -293,7 +308,8 @@ export function MarcacaoProducao({
                               type="number"
                               min={0}
                               inputMode="numeric"
-                              className="h-9 w-24"
+                              onFocus={keepVisible}
+                              className="h-11 w-24 text-base md:h-9 md:text-sm"
                               placeholder="Qtd"
                               value={selected[op.id] ?? ""}
                               onChange={(e) =>
@@ -322,10 +338,12 @@ export function MarcacaoProducao({
               )}
             </div>
 
-            <Button className="w-full" onClick={save} disabled={saving}>
-              <Check className="mr-2 h-4 w-4" />
-              {saving ? "Salvando..." : "Salvar marcação"}
-            </Button>
+            <div className="sticky bottom-0 -mx-6 border-t border-border bg-card px-6 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 md:static md:m-0 md:border-0 md:bg-transparent md:p-0">
+              <Button className="h-12 w-full text-base md:h-10 md:text-sm" onClick={save} disabled={saving}>
+                <Check className="mr-2 h-4 w-4" />
+                {saving ? "Salvando..." : "Salvar marcação"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
