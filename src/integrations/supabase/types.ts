@@ -111,6 +111,7 @@ export type Database = {
       }
       marcadores: {
         Row: {
+          cargo: string
           created_at: string
           id: string
           nome: string
@@ -118,6 +119,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cargo?: string
           created_at?: string
           id?: string
           nome: string
@@ -125,6 +127,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cargo?: string
           created_at?: string
           id?: string
           nome?: string
