@@ -28,11 +28,13 @@ import {
   entriesQuery,
   fmt,
   operationsQuery,
+  overtimeSlotsQuery,
   productCompletion,
   productsQuery,
   scheduleQuery,
   sectorsQuery,
   todayISO,
+  type Slot,
 } from "@/lib/production";
 
 export const Route = createFileRoute("/dashboard")({
@@ -68,7 +70,39 @@ function DashboardPage() {
   const { data: sectors = [] } = useQuery(sectorsQuery);
   const { data: catalogOps = [] } = useQuery(catalogOperationsQuery);
 
-  const slots = useMemo(() => buildSlots(config), [config]);
+  const { data: overtimeSlots = [] } = useQuery(overtimeSlotsQuery);
+
+  const normalSlots = useMemo(() => buildSlots(config), [config]);
+
+  // janelas de hora extra só aparecem quando houve marcação com quantidade
+  const slots = useMemo<Slot[]>(() => {
+    const usedKeys = new Set(
+      dayEntries
+        .filter((e) => e.is_overtime && e.quantity > 0)
+        .map((e) => fmt(e.slot_start)),
+    );
+    const extras = overtimeSlots
+      .filter((o) => usedKeys.has(fmt(o.start_time)))
+      .map((o) => ({ start: fmt(o.start_time), end: fmt(o.end_time), overtime: true }));
+    return [
+      ...normalSlots.map((s) => ({ ...s, overtime: false })),
+      ...extras.sort((a, b) => a.start.localeCompare(b.start)),
+    ];
+  }, [normalSlots, overtimeSlots, dayEntries]);
+
+  const inSlot = (e: { slot_start: string; is_overtime: boolean }, s: Slot) =>
+    fmt(e.slot_start) === fmt(s.start) && Boolean(e.is_overtime) === Boolean(s.overtime);
+
+  const slotKey = (s: Slot) => `${s.start}-${s.overtime ? "x" : "n"}`;
+
+  const SlotHead = ({ s }: { s: Slot }) => (
+    <>
+      {s.start}–{s.end}
+      {s.overtime ? (
+        <span className="ml-1 text-[9px] font-sans text-muted-foreground">(extra)</span>
+      ) : null}
+    </>
+  );
 
   // operação do produto -> setor, apenas quando é a última operação do setor
   const opSector = useMemo(() => {
@@ -83,13 +117,11 @@ function DashboardPage() {
     return map;
   }, [operations, catalogOps]);
 
-  const sectorSlotTotal = (sectorId: string, slotStart: string) =>
+  const sectorSlotTotal = (sectorId: string, slot: Slot) =>
     dayEntries
-      .filter(
-        (e) =>
-          opSector.get(e.operation_id) === sectorId && fmt(e.slot_start) === fmt(slotStart),
-      )
+      .filter((e) => opSector.get(e.operation_id) === sectorId && inSlot(e, slot))
       .reduce((s, e) => s + e.quantity, 0);
+
 
 
   const filtered = useMemo(
@@ -131,8 +163,9 @@ function DashboardPage() {
         const rows = opIds.map((opId) => {
           const perSlot = slots.map((s) => {
             const worked = empEntries.filter(
-              (e) => e.operation_id === opId && fmt(e.slot_start) === fmt(s.start),
+              (e) => e.operation_id === opId && inSlot(e, s),
             );
+
             const produced = worked.reduce((a, e) => a + e.quantity, 0);
             const eph = expectedPerHour.get(opId);
             const estimated = worked.length > 0 && eph != null ? eph * slotHours : null;
@@ -161,8 +194,8 @@ function DashboardPage() {
     return "text-destructive font-medium";
   };
 
-  const cell = (empId: string, slotStart: string) =>
-    filtered.filter((e) => e.employee_id === empId && fmt(e.slot_start) === fmt(slotStart));
+  const cell = (empId: string, s: Slot) =>
+    filtered.filter((e) => e.employee_id === empId && inSlot(e, s));
 
   return (
     <AppLayout title="Dashboard" subtitle="Acompanhamento da produção.">
@@ -228,10 +261,11 @@ function DashboardPage() {
                   <TableRow>
                     <TableHead className="sticky left-0 bg-card">Colaborador</TableHead>
                     {slots.map((s) => (
-                      <TableHead key={s.start} className="whitespace-nowrap text-center font-mono text-xs">
-                        {s.start}–{s.end}
+                      <TableHead key={slotKey(s)} className="whitespace-nowrap text-center font-mono text-xs">
+                        <SlotHead s={s} />
                       </TableHead>
                     ))}
+
                     <TableHead className="text-right">Total</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -256,9 +290,10 @@ function DashboardPage() {
                             {emp.name}
                           </TableCell>
                           {slots.map((s) => {
-                            const items = cell(emp.id, s.start);
+                            const items = cell(emp.id, s);
                             return (
-                              <TableCell key={s.start} className="align-top text-center">
+                              <TableCell key={slotKey(s)} className="align-top text-center">
+
                                 {items.length === 0 ? (
                                   <span className="text-muted-foreground">–</span>
                                 ) : (
@@ -307,10 +342,10 @@ function DashboardPage() {
                     <TableHead className="sticky left-0 bg-card">Setor</TableHead>
                     {slots.map((s) => (
                       <TableHead
-                        key={s.start}
+                        key={slotKey(s)}
                         className="whitespace-nowrap text-center font-mono text-xs"
                       >
-                        {s.start}–{s.end}
+                        <SlotHead s={s} />
                       </TableHead>
                     ))}
                     <TableHead className="text-right">Total</TableHead>
@@ -328,7 +363,7 @@ function DashboardPage() {
                     </TableRow>
                   ) : (
                     sectors.map((sec) => {
-                      const row = slots.map((s) => sectorSlotTotal(sec.id, s.start));
+                      const row = slots.map((s) => sectorSlotTotal(sec.id, s));
                       const totalRow = row.reduce((a, b) => a + b, 0);
                       return (
                         <TableRow key={sec.id}>
@@ -336,7 +371,8 @@ function DashboardPage() {
                             {sec.name}
                           </TableCell>
                           {row.map((v, i) => (
-                            <TableCell key={slots[i]!.start} className="text-center tabular-nums">
+                            <TableCell key={slotKey(slots[i]!)} className="text-center tabular-nums">
+
                               {v > 0 ? v : <span className="text-muted-foreground">–</span>}
                             </TableCell>
                           ))}
@@ -442,10 +478,10 @@ function DashboardPage() {
                           <TableHead className="sticky left-0 bg-card">Operação</TableHead>
                           {slots.map((s) => (
                             <TableHead
-                              key={s.start}
+                              key={slotKey(s)}
                               className="whitespace-nowrap text-center font-mono text-xs"
                             >
-                              {s.start}–{s.end}
+                              <SlotHead s={s} />
                             </TableHead>
                           ))}
                           <TableHead className="text-right">Total prod.</TableHead>
@@ -457,7 +493,8 @@ function DashboardPage() {
                           <TableRow key={r.opId}>
                             <TableCell className="sticky left-0 bg-card">{r.name}</TableCell>
                             {r.perSlot.map((c, i) => (
-                              <TableCell key={slots[i]!.start} className="text-center text-xs">
+                              <TableCell key={slotKey(slots[i]!)} className="text-center text-xs">
+
                                 {!c.active ? (
                                   <span className="text-muted-foreground">–</span>
                                 ) : (

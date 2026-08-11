@@ -35,6 +35,7 @@ import {
   esteiraQuery,
   fmt,
   operationsQuery,
+  overtimeSlotsQuery,
   productsQuery,
   scheduleQuery,
   todayISO,
@@ -57,6 +58,7 @@ export function MarcacaoProducao({
   const [employeeId, setEmployeeId] = useState("");
   const [productId, setProductId] = useState("");
   const [slotIdx, setSlotIdx] = useState("");
+  const [overtimeId, setOvertimeId] = useState("");
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [opSearch, setOpSearch] = useState("");
@@ -69,6 +71,7 @@ export function MarcacaoProducao({
   const { data: config } = useQuery(scheduleQuery);
   const { data: entries = [] } = useQuery(entriesQuery(date));
   const { data: esteira = [] } = useQuery(esteiraQuery);
+  const { data: overtimeSlots = [] } = useQuery(overtimeSlotsQuery);
 
   const slots = useMemo(() => buildSlots(config), [config]);
   const productOps = useMemo(
@@ -145,9 +148,15 @@ export function MarcacaoProducao({
   }
 
   async function save() {
-    const slot = slots[Number(slotIdx)];
+    const ot = overtimeSlots.find((o) => o.id === overtimeId);
+    const normal = slots[Number(slotIdx)];
+    const slot = ot
+      ? { start: fmt(ot.start_time), end: fmt(ot.end_time), overtime: true }
+      : normal
+        ? { ...normal, overtime: false }
+        : null;
     if (!employeeId || !productId || !slot) {
-      toast.error("Preencha colaborador, produto e horário.");
+      toast.error("Preencha colaborador, produto e horário (normal ou hora extra).");
       return;
     }
     const rows = Object.entries(selected)
@@ -158,9 +167,11 @@ export function MarcacaoProducao({
         operation_id,
         slot_start: slot.start,
         slot_end: slot.end,
+        is_overtime: slot.overtime,
         quantity: Number(v),
         entry_date: date,
       }));
+
 
     if (rows.length === 0) {
       toast.error("Informe a quantidade de ao menos uma operação.");
@@ -243,7 +254,13 @@ export function MarcacaoProducao({
               </div>
               <div className="space-y-1.5">
                 <Label>Horário</Label>
-                <Select value={slotIdx} onValueChange={setSlotIdx}>
+                <Select
+                  value={slotIdx}
+                  onValueChange={(v) => {
+                    setSlotIdx(v);
+                    setOvertimeId("");
+                  }}
+                >
                   <SelectTrigger className="h-11 text-base md:h-10 md:text-sm">
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
@@ -257,6 +274,45 @@ export function MarcacaoProducao({
                 </Select>
               </div>
             </div>
+
+            <div className="space-y-1.5">
+              <Label>Hora extra</Label>
+              <Select
+                value={overtimeId}
+                disabled={overtimeSlots.length === 0}
+                onValueChange={(v) => {
+                  setOvertimeId(v);
+                  setSlotIdx("");
+                }}
+              >
+                <SelectTrigger className="h-11 text-base md:h-10 md:text-sm">
+                  <SelectValue
+                    placeholder={
+                      overtimeSlots.length === 0
+                        ? "Nenhum horário extra configurado"
+                        : "Selecione uma janela de hora extra"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {overtimeSlots.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {fmt(o.start_time)} às {fmt(o.end_time)} (extra)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {overtimeId ? (
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground underline"
+                  onClick={() => setOvertimeId("")}
+                >
+                  Limpar hora extra
+                </button>
+              ) : null}
+            </div>
+
 
             <div className="space-y-1.5">
               <Label>Colaborador</Label>
@@ -431,7 +487,13 @@ export function MarcacaoProducao({
                             <TableRow key={e.id}>
                               <TableCell className="whitespace-nowrap font-mono text-xs">
                                 {fmt(e.slot_start)}–{fmt(e.slot_end)}
+                                {e.is_overtime ? (
+                                  <span className="ml-1 text-[9px] text-muted-foreground">
+                                    (extra)
+                                  </span>
+                                ) : null}
                               </TableCell>
+
                               <TableCell>{emp?.name ?? "—"}</TableCell>
                               <TableCell className="text-sm text-muted-foreground">
                                 {p ? `${p.name} · OP ${p.op_number}` : "—"}
