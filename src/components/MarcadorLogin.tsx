@@ -56,8 +56,8 @@ export function MarcadorLogin({
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/30 p-5">
-      <Card className="w-full max-w-sm">
+    <main className="flex min-h-screen items-center justify-center bg-muted/30 p-4 sm:p-5">
+      <Card className="w-full max-w-sm shadow-sm">
         <CardHeader className="space-y-1">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Factory className="h-5 w-5" />
@@ -82,6 +82,9 @@ export function MarcadorLogin({
                 value={nome}
                 maxLength={60}
                 autoComplete="username"
+                inputMode="text"
+                autoCapitalize="words"
+                className="h-12 text-base"
                 onChange={(e) => setNome(e.target.value)}
               />
             </div>
@@ -93,11 +96,12 @@ export function MarcadorLogin({
                 value={senha}
                 maxLength={100}
                 autoComplete="current-password"
+                className="h-12 text-base"
                 onChange={(e) => setSenha(e.target.value)}
               />
             </div>
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="h-12 w-full text-base" disabled={loading}>
               {loading ? "Validando..." : "Entrar"}
             </Button>
           </form>
