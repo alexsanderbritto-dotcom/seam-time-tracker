@@ -7,7 +7,15 @@ import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -20,8 +28,10 @@ import {
   createMarcador,
   deleteMarcador,
   listMarcadores,
+  updateMarcadorCargo,
   updateMarcadorSenha,
 } from "@/lib/marcadores.functions";
+import { useMarcadorSession, type MarcadorCargo } from "@/lib/marcador-session";
 import { KeyRound, Trash2, UserPlus } from "lucide-react";
 
 export const Route = createFileRoute("/marcadores")({
@@ -31,12 +41,12 @@ export const Route = createFileRoute("/marcadores")({
       {
         name: "description",
         content:
-          "Cadastre os marcadores que acessam a tela de marcação de produção, com senha protegida por criptografia.",
+          "Cadastre os marcadores que acessam a tela de marcação de produção, com cargo de usuário ou admin.",
       },
       { property: "og:title", content: "Marcadores | Controle de Confecção" },
       {
         property: "og:description",
-        content: "Cadastro de marcadores com acesso à tela de marcação de produção.",
+        content: "Cadastro de marcadores com cargo e acesso à tela de marcação de produção.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -46,24 +56,29 @@ export const Route = createFileRoute("/marcadores")({
 });
 
 function MarcadoresPage() {
+  const { session, isAdmin } = useMarcadorSession();
+  const token = session?.token ?? "";
   const qc = useQueryClient();
   const list = useServerFn(listMarcadores);
   const create = useServerFn(createMarcador);
   const updateSenha = useServerFn(updateMarcadorSenha);
+  const updateCargo = useServerFn(updateMarcadorCargo);
   const remove = useServerFn(deleteMarcador);
 
   const [nome, setNome] = useState("");
   const [senha, setSenha] = useState("");
+  const [cargo, setCargo] = useState<MarcadorCargo>("usuario");
   const [resetId, setResetId] = useState<string | null>(null);
   const [novaSenha, setNovaSenha] = useState("");
 
   const { data: marcadores = [], isLoading } = useQuery({
-    queryKey: ["marcadores"],
-    queryFn: () => list(),
+    queryKey: ["marcadores", token],
+    queryFn: () => list({ data: { token } }),
+    enabled: isAdmin && token.length > 0,
   });
 
   const createMut = useMutation({
-    mutationFn: () => create({ data: { nome, senha } }),
+    mutationFn: () => create({ data: { token, nome, senha, cargo } }),
     onSuccess: (res) => {
       if (!res.ok) {
         toast.error(res.error);
@@ -72,13 +87,14 @@ function MarcadoresPage() {
       toast.success("Marcador cadastrado.");
       setNome("");
       setSenha("");
+      setCargo("usuario");
       qc.invalidateQueries({ queryKey: ["marcadores"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const resetMut = useMutation({
-    mutationFn: (id: string) => updateSenha({ data: { id, senha: novaSenha } }),
+    mutationFn: (id: string) => updateSenha({ data: { token, id, senha: novaSenha } }),
     onSuccess: (res) => {
       if (!res.ok) {
         toast.error(res.error);
@@ -91,9 +107,27 @@ function MarcadoresPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const cargoMut = useMutation({
+    mutationFn: (v: { id: string; cargo: MarcadorCargo }) =>
+      updateCargo({ data: { token, id: v.id, cargo: v.cargo } }),
+    onSuccess: (res) => {
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success("Cargo atualizado.");
+      qc.invalidateQueries({ queryKey: ["marcadores"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const deleteMut = useMutation({
-    mutationFn: (id: string) => remove({ data: { id } }),
-    onSuccess: () => {
+    mutationFn: (id: string) => remove({ data: { token, id } }),
+    onSuccess: (res) => {
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
       toast.success("Marcador removido.");
       qc.invalidateQueries({ queryKey: ["marcadores"] });
     },
@@ -103,7 +137,7 @@ function MarcadoresPage() {
   return (
     <AppLayout
       title="Marcadores"
-      subtitle="Usuários autorizados a preencher a tela de marcação de produção."
+      subtitle="Usuários autorizados a acessar o sistema, com cargo de usuário ou admin."
     >
       <div className="grid gap-5 xl:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
         <Card>
@@ -126,6 +160,18 @@ function MarcadoresPage() {
                   maxLength={60}
                   onChange={(e) => setNome(e.target.value)}
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="m-cargo">Cargo</Label>
+                <Select value={cargo} onValueChange={(v) => setCargo(v as MarcadorCargo)}>
+                  <SelectTrigger id="m-cargo">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="usuario">Usuário (só marcação de produção)</SelectItem>
+                    <SelectItem value="admin">Admin (acesso total)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="m-senha">Senha de acesso</Label>
@@ -158,26 +204,50 @@ function MarcadoresPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
+                  <TableHead className="w-48">Cargo</TableHead>
                   <TableHead className="w-64 text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={2} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={3} className="py-10 text-center text-muted-foreground">
                       Carregando...
                     </TableCell>
                   </TableRow>
                 ) : marcadores.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={2} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={3} className="py-10 text-center text-muted-foreground">
                       Nenhum marcador cadastrado.
                     </TableCell>
                   </TableRow>
                 ) : (
                   marcadores.map((m) => (
                     <TableRow key={m.id}>
-                      <TableCell className="font-medium">{m.nome}</TableCell>
+                      <TableCell className="font-medium">
+                        {m.nome}
+                        {m.id === session?.id ? (
+                          <Badge variant="secondary" className="ml-2">
+                            você
+                          </Badge>
+                        ) : null}
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={m.cargo === "admin" ? "admin" : "usuario"}
+                          onValueChange={(v) =>
+                            cargoMut.mutate({ id: m.id, cargo: v as MarcadorCargo })
+                          }
+                        >
+                          <SelectTrigger className="h-8 w-36">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="usuario">Usuário</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
                       <TableCell>
                         {resetId === m.id ? (
                           <div className="flex items-center justify-end gap-2">
