@@ -194,8 +194,8 @@ function DashboardPage() {
     return "text-destructive font-medium";
   };
 
-  const cell = (empId: string, slotStart: string) =>
-    filtered.filter((e) => e.employee_id === empId && fmt(e.slot_start) === fmt(slotStart));
+  const cell = (empId: string, s: Slot) =>
+    filtered.filter((e) => e.employee_id === empId && inSlot(e, s));
 
   return (
     <AppLayout title="Dashboard" subtitle="Acompanhamento da produção.">
