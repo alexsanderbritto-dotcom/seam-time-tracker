@@ -265,26 +265,19 @@ export function MarcacaoProducao({
             </div>
 
             <div className="space-y-1.5">
-              <Label>Produto / OP</Label>
-              <Select
+              <Label>Produto (Esteira de Produção)</Label>
+              <SearchableSelect
+                options={productOptions}
                 value={productId}
-                onValueChange={(v) => {
+                onChange={(v) => {
                   setProductId(v);
                   setSelected({});
                   setOpSearch("");
                 }}
-              >
-                <SelectTrigger className="h-11 text-base md:h-10 md:text-sm">
-                  <SelectValue placeholder="Selecione o produto" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name} · REF {p.reference} · OP {p.op_number}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Buscar por nome ou OP Interna..."
+                searchPlaceholder="Buscar por nome ou OP Interna..."
+                emptyMessage="Nenhum produto na esteira de produção."
+              />
             </div>
 
             <div className="space-y-2">
