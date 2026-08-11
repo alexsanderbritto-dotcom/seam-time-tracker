@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ColaboradoresRouteImport } from './routes/colaboradores'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as EsteiraRouteImport } from './routes/esteira'
 import { Route as FaturamentoRouteImport } from './routes/faturamento'
 import { Route as HorariosRouteImport } from './routes/horarios'
 import { Route as MarcacaoProducaoRouteImport } from './routes/marcacao-producao'
@@ -32,6 +33,11 @@ const ColaboradoresRoute = ColaboradoresRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EsteiraRoute = EsteiraRouteImport.update({
+  id: '/esteira',
+  path: '/esteira',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FaturamentoRoute = FaturamentoRouteImport.update({
@@ -69,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/colaboradores': typeof ColaboradoresRoute
   '/dashboard': typeof DashboardRoute
+  '/esteira': typeof EsteiraRoute
   '/faturamento': typeof FaturamentoRoute
   '/horarios': typeof HorariosRoute
   '/marcacao-producao': typeof MarcacaoProducaoRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/colaboradores': typeof ColaboradoresRoute
   '/dashboard': typeof DashboardRoute
+  '/esteira': typeof EsteiraRoute
   '/faturamento': typeof FaturamentoRoute
   '/horarios': typeof HorariosRoute
   '/marcacao-producao': typeof MarcacaoProducaoRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/colaboradores': typeof ColaboradoresRoute
   '/dashboard': typeof DashboardRoute
+  '/esteira': typeof EsteiraRoute
   '/faturamento': typeof FaturamentoRoute
   '/horarios': typeof HorariosRoute
   '/marcacao-producao': typeof MarcacaoProducaoRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/'
     | '/colaboradores'
     | '/dashboard'
+    | '/esteira'
     | '/faturamento'
     | '/horarios'
     | '/marcacao-producao'
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/'
     | '/colaboradores'
     | '/dashboard'
+    | '/esteira'
     | '/faturamento'
     | '/horarios'
     | '/marcacao-producao'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/'
     | '/colaboradores'
     | '/dashboard'
+    | '/esteira'
     | '/faturamento'
     | '/horarios'
     | '/marcacao-producao'
@@ -139,6 +151,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ColaboradoresRoute: typeof ColaboradoresRoute
   DashboardRoute: typeof DashboardRoute
+  EsteiraRoute: typeof EsteiraRoute
   FaturamentoRoute: typeof FaturamentoRoute
   HorariosRoute: typeof HorariosRoute
   MarcacaoProducaoRoute: typeof MarcacaoProducaoRoute
@@ -168,6 +181,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/esteira': {
+      id: '/esteira'
+      path: '/esteira'
+      fullPath: '/esteira'
+      preLoaderRoute: typeof EsteiraRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/faturamento': {
@@ -219,6 +239,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ColaboradoresRoute: ColaboradoresRoute,
   DashboardRoute: DashboardRoute,
+  EsteiraRoute: EsteiraRoute,
   FaturamentoRoute: FaturamentoRoute,
   HorariosRoute: HorariosRoute,
   MarcacaoProducaoRoute: MarcacaoProducaoRoute,
