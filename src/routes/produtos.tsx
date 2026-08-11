@@ -328,6 +328,7 @@ function ProdutosPage() {
                   <TableHead>Produto</TableHead>
                   <TableHead>Referência</TableHead>
                   <TableHead>OP</TableHead>
+                  <TableHead>OP Interna</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Empresa</TableHead>
                   <TableHead className="text-right">Quantidade</TableHead>
@@ -342,7 +343,7 @@ function ProdutosPage() {
               <TableBody>
                 {products.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={14} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={15} className="py-10 text-center text-muted-foreground">
                       Nenhum produto cadastrado ainda.
                     </TableCell>
                   </TableRow>
@@ -359,6 +360,7 @@ function ProdutosPage() {
                         <TableCell className="font-medium">{p.name}</TableCell>
                         <TableCell className="font-mono text-xs">{p.reference}</TableCell>
                         <TableCell className="font-mono text-xs">{p.op_number}</TableCell>
+                        <TableCell className="font-mono text-xs">{p.op_interna ?? ""}</TableCell>
                         <TableCell>{p.cliente ?? "—"}</TableCell>
                         <TableCell>{p.empresa ?? "—"}</TableCell>
                         <TableCell className="text-right">{p.total_quantity}</TableCell>

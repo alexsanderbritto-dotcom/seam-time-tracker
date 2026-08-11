@@ -201,6 +201,7 @@ function FaturamentoPage() {
                   <TableHead>Produto</TableHead>
                   <TableHead>REF</TableHead>
                   <TableHead>OP</TableHead>
+                  <TableHead>OP Interna</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Empresa</TableHead>
                   <TableHead className="text-right">Qtd</TableHead>
@@ -218,7 +219,7 @@ function FaturamentoPage() {
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={15} className="py-8 text-center text-muted-foreground">
+                    <TableCell colSpan={16} className="py-8 text-center text-muted-foreground">
                       Nenhum produto encontrado para os filtros aplicados.
                     </TableCell>
                   </TableRow>
@@ -228,6 +229,7 @@ function FaturamentoPage() {
                       <TableCell className="font-medium">{p.name}</TableCell>
                       <TableCell>{p.reference}</TableCell>
                       <TableCell>{p.op_number}</TableCell>
+                      <TableCell className="font-mono text-xs">{p.op_interna ?? ""}</TableCell>
                       <TableCell>{p.cliente ?? "—"}</TableCell>
                       <TableCell>{p.empresa ?? "—"}</TableCell>
                       <TableCell className="text-right">{p.total_quantity}</TableCell>
