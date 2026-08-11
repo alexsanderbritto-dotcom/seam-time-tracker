@@ -32,6 +32,15 @@ export function MarcadorLogin({
     setError("");
     setLoading(true);
     try {
+      if (first) {
+        const created = await bootstrap({
+          data: { token: "", nome, senha, cargo: "admin" },
+        });
+        if (!created.ok) {
+          setError(created.error);
+          return;
+        }
+      }
       const res = await login({ data: { nome, senha } });
       if (res.ok && "marcador" in res) {
         writeSession(res.marcador);
@@ -54,9 +63,16 @@ export function MarcadorLogin({
             <Factory className="h-5 w-5" />
             <span className="text-xs font-medium uppercase tracking-wide">Controle de Produção</span>
           </div>
-          <CardTitle className="text-lg">Acesso do marcador</CardTitle>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <CardTitle className="text-lg">
+            {first ? "Criar primeiro administrador" : "Acesso do marcador"}
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {first
+              ? "Nenhum marcador cadastrado ainda. Defina o nome e a senha do primeiro admin."
+              : description}
+          </p>
         </CardHeader>
+
         <CardContent>
           <form className="space-y-4" onSubmit={submit}>
             <div className="space-y-1.5">
