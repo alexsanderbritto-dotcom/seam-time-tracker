@@ -35,6 +35,7 @@ import {
   esteiraQuery,
   fmt,
   operationsQuery,
+  overtimeSlotsQuery,
   productsQuery,
   scheduleQuery,
   todayISO,
