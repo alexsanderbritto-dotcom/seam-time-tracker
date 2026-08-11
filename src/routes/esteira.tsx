@@ -199,10 +199,6 @@ function EsteiraPage() {
                     <dd className="truncate">{p.cliente ?? "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-muted-foreground">Empresa</dt>
-                    <dd className="truncate">{p.empresa ?? "—"}</dd>
-                  </div>
-                  <div>
                     <dt className="text-xs text-muted-foreground">Entrada</dt>
                     <dd>{fmtDate(p.entry_date)}</dd>
                   </div>
@@ -212,11 +208,13 @@ function EsteiraPage() {
                   </div>
                 </dl>
 
-                <div className="flex justify-end">
-                  <Button variant="outline" size="sm" onClick={() => remove(entry.id)}>
-                    <Trash2 className="mr-2 h-4 w-4 text-destructive" /> Remover
-                  </Button>
-                </div>
+                {isAdmin ? (
+                  <div className="flex justify-end">
+                    <Button variant="outline" size="sm" onClick={() => remove(entry.id)}>
+                      <Trash2 className="mr-2 h-4 w-4 text-destructive" /> Remover
+                    </Button>
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
           ))}
