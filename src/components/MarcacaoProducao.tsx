@@ -8,6 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -38,7 +43,7 @@ import {
 } from "@/lib/production";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { cn } from "@/lib/utils";
-import { Trash2, Check, LogOut, Search } from "lucide-react";
+import { Trash2, Check, LogOut, Search, ChevronDown } from "lucide-react";
 
 export function MarcacaoProducao({
   marcadorNome,
