@@ -60,6 +60,7 @@ export function MarcacaoProducao({
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [opSearch, setOpSearch] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
   const opInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
   const { data: employees = [] } = useQuery(employeesQuery);
