@@ -66,7 +66,9 @@ export function SearchableSelect({
           className="h-11 w-full justify-between px-3 text-base font-normal md:h-10 md:text-sm"
           disabled={disabled}
         >
-          <span className="truncate">{selected ? selected.label : placeholder}</span>
+          <span className="min-w-0 truncate text-left">
+            {selected ? (selected.triggerNode ?? selected.label) : placeholder}
+          </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
