@@ -124,15 +124,20 @@ function EsteiraPage() {
     <AppLayout
       title="Esteira de Produção"
       subtitle="Acompanhamento visual dos produtos em andamento."
+      requireAdmin={false}
     >
       <div className="mb-5 flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {items.length} produto(s) na esteira.
+          {!isAdmin ? " Visualização somente leitura." : null}
         </p>
-        <Button size="sm" onClick={openAdd}>
-          <Plus className="mr-2 h-4 w-4" /> Adicionar produto
-        </Button>
+        {isAdmin ? (
+          <Button size="sm" onClick={openAdd}>
+            <Plus className="mr-2 h-4 w-4" /> Adicionar produto
+          </Button>
+        ) : null}
       </div>
+
 
       {items.length === 0 ? (
         <Card>
