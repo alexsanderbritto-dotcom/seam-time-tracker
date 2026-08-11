@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Eye, X } from "lucide-react";
+import { FileText, Eye, X, ImageOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
 
 export function useSignedUrl(path: string | null | undefined) {
   return useQuery({
