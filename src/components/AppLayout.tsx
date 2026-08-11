@@ -9,17 +9,20 @@ import {
   Factory,
   Scissors,
   Receipt,
+  UserCheck,
 } from "lucide-react";
 
 const nav = [
-  { to: "/", label: "Marcação de Produção", icon: ClipboardList },
+  { to: "/marcacao-producao", label: "Marcação de Produção", icon: ClipboardList },
   { to: "/produtos", label: "Produtos", icon: Package },
   { to: "/operacoes", label: "Operações", icon: Scissors },
   { to: "/colaboradores", label: "Colaboradores", icon: Users },
+  { to: "/marcadores", label: "Marcadores", icon: UserCheck },
   { to: "/horarios", label: "Horários", icon: Clock },
   { to: "/faturamento", label: "Faturamento", icon: Receipt },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
 ] as const;
+
 
 export function AppLayout({
   title,
@@ -42,7 +45,7 @@ export function AppLayout({
             <Link
               key={item.to}
               to={item.to}
-              activeOptions={{ exact: item.to === "/" }}
+              
               activeProps={{
                 className: "bg-sidebar-accent text-sidebar-accent-foreground",
               }}
@@ -67,7 +70,7 @@ export function AppLayout({
             <Link
               key={item.to}
               to={item.to}
-              activeOptions={{ exact: item.to === "/" }}
+              
               activeProps={{ className: "bg-secondary text-secondary-foreground" }}
               className="whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground"
             >

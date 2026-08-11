@@ -14,6 +14,8 @@ import { Route as ColaboradoresRouteImport } from './routes/colaboradores'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as FaturamentoRouteImport } from './routes/faturamento'
 import { Route as HorariosRouteImport } from './routes/horarios'
+import { Route as MarcacaoProducaoRouteImport } from './routes/marcacao-producao'
+import { Route as MarcadoresRouteImport } from './routes/marcadores'
 import { Route as OperacoesRouteImport } from './routes/operacoes'
 import { Route as ProdutosRouteImport } from './routes/produtos'
 
@@ -42,6 +44,16 @@ const HorariosRoute = HorariosRouteImport.update({
   path: '/horarios',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MarcacaoProducaoRoute = MarcacaoProducaoRouteImport.update({
+  id: '/marcacao-producao',
+  path: '/marcacao-producao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarcadoresRoute = MarcadoresRouteImport.update({
+  id: '/marcadores',
+  path: '/marcadores',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OperacoesRoute = OperacoesRouteImport.update({
   id: '/operacoes',
   path: '/operacoes',
@@ -59,6 +71,8 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/faturamento': typeof FaturamentoRoute
   '/horarios': typeof HorariosRoute
+  '/marcacao-producao': typeof MarcacaoProducaoRoute
+  '/marcadores': typeof MarcadoresRoute
   '/operacoes': typeof OperacoesRoute
   '/produtos': typeof ProdutosRoute
 }
@@ -68,6 +82,8 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/faturamento': typeof FaturamentoRoute
   '/horarios': typeof HorariosRoute
+  '/marcacao-producao': typeof MarcacaoProducaoRoute
+  '/marcadores': typeof MarcadoresRoute
   '/operacoes': typeof OperacoesRoute
   '/produtos': typeof ProdutosRoute
 }
@@ -78,6 +94,8 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/faturamento': typeof FaturamentoRoute
   '/horarios': typeof HorariosRoute
+  '/marcacao-producao': typeof MarcacaoProducaoRoute
+  '/marcadores': typeof MarcadoresRoute
   '/operacoes': typeof OperacoesRoute
   '/produtos': typeof ProdutosRoute
 }
@@ -89,6 +107,8 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/faturamento'
     | '/horarios'
+    | '/marcacao-producao'
+    | '/marcadores'
     | '/operacoes'
     | '/produtos'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +118,8 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/faturamento'
     | '/horarios'
+    | '/marcacao-producao'
+    | '/marcadores'
     | '/operacoes'
     | '/produtos'
   id:
@@ -107,6 +129,8 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/faturamento'
     | '/horarios'
+    | '/marcacao-producao'
+    | '/marcadores'
     | '/operacoes'
     | '/produtos'
   fileRoutesById: FileRoutesById
@@ -117,6 +141,8 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   FaturamentoRoute: typeof FaturamentoRoute
   HorariosRoute: typeof HorariosRoute
+  MarcacaoProducaoRoute: typeof MarcacaoProducaoRoute
+  MarcadoresRoute: typeof MarcadoresRoute
   OperacoesRoute: typeof OperacoesRoute
   ProdutosRoute: typeof ProdutosRoute
 }
@@ -158,6 +184,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HorariosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/marcacao-producao': {
+      id: '/marcacao-producao'
+      path: '/marcacao-producao'
+      fullPath: '/marcacao-producao'
+      preLoaderRoute: typeof MarcacaoProducaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marcadores': {
+      id: '/marcadores'
+      path: '/marcadores'
+      fullPath: '/marcadores'
+      preLoaderRoute: typeof MarcadoresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/operacoes': {
       id: '/operacoes'
       path: '/operacoes'
@@ -181,6 +221,8 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   FaturamentoRoute: FaturamentoRoute,
   HorariosRoute: HorariosRoute,
+  MarcacaoProducaoRoute: MarcacaoProducaoRoute,
+  MarcadoresRoute: MarcadoresRoute,
   OperacoesRoute: OperacoesRoute,
   ProdutosRoute: ProdutosRoute,
 }
