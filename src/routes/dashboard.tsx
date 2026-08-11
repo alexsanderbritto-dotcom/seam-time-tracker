@@ -120,22 +120,41 @@ function DashboardPage() {
     return map;
   }, [operations, catalogOps]);
 
+  const opCatalog = useMemo(
+    () => new Map(operations.map((o) => [o.id, o.catalog_operation_id] as const)),
+    [operations],
+  );
+
+  const matchesOp = (operationId: string) =>
+    operationFilter === "all" || opCatalog.get(operationId) === operationFilter;
+
+  const visibleOperations = useMemo(
+    () =>
+      operationFilter === "all"
+        ? operations
+        : operations.filter((o) => o.catalog_operation_id === operationFilter),
+    [operations, operationFilter],
+  );
+
   const sectorSlotTotal = (sectorId: string, slot: Slot) =>
     dayEntries
-      .filter((e) => opSector.get(e.operation_id) === sectorId && inSlot(e, slot))
+      .filter(
+        (e) =>
+          opSector.get(e.operation_id) === sectorId && matchesOp(e.operation_id) && inSlot(e, slot),
+      )
       .reduce((s, e) => s + e.quantity, 0);
-
-
 
   const filtered = useMemo(
     () =>
       dayEntries.filter(
         (e) =>
           (employeeFilter === "all" || e.employee_id === employeeFilter) &&
-          (productFilter === "all" || e.product_id === productFilter),
+          (productFilter === "all" || e.product_id === productFilter) &&
+          (operationFilter === "all" || opCatalog.get(e.operation_id) === operationFilter),
       ),
-    [dayEntries, employeeFilter, productFilter],
+    [dayEntries, employeeFilter, productFilter, operationFilter, opCatalog],
   );
+
 
   const activeEmployees = useMemo(() => {
     const ids = new Set(filtered.map((e) => e.employee_id));
