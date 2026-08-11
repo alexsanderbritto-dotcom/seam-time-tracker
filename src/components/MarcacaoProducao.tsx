@@ -57,6 +57,7 @@ export function MarcacaoProducao({
   const [employeeId, setEmployeeId] = useState("");
   const [productId, setProductId] = useState("");
   const [slotIdx, setSlotIdx] = useState("");
+  const [overtimeId, setOvertimeId] = useState("");
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [opSearch, setOpSearch] = useState("");
