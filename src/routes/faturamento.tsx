@@ -81,6 +81,9 @@ function FaturamentoPage() {
     (sum, p) => sum + p.total_quantity * Number(p.unit_value ?? 0),
     0,
   );
+  const toInvoiceValue = filtered
+    .filter((p) => !p.delivery_date)
+    .reduce((sum, p) => sum + p.total_quantity * Number(p.unit_value ?? 0), 0);
   const invoicedValue = filtered
     .filter((p) => !!p.delivery_date)
     .reduce((sum, p) => sum + p.total_quantity * Number(p.unit_value ?? 0), 0);
