@@ -18,6 +18,27 @@ export type Product = {
   delivery_date: string | null;
   forecast_date: string | null;
   nf_out_number: string | null;
+  op_interna: string | null;
+};
+
+export type EsteiraItem = {
+  id: string;
+  produto_id: string;
+  data_adicionado: string;
+  status: string;
+};
+
+export const esteiraQuery = {
+  queryKey: ["esteira_producao"],
+  queryFn: async (): Promise<EsteiraItem[]> => {
+    const { data, error } = await supabase
+      .from("esteira_producao")
+      .select("id,produto_id,data_adicionado,status")
+      .eq("status", "ativo")
+      .order("data_adicionado", { ascending: false });
+    if (error) throw error;
+    return data as EsteiraItem[];
+  },
 };
 
 export type Company = { id: string; name: string };
