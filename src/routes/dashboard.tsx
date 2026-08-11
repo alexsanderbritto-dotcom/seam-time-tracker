@@ -290,9 +290,10 @@ function DashboardPage() {
                             {emp.name}
                           </TableCell>
                           {slots.map((s) => {
-                            const items = cell(emp.id, s.start);
+                            const items = cell(emp.id, s);
                             return (
-                              <TableCell key={s.start} className="align-top text-center">
+                              <TableCell key={slotKey(s)} className="align-top text-center">
+
                                 {items.length === 0 ? (
                                   <span className="text-muted-foreground">–</span>
                                 ) : (
