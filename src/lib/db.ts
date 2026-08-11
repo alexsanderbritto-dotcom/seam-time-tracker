@@ -34,6 +34,10 @@ class SelectBuilder<T> implements PromiseLike<Result<T>> {
     this.filters.push({ op: "lte", col, value });
     return this;
   }
+  in(col: string, value: unknown[]) {
+    this.filters.push({ op: "in", col, value });
+    return this;
+  }
   order(col: string, opts?: { ascending?: boolean }) {
     this._order = { col, asc: opts?.ascending !== false };
     return this;
@@ -84,6 +88,10 @@ class MutateBuilder implements PromiseLike<Result<unknown>> {
 
   eq(col: string, value: unknown) {
     this.filters.push({ op: "eq", col, value });
+    return this;
+  }
+  in(col: string, value: unknown[]) {
+    this.filters.push({ op: "in", col, value });
     return this;
   }
   select() {

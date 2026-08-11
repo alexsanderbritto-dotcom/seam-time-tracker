@@ -17,7 +17,7 @@ export function useSignedUrl(path: string | null | undefined) {
         .from("product-files")
         .createSignedUrl(path, 60 * 60);
       if (error) throw error;
-      return data.signedUrl;
+      return data?.signedUrl ?? null;
     },
   });
 }

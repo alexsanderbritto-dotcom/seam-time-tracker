@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 
-export type Filter = { op: "eq" | "neq" | "gte" | "lte"; col: string; value: unknown };
+export type Filter = { op: "eq" | "neq" | "gte" | "lte" | "in"; col: string; value: unknown };
 
 export type SelectPayload = {
   token: string;

@@ -42,6 +42,7 @@ function applyFilters<T>(query: T, filters: Filter[]): T {
     neq: (c: string, v: unknown) => unknown;
     gte: (c: string, v: unknown) => unknown;
     lte: (c: string, v: unknown) => unknown;
+    in: (c: string, v: unknown) => unknown;
   };
   for (const f of filters ?? []) {
     q = q[f.op](f.col, f.value) as typeof q;

@@ -255,7 +255,7 @@ function ProdutosPage() {
       } else {
         const { data, error } = await db.from("products").insert(payload).select().single();
         if (error) throw error;
-        productId = data.id;
+        productId = (data as { id: string }).id;
       }
 
       if (productId) await syncOperations(productId);
