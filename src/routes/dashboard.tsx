@@ -28,11 +28,13 @@ import {
   entriesQuery,
   fmt,
   operationsQuery,
+  overtimeSlotsQuery,
   productCompletion,
   productsQuery,
   scheduleQuery,
   sectorsQuery,
   todayISO,
+  type Slot,
 } from "@/lib/production";
 
 export const Route = createFileRoute("/dashboard")({
