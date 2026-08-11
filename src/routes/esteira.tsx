@@ -46,6 +46,7 @@ const fmtDate = (d: string | null) => (d ? d.split("-").reverse().join("/") : "â
 
 function EsteiraPage() {
   const qc = useQueryClient();
+  const { session, isAdmin } = useMarcadorSession();
   const [open, setOpen] = useState(false);
   const [productId, setProductId] = useState("");
   const [opInterna, setOpInterna] = useState("");
@@ -90,19 +91,10 @@ function EsteiraPage() {
     }
     setSaving(true);
     try {
-      const { error: upErr } = await supabase
-        .from("products")
-        .update({ op_interna: opInterna.trim() || null })
-        .eq("id", productId);
-      if (upErr) throw upErr;
-
-      const { error } = await supabase
-        .from("esteira_producao")
-        .upsert(
-          { produto_id: productId, status: "ativo", data_adicionado: new Date().toISOString() },
-          { onConflict: "produto_id" },
-        );
-      if (error) throw error;
+      const res = await addToEsteira({
+        data: { token: session?.token ?? "", productId, opInterna },
+      });
+      if (!res.ok) throw new Error(res.error);
 
       toast.success("Produto adicionado Ã  esteira.");
       setOpen(false);
@@ -116,17 +108,16 @@ function EsteiraPage() {
   }
 
   async function remove(id: string) {
-    const { error } = await supabase
-      .from("esteira_producao")
-      .update({ status: "removido" })
-      .eq("id", id);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const res = await removeFromEsteira({ data: { token: session?.token ?? "", id } });
+      if (!res.ok) throw new Error(res.error);
+      toast.success("Produto removido da esteira.");
+      qc.invalidateQueries({ queryKey: ["esteira_producao"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao remover produto.");
     }
-    toast.success("Produto removido da esteira.");
-    qc.invalidateQueries({ queryKey: ["esteira_producao"] });
   }
+
 
   return (
     <AppLayout
