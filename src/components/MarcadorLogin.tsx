@@ -1,10 +1,11 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { loginMarcador } from "@/lib/marcadores.functions";
+import { createMarcador, hasMarcadores, loginMarcador } from "@/lib/marcadores.functions";
 import { writeSession } from "@/lib/marcador-session";
 import { Factory } from "lucide-react";
 
@@ -16,10 +17,15 @@ export function MarcadorLogin({
   onSuccess?: (() => void) | undefined;
 }) {
   const login = useServerFn(loginMarcador);
+  const bootstrap = useServerFn(createMarcador);
+  const checkEmpty = useServerFn(hasMarcadores);
+  const { data: state } = useQuery({ queryKey: ["marcadores-empty"], queryFn: () => checkEmpty() });
   const [nome, setNome] = useState("");
   const [senha, setSenha] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const first = state?.empty === true;
+
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
