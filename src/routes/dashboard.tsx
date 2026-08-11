@@ -246,6 +246,32 @@ function DashboardPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label>Operação</Label>
+              <Select value={operationFilter} onValueChange={setOperationFilter}>
+                <SelectTrigger className="w-64">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {sectors.map((sec) => {
+                    const ops = catalogOps.filter((c) => c.sector_id === sec.id);
+                    if (ops.length === 0) return null;
+                    return (
+                      <SelectGroup key={sec.id}>
+                        <SelectLabel>{sec.name}</SelectLabel>
+                        {ops.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="ml-auto rounded-md bg-secondary px-4 py-2 text-right">
               <p className="text-xs text-muted-foreground">Total no dia</p>
               <p className="text-2xl font-semibold tabular-nums">{total}</p>
