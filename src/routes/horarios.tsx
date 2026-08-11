@@ -203,3 +203,114 @@ function HorariosPage() {
     </AppLayout>
   );
 }
+
+function OvertimeCard() {
+  const qc = useQueryClient();
+  const { data: overtime = [] } = useQuery(overtimeSlotsQuery);
+  const [newStart, setNewStart] = useState("18:00");
+  const [newEnd, setNewEnd] = useState("19:00");
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["overtime_slots"] });
+
+  async function add() {
+    if (!newStart || !newEnd || newStart >= newEnd) {
+      toast.error("Informe um intervalo válido de hora extra.");
+      return;
+    }
+    const { error } = await supabase
+      .from("overtime_slots")
+      .insert({ start_time: newStart, end_time: newEnd });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Janela de hora extra criada.");
+    invalidate();
+  }
+
+  async function update(id: string, patch: { start_time?: string; end_time?: string }) {
+    const { error } = await supabase.from("overtime_slots").update(patch).eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    invalidate();
+  }
+
+  async function remove(id: string) {
+    const { error } = await supabase.from("overtime_slots").delete().eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Janela de hora extra excluída.");
+    invalidate();
+  }
+
+  return (
+    <Card className="lg:col-span-2">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">
+          Horas extras <Badge variant="secondary">{overtime.length}</Badge>
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Janelas fora do expediente padrão, usadas apenas quando a marcação for de hora extra.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1.5">
+            <Label>Início</Label>
+            <Input
+              type="time"
+              className="w-32"
+              value={newStart}
+              onChange={(e) => setNewStart(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Término</Label>
+            <Input
+              type="time"
+              className="w-32"
+              value={newEnd}
+              onChange={(e) => setNewEnd(e.target.value)}
+            />
+          </div>
+          <Button variant="outline" onClick={add}>
+            <Plus className="mr-1 h-4 w-4" /> Adicionar hora extra
+          </Button>
+        </div>
+
+        {overtime.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma janela de hora extra cadastrada.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {overtime.map((o) => (
+              <div key={o.id} className="flex items-center gap-2">
+                <Input
+                  type="time"
+                  className="w-32"
+                  value={fmt(o.start_time)}
+                  onChange={(e) => update(o.id, { start_time: e.target.value })}
+                />
+                <Input
+                  type="time"
+                  className="w-32"
+                  value={fmt(o.end_time)}
+                  onChange={(e) => update(o.id, { end_time: e.target.value })}
+                />
+                <Button variant="ghost" size="icon" onClick={() => remove(o.id)}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
