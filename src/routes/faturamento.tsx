@@ -137,6 +137,16 @@ function FaturamentoPage() {
               </p>
             </CardContent>
           </Card>
+          <Card className="border-l-4 border-l-amber-500">
+            <CardContent className="p-5">
+              <p className="text-3xl font-semibold tracking-tight text-foreground">
+                {brl(toInvoiceValue)}
+              </p>
+              <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
+                Produtos a faturar (sem data efetiva de entrega)
+              </p>
+            </CardContent>
+          </Card>
           <Card className="border-l-4 border-l-emerald-500">
             <CardContent className="p-5">
               <p className="text-3xl font-semibold tracking-tight text-foreground">
