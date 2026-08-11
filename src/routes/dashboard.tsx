@@ -163,8 +163,9 @@ function DashboardPage() {
         const rows = opIds.map((opId) => {
           const perSlot = slots.map((s) => {
             const worked = empEntries.filter(
-              (e) => e.operation_id === opId && fmt(e.slot_start) === fmt(s.start),
+              (e) => e.operation_id === opId && inSlot(e, s),
             );
+
             const produced = worked.reduce((a, e) => a + e.quantity, 0);
             const eph = expectedPerHour.get(opId);
             const estimated = worked.length > 0 && eph != null ? eph * slotHours : null;
