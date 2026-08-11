@@ -99,6 +99,7 @@ export function MarcacaoProducao({
         ? Math.min(idx + 1, ids.length - 1)
         : Math.max(idx - 1, 0);
     const nextId = ids[nextIdx];
+    if (!nextId) return;
     opInputRefs.current.get(nextId)?.focus();
   }
 
