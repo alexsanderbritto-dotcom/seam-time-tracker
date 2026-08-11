@@ -15,6 +15,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { ProductPhotoCell, PilotPhotoCell } from "@/components/ProductPhoto";
 import { addToEsteira, removeFromEsteira } from "@/lib/esteira.functions";
@@ -52,6 +62,7 @@ function EsteiraPage() {
   const [productId, setProductId] = useState("");
   const [opInterna, setOpInterna] = useState("");
   const [saving, setSaving] = useState(false);
+  const [pendingRemove, setPendingRemove] = useState<{ id: string; name: string } | null>(null);
 
   const { data: products = [] } = useQuery(productsQuery);
   const { data: esteira = [] } = useQuery(esteiraQuery);
@@ -126,13 +137,13 @@ function EsteiraPage() {
       subtitle="Acompanhamento visual dos produtos em andamento."
       requireAdmin={false}
     >
-      <div className="mb-5 flex items-center justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 md:mb-5">
         <p className="text-sm text-muted-foreground">
           {items.length} produto(s) na esteira.
           {!isAdmin ? " Visualização somente leitura." : null}
         </p>
         {isAdmin ? (
-          <Button size="sm" onClick={openAdd}>
+          <Button className="h-11 w-full text-base sm:h-9 sm:w-auto sm:text-sm" onClick={openAdd}>
             <Plus className="mr-2 h-4 w-4" /> Adicionar produto
           </Button>
         ) : null}
@@ -146,13 +157,13 @@ function EsteiraPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3">
           {items.map(({ entry, product: p }) => (
             <Card key={entry.id} className="overflow-hidden">
-              <CardContent className="space-y-4 pt-6">
+              <CardContent className="space-y-4 p-4 pt-5 md:p-6">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h2 className="truncate text-base font-semibold">
+                    <h2 className="break-words text-base font-semibold uppercase">
                       {p.name}
                       {p.op_interna ? (
                         <span className="ml-1.5 text-sm font-medium text-muted-foreground">
@@ -169,6 +180,7 @@ function EsteiraPage() {
                     </p>
                   </div>
                   <Badge
+                    className="shrink-0"
                     variant={
                       p.status === "finalizado"
                         ? "secondary"
@@ -221,7 +233,11 @@ function EsteiraPage() {
 
                 {isAdmin ? (
                   <div className="flex justify-end">
-                    <Button variant="outline" size="sm" onClick={() => remove(entry.id)}>
+                    <Button
+                      variant="outline"
+                      className="h-11 w-full text-base sm:h-9 sm:w-auto sm:text-sm"
+                      onClick={() => setPendingRemove({ id: entry.id, name: p.name })}
+                    >
                       <Trash2 className="mr-2 h-4 w-4 text-destructive" /> Remover
                     </Button>
                   </div>
@@ -231,6 +247,35 @@ function EsteiraPage() {
           ))}
         </div>
       )}
+
+      <AlertDialog
+        open={!!pendingRemove}
+        onOpenChange={(v) => {
+          if (!v) setPendingRemove(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover produto da esteira?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingRemove?.name} deixará de aparecer na esteira. O cadastro do produto e a OP
+              interna continuam salvos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="h-11 sm:h-9">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="h-11 sm:h-9"
+              onClick={() => {
+                if (pendingRemove) remove(pendingRemove.id);
+                setPendingRemove(null);
+              }}
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
@@ -253,6 +298,8 @@ function EsteiraPage() {
               <Label>OP Interna</Label>
               <Input
                 placeholder="Ex: 1024"
+                inputMode="numeric"
+                className="h-11 text-base md:h-10 md:text-sm"
                 value={opInterna}
                 onChange={(e) => setOpInterna(e.target.value)}
               />
@@ -263,7 +310,7 @@ function EsteiraPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={save} disabled={saving}>
+            <Button className="h-11 w-full text-base sm:h-10 sm:w-auto sm:text-sm" onClick={save} disabled={saving}>
               {saving ? "Salvando…" : "Adicionar"}
             </Button>
           </DialogFooter>
