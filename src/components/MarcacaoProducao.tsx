@@ -27,6 +27,7 @@ import {
   buildSlots,
   employeesQuery,
   entriesQuery,
+  esteiraQuery,
   fmt,
   operationsQuery,
   productsQuery,
