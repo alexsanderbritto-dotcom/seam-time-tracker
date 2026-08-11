@@ -68,7 +68,39 @@ function DashboardPage() {
   const { data: sectors = [] } = useQuery(sectorsQuery);
   const { data: catalogOps = [] } = useQuery(catalogOperationsQuery);
 
-  const slots = useMemo(() => buildSlots(config), [config]);
+  const { data: overtimeSlots = [] } = useQuery(overtimeSlotsQuery);
+
+  const normalSlots = useMemo(() => buildSlots(config), [config]);
+
+  // janelas de hora extra só aparecem quando houve marcação com quantidade
+  const slots = useMemo<Slot[]>(() => {
+    const usedKeys = new Set(
+      dayEntries
+        .filter((e) => e.is_overtime && e.quantity > 0)
+        .map((e) => fmt(e.slot_start)),
+    );
+    const extras = overtimeSlots
+      .filter((o) => usedKeys.has(fmt(o.start_time)))
+      .map((o) => ({ start: fmt(o.start_time), end: fmt(o.end_time), overtime: true }));
+    return [
+      ...normalSlots.map((s) => ({ ...s, overtime: false })),
+      ...extras.sort((a, b) => a.start.localeCompare(b.start)),
+    ];
+  }, [normalSlots, overtimeSlots, dayEntries]);
+
+  const inSlot = (e: { slot_start: string; is_overtime: boolean }, s: Slot) =>
+    fmt(e.slot_start) === fmt(s.start) && Boolean(e.is_overtime) === Boolean(s.overtime);
+
+  const slotKey = (s: Slot) => `${s.start}-${s.overtime ? "x" : "n"}`;
+
+  const SlotHead = ({ s }: { s: Slot }) => (
+    <>
+      {s.start}–{s.end}
+      {s.overtime ? (
+        <span className="ml-1 text-[9px] font-sans text-muted-foreground">(extra)</span>
+      ) : null}
+    </>
+  );
 
   // operação do produto -> setor, apenas quando é a última operação do setor
   const opSector = useMemo(() => {
@@ -83,13 +115,11 @@ function DashboardPage() {
     return map;
   }, [operations, catalogOps]);
 
-  const sectorSlotTotal = (sectorId: string, slotStart: string) =>
+  const sectorSlotTotal = (sectorId: string, slot: Slot) =>
     dayEntries
-      .filter(
-        (e) =>
-          opSector.get(e.operation_id) === sectorId && fmt(e.slot_start) === fmt(slotStart),
-      )
+      .filter((e) => opSector.get(e.operation_id) === sectorId && inSlot(e, slot))
       .reduce((s, e) => s + e.quantity, 0);
+
 
 
   const filtered = useMemo(
