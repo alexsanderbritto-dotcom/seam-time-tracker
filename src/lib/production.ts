@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db";
 
 export type Product = {
   id: string;
@@ -164,7 +164,7 @@ export const productsQuery = {
 export const companiesQuery = {
   queryKey: ["companies"],
   queryFn: async (): Promise<Company[]> => {
-    const { data, error } = await supabase.from("companies").select("id,name").order("name");
+    const { data, error } = await db.from("companies").select("id,name").order("name");
     if (error) throw error;
     return data as Company[];
   },
@@ -174,7 +174,7 @@ export const companiesQuery = {
 export const clientsQuery = {
   queryKey: ["clients"],
   queryFn: async (): Promise<Company[]> => {
-    const { data, error } = await supabase.from("clients").select("id,name").order("name");
+    const { data, error } = await db.from("clients").select("id,name").order("name");
     if (error) throw error;
     return data as Company[];
   },
@@ -219,7 +219,7 @@ export const operationsQuery = {
 export const employeesQuery = {
   queryKey: ["employees"],
   queryFn: async (): Promise<Employee[]> => {
-    const { data, error } = await supabase.from("employees").select("*").order("name");
+    const { data, error } = await db.from("employees").select("*").order("name");
     if (error) throw error;
     return data as Employee[];
   },
@@ -228,7 +228,7 @@ export const employeesQuery = {
 export const scheduleQuery = {
   queryKey: ["schedule_config"],
   queryFn: async (): Promise<ScheduleConfig | null> => {
-    const { data, error } = await supabase.from("schedule_config").select("*").limit(1).maybeSingle();
+    const { data, error } = await db.from("schedule_config").select("*").limit(1).maybeSingle();
     if (error) throw error;
     return data as ScheduleConfig | null;
   },
@@ -237,7 +237,7 @@ export const scheduleQuery = {
 export const entriesQuery = (date?: string) => ({
   queryKey: ["production_entries", date ?? "all"],
   queryFn: async (): Promise<ProductionEntry[]> => {
-    let q = supabase.from("production_entries").select("*");
+    let q = db.from("production_entries").select("*");
     if (date) q = q.eq("entry_date", date);
     const { data, error } = await q.order("slot_start");
     if (error) throw error;

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { FileText, Eye, X, ImageOff, ChevronLeft, ChevronRight } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useEffect, useRef, useState } from "react";
@@ -13,7 +13,7 @@ export function useSignedUrl(path: string | null | undefined) {
     staleTime: 1000 * 60 * 30,
     queryFn: async (): Promise<string | null> => {
       if (!path) return null;
-      const { data, error } = await supabase.storage
+      const { data, error } = await db.storage
         .from("product-files")
         .createSignedUrl(path, 60 * 60);
       if (error) throw error;

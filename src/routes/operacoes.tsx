@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db";
 import { catalogOperationsQuery, sectorsQuery, type CatalogOperation } from "@/lib/production";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Pencil, Trash2, Flag } from "lucide-react";
@@ -61,7 +61,7 @@ function OperacoesSetorPage() {
   async function addSector() {
     const name = newSector.trim();
     if (!name) { toast.error("Informe o nome do setor."); return; }
-    const { error } = await supabase.from("sectors").insert({ name });
+    const { error } = await db.from("sectors").insert({ name });
     if (error) { toast.error(error.message); return; }
     setNewSector("");
     invalidate();
@@ -71,14 +71,14 @@ function OperacoesSetorPage() {
     if (!editSector) return;
     const name = editSector.name.trim();
     if (!name) { toast.error("Informe o nome do setor."); return; }
-    const { error } = await supabase.from("sectors").update({ name }).eq("id", editSector.id);
+    const { error } = await db.from("sectors").update({ name }).eq("id", editSector.id);
     if (error) { toast.error(error.message); return; }
     setEditSector(null);
     invalidate();
   }
 
   async function removeSector(id: string) {
-    const { error } = await supabase.from("sectors").delete().eq("id", id);
+    const { error } = await db.from("sectors").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success("Setor excluído.");
     invalidate();
@@ -102,15 +102,15 @@ function OperacoesSetorPage() {
       is_last_operation: opLast,
     };
     const { error } = opDialog.op
-      ? await supabase.from("catalog_operations").update(payload).eq("id", opDialog.op.id)
-      : await supabase.from("catalog_operations").insert(payload);
+      ? await db.from("catalog_operations").update(payload).eq("id", opDialog.op.id)
+      : await db.from("catalog_operations").insert(payload);
     if (error) { toast.error(error.message); return; }
     setOpDialog(null);
     invalidate();
   }
 
   async function removeOp(id: string) {
-    const { error } = await supabase.from("catalog_operations").delete().eq("id", id);
+    const { error } = await db.from("catalog_operations").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     invalidate();
   }

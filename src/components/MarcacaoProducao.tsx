@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db";
 import {
   buildSlots,
   employeesQuery,
@@ -179,7 +179,7 @@ export function MarcacaoProducao({
     }
 
     setSaving(true);
-    const { error } = await supabase.from("production_entries").insert(rows);
+    const { error } = await db.from("production_entries").insert(rows);
     setSaving(false);
     if (error) {
       toast.error("Erro ao salvar: " + error.message);
@@ -192,7 +192,7 @@ export function MarcacaoProducao({
   }
 
   async function remove(id: string) {
-    const { error } = await supabase.from("production_entries").delete().eq("id", id);
+    const { error } = await db.from("production_entries").delete().eq("id", id);
     if (error) {
       toast.error(error.message);
       return;
@@ -202,7 +202,7 @@ export function MarcacaoProducao({
   }
 
   async function updateQty(id: string, quantity: number) {
-    const { error } = await supabase.from("production_entries").update({ quantity }).eq("id", id);
+    const { error } = await db.from("production_entries").update({ quantity }).eq("id", id);
     if (error) {
       toast.error(error.message);
       return;
