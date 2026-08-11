@@ -310,7 +310,9 @@ export function MarcacaoProducao({
                   </div>
                   {filteredOps.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
-                      Nenhuma operação corresponde à busca.
+                      {opSearch.trim()
+                        ? "Nenhuma operação corresponde à busca."
+                        : "Digite para buscar uma operação deste produto."}
                     </p>
                   ) : (
                     <div className="divide-y divide-border rounded-md border border-border">
