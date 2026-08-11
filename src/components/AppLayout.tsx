@@ -45,7 +45,7 @@ export function AppLayout({
             <Link
               key={item.to}
               to={item.to}
-              activeOptions={{ exact: item.to === "/" }}
+              
               activeProps={{
                 className: "bg-sidebar-accent text-sidebar-accent-foreground",
               }}
@@ -70,7 +70,7 @@ export function AppLayout({
             <Link
               key={item.to}
               to={item.to}
-              activeOptions={{ exact: item.to === "/" }}
+              
               activeProps={{ className: "bg-secondary text-secondary-foreground" }}
               className="whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground"
             >
