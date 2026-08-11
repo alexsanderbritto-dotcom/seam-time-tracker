@@ -152,7 +152,18 @@ function EsteiraPage() {
               <CardContent className="space-y-4 pt-6">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h2 className="truncate text-base font-semibold">{p.name}</h2>
+                    <h2 className="truncate text-base font-semibold">
+                      {p.name}
+                      {p.op_interna ? (
+                        <span className="ml-1.5 text-sm font-medium text-muted-foreground">
+                          — OP INTERNA: {p.op_interna}
+                        </span>
+                      ) : (
+                        <span className="ml-1.5 text-sm font-medium text-muted-foreground/70">
+                          — OP INTERNA: não definida
+                        </span>
+                      )}
+                    </h2>
                     <p className="font-mono text-xs text-muted-foreground">
                       REF {p.reference} · OP {p.op_number}
                     </p>
