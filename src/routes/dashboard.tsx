@@ -342,10 +342,10 @@ function DashboardPage() {
                     <TableHead className="sticky left-0 bg-card">Setor</TableHead>
                     {slots.map((s) => (
                       <TableHead
-                        key={s.start}
+                        key={slotKey(s)}
                         className="whitespace-nowrap text-center font-mono text-xs"
                       >
-                        {s.start}–{s.end}
+                        <SlotHead s={s} />
                       </TableHead>
                     ))}
                     <TableHead className="text-right">Total</TableHead>
@@ -363,7 +363,7 @@ function DashboardPage() {
                     </TableRow>
                   ) : (
                     sectors.map((sec) => {
-                      const row = slots.map((s) => sectorSlotTotal(sec.id, s.start));
+                      const row = slots.map((s) => sectorSlotTotal(sec.id, s));
                       const totalRow = row.reduce((a, b) => a + b, 0);
                       return (
                         <TableRow key={sec.id}>
@@ -371,7 +371,8 @@ function DashboardPage() {
                             {sec.name}
                           </TableCell>
                           {row.map((v, i) => (
-                            <TableCell key={slots[i]!.start} className="text-center tabular-nums">
+                            <TableCell key={slotKey(slots[i]!)} className="text-center tabular-nums">
+
                               {v > 0 ? v : <span className="text-muted-foreground">–</span>}
                             </TableCell>
                           ))}
