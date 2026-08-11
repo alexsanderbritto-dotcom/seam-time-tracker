@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/dialog";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { ProductPhotoCell, PilotPhotoCell } from "@/components/ProductPhoto";
-import { supabase } from "@/integrations/supabase/client";
+import { addToEsteira, removeFromEsteira } from "@/lib/esteira.functions";
+import { useMarcadorSession } from "@/lib/marcador-session";
 import { esteiraQuery, productsQuery, STATUS_LABEL, type Product } from "@/lib/production";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -46,6 +47,7 @@ const fmtDate = (d: string | null) => (d ? d.split("-").reverse().join("/") : "�
 
 function EsteiraPage() {
   const qc = useQueryClient();
+  const { session, isAdmin } = useMarcadorSession();
   const [open, setOpen] = useState(false);
   const [productId, setProductId] = useState("");
   const [opInterna, setOpInterna] = useState("");
@@ -90,19 +92,10 @@ function EsteiraPage() {
     }
     setSaving(true);
     try {
-      const { error: upErr } = await supabase
-        .from("products")
-        .update({ op_interna: opInterna.trim() || null })
-        .eq("id", productId);
-      if (upErr) throw upErr;
-
-      const { error } = await supabase
-        .from("esteira_producao")
-        .upsert(
-          { produto_id: productId, status: "ativo", data_adicionado: new Date().toISOString() },
-          { onConflict: "produto_id" },
-        );
-      if (error) throw error;
+      const res = await addToEsteira({
+        data: { token: session?.token ?? "", productId, opInterna },
+      });
+      if (!res.ok) throw new Error(res.error);
 
       toast.success("Produto adicionado à esteira.");
       setOpen(false);
@@ -116,31 +109,35 @@ function EsteiraPage() {
   }
 
   async function remove(id: string) {
-    const { error } = await supabase
-      .from("esteira_producao")
-      .update({ status: "removido" })
-      .eq("id", id);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const res = await removeFromEsteira({ data: { token: session?.token ?? "", id } });
+      if (!res.ok) throw new Error(res.error);
+      toast.success("Produto removido da esteira.");
+      qc.invalidateQueries({ queryKey: ["esteira_producao"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao remover produto.");
     }
-    toast.success("Produto removido da esteira.");
-    qc.invalidateQueries({ queryKey: ["esteira_producao"] });
   }
+
 
   return (
     <AppLayout
       title="Esteira de Produção"
       subtitle="Acompanhamento visual dos produtos em andamento."
+      requireAdmin={false}
     >
       <div className="mb-5 flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {items.length} produto(s) na esteira.
+          {!isAdmin ? " Visualização somente leitura." : null}
         </p>
-        <Button size="sm" onClick={openAdd}>
-          <Plus className="mr-2 h-4 w-4" /> Adicionar produto
-        </Button>
+        {isAdmin ? (
+          <Button size="sm" onClick={openAdd}>
+            <Plus className="mr-2 h-4 w-4" /> Adicionar produto
+          </Button>
+        ) : null}
       </div>
+
 
       {items.length === 0 ? (
         <Card>
@@ -202,10 +199,6 @@ function EsteiraPage() {
                     <dd className="truncate">{p.cliente ?? "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-muted-foreground">Empresa</dt>
-                    <dd className="truncate">{p.empresa ?? "—"}</dd>
-                  </div>
-                  <div>
                     <dt className="text-xs text-muted-foreground">Entrada</dt>
                     <dd>{fmtDate(p.entry_date)}</dd>
                   </div>
@@ -215,11 +208,13 @@ function EsteiraPage() {
                   </div>
                 </dl>
 
-                <div className="flex justify-end">
-                  <Button variant="outline" size="sm" onClick={() => remove(entry.id)}>
-                    <Trash2 className="mr-2 h-4 w-4 text-destructive" /> Remover
-                  </Button>
-                </div>
+                {isAdmin ? (
+                  <div className="flex justify-end">
+                    <Button variant="outline" size="sm" onClick={() => remove(entry.id)}>
+                      <Trash2 className="mr-2 h-4 w-4 text-destructive" /> Remover
+                    </Button>
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
           ))}
