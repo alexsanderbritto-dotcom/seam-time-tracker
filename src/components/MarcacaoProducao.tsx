@@ -243,7 +243,13 @@ export function MarcacaoProducao({
               </div>
               <div className="space-y-1.5">
                 <Label>Horário</Label>
-                <Select value={slotIdx} onValueChange={setSlotIdx}>
+                <Select
+                  value={slotIdx}
+                  onValueChange={(v) => {
+                    setSlotIdx(v);
+                    setOvertimeId("");
+                  }}
+                >
                   <SelectTrigger className="h-11 text-base md:h-10 md:text-sm">
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
@@ -257,6 +263,45 @@ export function MarcacaoProducao({
                 </Select>
               </div>
             </div>
+
+            <div className="space-y-1.5">
+              <Label>Hora extra</Label>
+              <Select
+                value={overtimeId}
+                disabled={overtimeSlots.length === 0}
+                onValueChange={(v) => {
+                  setOvertimeId(v);
+                  setSlotIdx("");
+                }}
+              >
+                <SelectTrigger className="h-11 text-base md:h-10 md:text-sm">
+                  <SelectValue
+                    placeholder={
+                      overtimeSlots.length === 0
+                        ? "Nenhum horário extra configurado"
+                        : "Selecione uma janela de hora extra"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {overtimeSlots.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {fmt(o.start_time)} às {fmt(o.end_time)} (extra)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {overtimeId ? (
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground underline"
+                  onClick={() => setOvertimeId("")}
+                >
+                  Limpar hora extra
+                </button>
+              ) : null}
+            </div>
+
 
             <div className="space-y-1.5">
               <Label>Colaborador</Label>
