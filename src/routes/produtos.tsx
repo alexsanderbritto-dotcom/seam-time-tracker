@@ -659,33 +659,73 @@ function ProdutosPage() {
                   sectors.map((s) => {
                     const list = filteredCatalog.filter((o) => o.sector_id === s.id);
                     if (list.length === 0) return null;
+                    const sectorUsed = usedSectors.some((x) => x.id === s.id);
+                    const lastId = lastBySector[s.id];
                     return (
                       <div key={s.id} className="space-y-1.5">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                           {s.name}
+                          {sectorUsed && !lastId ? (
+                            <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive">
+                              defina a última operação
+                            </span>
+                          ) : null}
                         </p>
-                        {list.map((o) => (
-                          <label key={o.id} className="flex items-center gap-2 text-sm">
-                            <Checkbox
-                              checked={selectedOps.includes(o.id)}
-                              onCheckedChange={(v) => toggleOp(o.id, s.id, v === true)}
-                            />
-                            <span>{o.name}</span>
-                            {o.expected_per_hour != null ? (
-                              <span className="text-xs text-muted-foreground">
-                                ({o.expected_per_hour}/h)
-                              </span>
-                            ) : null}
-                          </label>
-                        ))}
+                        {list.map((o) => {
+                          const checked = selectedOps.includes(o.id);
+                          const isLast = lastId === o.id;
+                          return (
+                            <div key={o.id} className="flex items-center gap-2 text-sm">
+                              <label className="flex min-w-0 flex-1 items-center gap-2">
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(v) => toggleOp(o.id, s.id, v === true)}
+                                />
+                                <span className="truncate">{o.name}</span>
+                                {o.expected_per_hour != null ? (
+                                  <span className="shrink-0 text-xs text-muted-foreground">
+                                    ({o.expected_per_hour}/h)
+                                  </span>
+                                ) : null}
+                              </label>
+                              {checked ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setLastBySector((prev) => {
+                                      const next = { ...prev };
+                                      if (isLast) delete next[s.id];
+                                      else next[s.id] = o.id;
+                                      return next;
+                                    })
+                                  }
+                                  className={
+                                    isLast
+                                      ? "shrink-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground"
+                                      : "shrink-0 rounded-full border border-input px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground hover:bg-accent"
+                                  }
+                                >
+                                  {isLast ? "Última do setor" : "Marcar última"}
+                                </button>
+                              ) : null}
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                {selectedOps.length} operação(ões) selecionada(s).
+                {selectedOps.length} operação(ões) selecionada(s). Cada setor usado precisa de
+                exatamente uma operação marcada como “Última do setor”.
               </p>
+              {missingLast.length > 0 ? (
+                <p className="text-xs font-medium text-destructive">
+                  Falta marcar a última operação em: {missingLast.map((s) => s.name).join(", ")}.
+                </p>
+              ) : null}
+
             </div>
           </div>
           <DialogFooter>
