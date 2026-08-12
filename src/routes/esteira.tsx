@@ -81,7 +81,30 @@ function EsteiraPage() {
   );
 
   const options = useMemo(
-    () => products.map((p) => ({ value: p.id, label: `${p.reference} · ${p.name}` })),
+    () =>
+      products.map((p) => ({
+        value: p.id,
+        label: `${p.name} · OP ${p.op_number}`,
+        searchText: `${p.name} ${p.reference} ${p.op_number} ${p.op_interna ?? ""}`,
+        triggerNode: (
+          <span className="flex flex-col text-left leading-tight">
+            <span className="truncate font-medium">{p.name}</span>
+            <span className="font-mono text-xs text-muted-foreground">
+              OP {p.op_number}
+              {p.reference ? ` · REF ${p.reference}` : null}
+            </span>
+          </span>
+        ),
+        node: (
+          <span className="flex flex-col leading-tight">
+            <span className="truncate">{p.name}</span>
+            <span className="font-mono text-xs text-muted-foreground">
+              OP {p.op_number}
+              {p.reference ? ` · REF ${p.reference}` : null}
+            </span>
+          </span>
+        ),
+      })),
     [products],
   );
 
