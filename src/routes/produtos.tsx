@@ -147,6 +147,32 @@ function ProdutosPage() {
     setOpen(true);
   }
 
+  function toggleOp(opId: string, sectorId: string, checked: boolean) {
+    setSelectedOps((prev) =>
+      checked ? [...prev, opId] : prev.filter((id) => id !== opId),
+    );
+    if (!checked) {
+      setLastBySector((prev) => {
+        if (prev[sectorId] !== opId) return prev;
+        const next = { ...prev };
+        delete next[sectorId];
+        return next;
+      });
+    }
+  }
+
+  /** setores que têm operações selecionadas neste produto */
+  const usedSectors = useMemo(() => {
+    const ids = new Set<string>();
+    for (const id of selectedOps) {
+      const c = catalogOps.find((o) => o.id === id);
+      if (c) ids.add(c.sector_id);
+    }
+    return sectors.filter((s) => ids.has(s.id));
+  }, [selectedOps, catalogOps, sectors]);
+
+  const missingLast = usedSectors.filter((s) => !lastBySector[s.id]);
+
   const dupLabel = (p: Product) => `${p.reference} · ${p.name}`;
 
   function applyDuplicate(value: string) {
@@ -227,6 +253,8 @@ function ProdutosPage() {
     const existing = new Set(
       current.map((o) => o.catalog_operation_id).filter(Boolean) as string[],
     );
+    const lastIds = new Set(Object.values(lastBySector));
+
     const toAdd = selectedOps
       .filter((id) => !existing.has(id))
       .map((id) => {
@@ -235,14 +263,36 @@ function ProdutosPage() {
           product_id: productId,
           name: c?.name ?? "Operação",
           catalog_operation_id: id,
+          is_last_operation: lastIds.has(id),
         };
       });
     if (toAdd.length > 0) await db.from("operations").insert(toAdd);
+
+    // sincroniza a marcação de "última operação do setor" das operações mantidas
+    const { data: rows } = await db
+      .from("operations")
+      .select("id,catalog_operation_id")
+      .eq("product_id", productId);
+    const list = (rows ?? []) as { id: string; catalog_operation_id: string | null }[];
+    const markTrue = list.filter((r) => r.catalog_operation_id && lastIds.has(r.catalog_operation_id));
+    const markFalse = list.filter((r) => !r.catalog_operation_id || !lastIds.has(r.catalog_operation_id));
+    if (markTrue.length > 0) {
+      await db.from("operations").update({ is_last_operation: true }).in("id", markTrue.map((r) => r.id));
+    }
+    if (markFalse.length > 0) {
+      await db.from("operations").update({ is_last_operation: false }).in("id", markFalse.map((r) => r.id));
+    }
   }
 
   async function save() {
     if (!form.name || !form.reference || !form.op_number) {
       toast.error("Nome, referência e OP são obrigatórios.");
+      return;
+    }
+    if (missingLast.length > 0) {
+      toast.error(
+        `Marque a última operação do setor: ${missingLast.map((s) => s.name).join(", ")}.`,
+      );
       return;
     }
     setSaving(true);
@@ -283,6 +333,7 @@ function ProdutosPage() {
       setOpen(false);
       setForm(empty);
       setSelectedOps([]);
+      setLastBySector({});
       setFile(null);
       setPilotFiles([]);
       setPilotPaths([]);
