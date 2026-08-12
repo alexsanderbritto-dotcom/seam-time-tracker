@@ -129,7 +129,9 @@ export function buildSlots(config: ScheduleConfig | null | undefined): Slot[] {
   if (!config) return [];
   const start = toMinutes(config.start_time);
   const end = toMinutes(config.end_time);
-  const step = config.slot_minutes || 60;
+  // A non-positive step would loop forever and freeze/crash the tab.
+  const rawStep = Number(config.slot_minutes);
+  const step = Number.isFinite(rawStep) && rawStep > 0 ? rawStep : 60;
   const breaks = (config.breaks ?? []).map((b) => ({
     start: toMinutes(b.start),
     end: toMinutes(b.end),
