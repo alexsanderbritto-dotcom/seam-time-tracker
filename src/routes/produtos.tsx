@@ -145,13 +145,23 @@ function ProdutosPage() {
   function applyDuplicate(value: string) {
     setDupValue(value);
     const src = products.find((p) => dupLabel(p) === value);
-    if (!src) return;
+    if (!src || src.id === editing?.id) return;
     const ops = operations
       .filter((o) => o.product_id === src.id && o.catalog_operation_id)
       .map((o) => o.catalog_operation_id as string);
-    setSelectedOps(ops);
-    toast.success(`${ops.length} operação(ões) copiada(s) de ${src.reference}.`);
+    let added = 0;
+    setSelectedOps((prev) => {
+      const merged = new Set(prev);
+      ops.forEach((id) => {
+        if (!merged.has(id)) added++;
+        merged.add(id);
+      });
+      return Array.from(merged);
+    });
+    added = ops.filter((id) => !selectedOps.includes(id)).length;
+    toast.success(`${added} operação(ões) copiada(s) de ${src.reference}.`);
   }
+
 
   async function uploadPilotFiles(): Promise<string[]> {
     const paths: string[] = [];
