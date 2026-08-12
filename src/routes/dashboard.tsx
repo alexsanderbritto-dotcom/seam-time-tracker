@@ -137,6 +137,19 @@ function DashboardPage() {
     [operations],
   );
 
+  // operation id -> sector id (via catalog_operation)
+  const opSectorAll = useMemo(() => {
+    const catSector = new Map(catalogOps.map((c) => [c.id, c.sector_id]));
+    const map = new Map<string, string>();
+    for (const o of operations) {
+      if (o.catalog_operation_id) {
+        const sid = catSector.get(o.catalog_operation_id);
+        if (sid) map.set(o.id, sid);
+      }
+    }
+    return map;
+  }, [operations, catalogOps]);
+
   const matchesOp = (operationId: string) =>
     operationFilter === "all" || opCatalog.get(operationId) === operationFilter;
 
@@ -507,52 +520,69 @@ function DashboardPage() {
                           Nenhuma operação cadastrada para este produto.
                         </p>
                       ) : (
-                        <ul className="mt-3 space-y-1.5 animate-collapsible-down">
-                          {perOperation.map((op) => {
-                            const excess = op.target > 0 && op.produced > op.target;
-                            return (
-                              <li
-                                key={op.operationId}
-                                className={cn(
-                                  "flex items-center gap-2 rounded px-1 py-0.5 text-xs",
-                                  excess && "bg-destructive/10 text-destructive",
-                                )}
-                              >
-                                <span
-                                  className={cn(
-                                    "h-2 w-2 shrink-0 rounded-full",
-                                    excess
-                                      ? "bg-destructive"
-                                      : op.done
-                                        ? "bg-primary"
-                                        : "bg-muted-foreground/40",
-                                  )}
-                                />
-                                <span className="min-w-0 flex-1 truncate">{op.name}</span>
-                                <span
-                                  className={cn(
-                                    "tabular-nums",
-                                    excess ? "font-semibold" : "text-muted-foreground",
-                                  )}
-                                >
-                                  {op.produced}/{op.target}
-                                </span>
-                                <span
-                                  className={cn(
-                                    "w-10 text-right tabular-nums",
-                                    excess
-                                      ? "font-semibold"
-                                      : op.done
-                                        ? "font-semibold text-foreground"
-                                        : "text-muted-foreground",
-                                  )}
-                                >
-                                  {op.pct.toFixed(0)}%
-                                </span>
-                              </li>
-                            );
-                          })}
-                        </ul>
+                        <div className="mt-3 space-y-3 animate-collapsible-down">
+                          {sectors
+                            .map((sec) => ({
+                              sector: sec,
+                              ops: perOperation.filter(
+                                (op) => opSectorAll.get(op.operationId) === sec.id,
+                              ),
+                            }))
+                            .filter((g) => g.ops.length > 0)
+                            .map((g) => (
+                              <div key={g.sector.id} className="space-y-1.5">
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                  {g.sector.name}
+                                </p>
+                                <ul className="space-y-1.5">
+                                  {g.ops.map((op) => {
+                                    const excess = op.target > 0 && op.produced > op.target;
+                                    return (
+                                      <li
+                                        key={op.operationId}
+                                        className={cn(
+                                          "flex items-center gap-2 rounded px-1 py-0.5 text-xs",
+                                          excess && "bg-destructive/10 text-destructive",
+                                        )}
+                                      >
+                                        <span
+                                          className={cn(
+                                            "h-2 w-2 shrink-0 rounded-full",
+                                            excess
+                                              ? "bg-destructive"
+                                              : op.done
+                                                ? "bg-primary"
+                                                : "bg-muted-foreground/40",
+                                          )}
+                                        />
+                                        <span className="min-w-0 flex-1 truncate">{op.name}</span>
+                                        <span
+                                          className={cn(
+                                            "tabular-nums",
+                                            excess ? "font-semibold" : "text-muted-foreground",
+                                          )}
+                                        >
+                                          {op.produced}/{op.target}
+                                        </span>
+                                        <span
+                                          className={cn(
+                                            "w-10 text-right tabular-nums",
+                                            excess
+                                              ? "font-semibold"
+                                              : op.done
+                                                ? "font-semibold text-foreground"
+                                                : "text-muted-foreground",
+                                          )}
+                                        >
+                                          {op.pct.toFixed(0)}%
+                                        </span>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              </div>
+                            ))}
+                        </div>
                       )
                     ) : null}
                   </div>
