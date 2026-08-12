@@ -53,7 +53,9 @@ export type Operation = {
   name: string;
   standard_time: number | null;
   catalog_operation_id: string | null;
+  is_last_operation: boolean;
 };
+
 
 export type Sector = { id: string; name: string };
 
