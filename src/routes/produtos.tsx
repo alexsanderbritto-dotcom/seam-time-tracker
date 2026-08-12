@@ -145,13 +145,23 @@ function ProdutosPage() {
   function applyDuplicate(value: string) {
     setDupValue(value);
     const src = products.find((p) => dupLabel(p) === value);
-    if (!src) return;
+    if (!src || src.id === editing?.id) return;
     const ops = operations
       .filter((o) => o.product_id === src.id && o.catalog_operation_id)
       .map((o) => o.catalog_operation_id as string);
-    setSelectedOps(ops);
-    toast.success(`${ops.length} operação(ões) copiada(s) de ${src.reference}.`);
+    let added = 0;
+    setSelectedOps((prev) => {
+      const merged = new Set(prev);
+      ops.forEach((id) => {
+        if (!merged.has(id)) added++;
+        merged.add(id);
+      });
+      return Array.from(merged);
+    });
+    added = ops.filter((id) => !selectedOps.includes(id)).length;
+    toast.success(`${added} operação(ões) copiada(s) de ${src.reference}.`);
   }
+
 
   async function uploadPilotFiles(): Promise<string[]> {
     const paths: string[] = [];
@@ -411,27 +421,29 @@ function ProdutosPage() {
             <DialogTitle>{editing ? "Editar produto / OP" : "Novo produto / OP"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3">
-            {!editing ? (
-              <div className="space-y-1.5 rounded-md border border-dashed border-input p-3">
-                <Label className="flex items-center gap-2">
-                  <Copy className="h-4 w-4" /> Duplicar de um produto existente
-                </Label>
-                <Input
-                  list="duplicar-list"
-                  placeholder="Buscar por referência ou nome…"
-                  value={dupValue}
-                  onChange={(e) => applyDuplicate(e.target.value)}
-                />
-                <datalist id="duplicar-list">
-                  {products.map((p) => (
+            <div className="space-y-1.5 rounded-md border border-dashed border-input p-3">
+              <Label className="flex items-center gap-2">
+                <Copy className="h-4 w-4" /> Duplicar operações de um produto existente
+              </Label>
+              <Input
+                list="duplicar-list"
+                placeholder="Buscar por referência ou nome…"
+                value={dupValue}
+                onChange={(e) => applyDuplicate(e.target.value)}
+              />
+              <datalist id="duplicar-list">
+                {products
+                  .filter((p) => p.id !== editing?.id)
+                  .map((p) => (
                     <option key={p.id} value={dupLabel(p)} />
                   ))}
-                </datalist>
-                <p className="text-xs text-muted-foreground">
-                  Copia apenas as operações. Você pode ajustar a seleção antes de salvar.
-                </p>
-              </div>
-            ) : null}
+              </datalist>
+              <p className="text-xs text-muted-foreground">
+                Copia apenas as operações, somando às já selecionadas. Você pode ajustar antes de
+                salvar.
+              </p>
+            </div>
+
             <div className="space-y-1.5">
               <Label>Nome do produto</Label>
               <Input
