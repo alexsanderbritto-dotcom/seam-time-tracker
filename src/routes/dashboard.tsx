@@ -119,18 +119,18 @@ function DashboardPage() {
     </>
   );
 
-  // operação do produto -> setor, apenas quando é a última operação do setor
+  // operação do produto -> setor, apenas quando é a última operação do setor no produto
   const opSector = useMemo(() => {
-    const lastBySector = new Map(
-      catalogOps.filter((c) => c.is_last_operation).map((c) => [c.id, c.sector_id]),
-    );
+    const catSector = new Map(catalogOps.map((c) => [c.id, c.sector_id]));
     const map = new Map<string, string>();
     for (const o of operations) {
-      const sectorId = o.catalog_operation_id ? lastBySector.get(o.catalog_operation_id) : undefined;
+      if (!o.is_last_operation || !o.catalog_operation_id) continue;
+      const sectorId = catSector.get(o.catalog_operation_id);
       if (sectorId) map.set(o.id, sectorId);
     }
     return map;
   }, [operations, catalogOps]);
+
 
   const opCatalog = useMemo(
     () => new Map(operations.map((o) => [o.id, o.catalog_operation_id] as const)),

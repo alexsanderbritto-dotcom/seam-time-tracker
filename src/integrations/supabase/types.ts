@@ -176,6 +176,7 @@ export type Database = {
           catalog_operation_id: string | null
           created_at: string
           id: string
+          is_last_operation: boolean
           name: string
           product_id: string
           standard_time: number | null
@@ -184,6 +185,7 @@ export type Database = {
           catalog_operation_id?: string | null
           created_at?: string
           id?: string
+          is_last_operation?: boolean
           name: string
           product_id: string
           standard_time?: number | null
@@ -192,6 +194,7 @@ export type Database = {
           catalog_operation_id?: string | null
           created_at?: string
           id?: string
+          is_last_operation?: boolean
           name?: string
           product_id?: string
           standard_time?: number | null

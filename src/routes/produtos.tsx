@@ -77,6 +77,8 @@ function ProdutosPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState(empty);
   const [selectedOps, setSelectedOps] = useState<string[]>([]);
+  /** setor -> operação do catálogo marcada como última daquele setor neste produto */
+  const [lastBySector, setLastBySector] = useState<Record<string, string>>({});
   const [opSearch, setOpSearch] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [pilotFiles, setPilotFiles] = useState<File[]>([]);
@@ -106,6 +108,7 @@ function ProdutosPage() {
     setEditing(null);
     setForm(empty);
     setSelectedOps([]);
+    setLastBySector({});
     setOpSearch("");
     setFile(null);
     setPilotFiles([]);
@@ -127,11 +130,15 @@ function ProdutosPage() {
       entry_date: p.entry_date ?? "",
       nf_number: p.nf_number ?? "",
     });
-    setSelectedOps(
-      operations
-        .filter((o) => o.product_id === p.id && o.catalog_operation_id)
-        .map((o) => o.catalog_operation_id as string),
-    );
+    const productOps = operations.filter((o) => o.product_id === p.id && o.catalog_operation_id);
+    setSelectedOps(productOps.map((o) => o.catalog_operation_id as string));
+    const lasts: Record<string, string> = {};
+    for (const o of productOps) {
+      if (!o.is_last_operation) continue;
+      const c = catalogOps.find((x) => x.id === o.catalog_operation_id);
+      if (c) lasts[c.sector_id] = c.id;
+    }
+    setLastBySector(lasts);
     setOpSearch("");
     setFile(null);
     setPilotFiles([]);
@@ -139,6 +146,32 @@ function ProdutosPage() {
     setDupValue("");
     setOpen(true);
   }
+
+  function toggleOp(opId: string, sectorId: string, checked: boolean) {
+    setSelectedOps((prev) =>
+      checked ? [...prev, opId] : prev.filter((id) => id !== opId),
+    );
+    if (!checked) {
+      setLastBySector((prev) => {
+        if (prev[sectorId] !== opId) return prev;
+        const next = { ...prev };
+        delete next[sectorId];
+        return next;
+      });
+    }
+  }
+
+  /** setores que têm operações selecionadas neste produto */
+  const usedSectors = useMemo(() => {
+    const ids = new Set<string>();
+    for (const id of selectedOps) {
+      const c = catalogOps.find((o) => o.id === id);
+      if (c) ids.add(c.sector_id);
+    }
+    return sectors.filter((s) => ids.has(s.id));
+  }, [selectedOps, catalogOps, sectors]);
+
+  const missingLast = usedSectors.filter((s) => !lastBySector[s.id]);
 
   const dupLabel = (p: Product) => `${p.reference} · ${p.name}`;
 
@@ -159,7 +192,9 @@ function ProdutosPage() {
       return Array.from(merged);
     });
     added = ops.filter((id) => !selectedOps.includes(id)).length;
-    toast.success(`${added} operação(ões) copiada(s) de ${src.reference}.`);
+    toast.success(
+      `${added} operação(ões) copiada(s) de ${src.reference}. Marque a última operação de cada setor.`,
+    );
   }
 
 
@@ -218,6 +253,8 @@ function ProdutosPage() {
     const existing = new Set(
       current.map((o) => o.catalog_operation_id).filter(Boolean) as string[],
     );
+    const lastIds = new Set(Object.values(lastBySector));
+
     const toAdd = selectedOps
       .filter((id) => !existing.has(id))
       .map((id) => {
@@ -226,14 +263,36 @@ function ProdutosPage() {
           product_id: productId,
           name: c?.name ?? "Operação",
           catalog_operation_id: id,
+          is_last_operation: lastIds.has(id),
         };
       });
     if (toAdd.length > 0) await db.from("operations").insert(toAdd);
+
+    // sincroniza a marcação de "última operação do setor" das operações mantidas
+    const { data: rows } = await db
+      .from("operations")
+      .select("id,catalog_operation_id")
+      .eq("product_id", productId);
+    const list = (rows ?? []) as { id: string; catalog_operation_id: string | null }[];
+    const markTrue = list.filter((r) => r.catalog_operation_id && lastIds.has(r.catalog_operation_id));
+    const markFalse = list.filter((r) => !r.catalog_operation_id || !lastIds.has(r.catalog_operation_id));
+    if (markTrue.length > 0) {
+      await db.from("operations").update({ is_last_operation: true }).in("id", markTrue.map((r) => r.id));
+    }
+    if (markFalse.length > 0) {
+      await db.from("operations").update({ is_last_operation: false }).in("id", markFalse.map((r) => r.id));
+    }
   }
 
   async function save() {
     if (!form.name || !form.reference || !form.op_number) {
       toast.error("Nome, referência e OP são obrigatórios.");
+      return;
+    }
+    if (missingLast.length > 0) {
+      toast.error(
+        `Marque a última operação do setor: ${missingLast.map((s) => s.name).join(", ")}.`,
+      );
       return;
     }
     setSaving(true);
@@ -274,6 +333,7 @@ function ProdutosPage() {
       setOpen(false);
       setForm(empty);
       setSelectedOps([]);
+      setLastBySector({});
       setFile(null);
       setPilotFiles([]);
       setPilotPaths([]);
@@ -599,37 +659,73 @@ function ProdutosPage() {
                   sectors.map((s) => {
                     const list = filteredCatalog.filter((o) => o.sector_id === s.id);
                     if (list.length === 0) return null;
+                    const sectorUsed = usedSectors.some((x) => x.id === s.id);
+                    const lastId = lastBySector[s.id];
                     return (
                       <div key={s.id} className="space-y-1.5">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                           {s.name}
+                          {sectorUsed && !lastId ? (
+                            <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive">
+                              defina a última operação
+                            </span>
+                          ) : null}
                         </p>
-                        {list.map((o) => (
-                          <label key={o.id} className="flex items-center gap-2 text-sm">
-                            <Checkbox
-                              checked={selectedOps.includes(o.id)}
-                              onCheckedChange={(v) =>
-                                setSelectedOps((prev) =>
-                                  v ? [...prev, o.id] : prev.filter((id) => id !== o.id),
-                                )
-                              }
-                            />
-                            <span>{o.name}</span>
-                            {o.expected_per_hour != null ? (
-                              <span className="text-xs text-muted-foreground">
-                                ({o.expected_per_hour}/h)
-                              </span>
-                            ) : null}
-                          </label>
-                        ))}
+                        {list.map((o) => {
+                          const checked = selectedOps.includes(o.id);
+                          const isLast = lastId === o.id;
+                          return (
+                            <div key={o.id} className="flex items-center gap-2 text-sm">
+                              <label className="flex min-w-0 flex-1 items-center gap-2">
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(v) => toggleOp(o.id, s.id, v === true)}
+                                />
+                                <span className="truncate">{o.name}</span>
+                                {o.expected_per_hour != null ? (
+                                  <span className="shrink-0 text-xs text-muted-foreground">
+                                    ({o.expected_per_hour}/h)
+                                  </span>
+                                ) : null}
+                              </label>
+                              {checked ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setLastBySector((prev) => {
+                                      const next = { ...prev };
+                                      if (isLast) delete next[s.id];
+                                      else next[s.id] = o.id;
+                                      return next;
+                                    })
+                                  }
+                                  className={
+                                    isLast
+                                      ? "shrink-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground"
+                                      : "shrink-0 rounded-full border border-input px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground hover:bg-accent"
+                                  }
+                                >
+                                  {isLast ? "Última do setor" : "Marcar última"}
+                                </button>
+                              ) : null}
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                {selectedOps.length} operação(ões) selecionada(s).
+                {selectedOps.length} operação(ões) selecionada(s). Cada setor usado precisa de
+                exatamente uma operação marcada como “Última do setor”.
               </p>
+              {missingLast.length > 0 ? (
+                <p className="text-xs font-medium text-destructive">
+                  Falta marcar a última operação em: {missingLast.map((s) => s.name).join(", ")}.
+                </p>
+              ) : null}
+
             </div>
           </div>
           <DialogFooter>
