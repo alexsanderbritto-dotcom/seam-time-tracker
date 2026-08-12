@@ -39,6 +39,11 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import { cn } from "@/lib/utils";
 import { Trash2, Check, LogOut, Search, ChevronDown } from "lucide-react";
 
+/** Native select: mobile browsers render their own picker, avoiding the
+ * portal/scroll-lock crashes seen with the custom dropdown on some devices. */
+const selectClass =
+  "flex h-11 w-full rounded-md border border-input bg-background px-3 text-base ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:h-10 md:text-sm";
+
 export function MarcacaoProducao({
   marcadorNome,
   onLogout,
