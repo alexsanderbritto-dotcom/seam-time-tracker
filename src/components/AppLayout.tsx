@@ -27,7 +27,9 @@ const nav = [
   { to: "/marcadores", label: "Marcadores", icon: UserCheck, adminOnly: true },
   { to: "/horarios", label: "Horários", icon: Clock, adminOnly: true },
   { to: "/faturamento", label: "Faturamento", icon: Receipt, adminOnly: true },
+  { to: "/gargalo", label: "Gargalo na Produção", icon: AlertTriangle, adminOnly: true },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: true },
+
 ] as const;
 
 export function AppLayout({
