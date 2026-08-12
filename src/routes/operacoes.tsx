@@ -16,8 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { db } from "@/lib/db";
 import { catalogOperationsQuery, sectorsQuery, type CatalogOperation } from "@/lib/production";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Pencil, Trash2, Flag } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/operacoes")({
   head: () => ({
@@ -51,7 +50,6 @@ function OperacoesSetorPage() {
   } | null>(null);
   const [opName, setOpName] = useState("");
   const [opRate, setOpRate] = useState("");
-  const [opLast, setOpLast] = useState(false);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["sectors"] });
@@ -88,7 +86,6 @@ function OperacoesSetorPage() {
     setOpDialog({ sectorId, op });
     setOpName(op?.name ?? "");
     setOpRate(op?.expected_per_hour != null ? String(op.expected_per_hour) : "");
-    setOpLast(op?.is_last_operation ?? false);
   }
 
   async function saveOp() {
@@ -99,7 +96,6 @@ function OperacoesSetorPage() {
       sector_id: opDialog.sectorId,
       name,
       expected_per_hour: opRate ? Number(opRate.replace(",", ".")) : null,
-      is_last_operation: opLast,
     };
     const { error } = opDialog.op
       ? await db.from("catalog_operations").update(payload).eq("id", opDialog.op.id)
@@ -168,14 +164,7 @@ function OperacoesSetorPage() {
                         className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
                       >
                         <div className="min-w-0">
-                          <p className="flex items-center gap-1.5 truncate text-sm font-medium">
-                            {o.name}
-                            {o.is_last_operation ? (
-                              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                                <Flag className="h-3 w-3" /> Última
-                              </span>
-                            ) : null}
-                          </p>
+                          <p className="truncate text-sm font-medium">{o.name}</p>
                           <p className="text-xs text-muted-foreground">
                             {o.expected_per_hour != null
                               ? `${o.expected_per_hour} pçs/hora`
@@ -251,20 +240,6 @@ function OperacoesSetorPage() {
                 placeholder="60"
               />
             </div>
-            <label className="flex items-start gap-3 rounded-md border border-border p-3">
-              <Checkbox
-                checked={opLast}
-                onCheckedChange={(v) => setOpLast(v === true)}
-                className="mt-0.5"
-              />
-              <span className="text-sm">
-                <span className="font-medium">Esta é a última operação do setor?</span>
-                <span className="block text-xs text-muted-foreground">
-                  Usada para contar as peças concluídas do setor. O setor pode ter mais de uma
-                  última operação.
-                </span>
-              </span>
-            </label>
           </div>
           <DialogFooter>
             <Button onClick={saveOp}>Salvar</Button>
