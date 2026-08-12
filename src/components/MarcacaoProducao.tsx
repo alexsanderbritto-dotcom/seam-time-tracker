@@ -253,34 +253,30 @@ export function MarcacaoProducao({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Horário</Label>
-                <Select
+                <Label htmlFor="slot-select">Horário</Label>
+                <select
+                  id="slot-select"
+                  className={selectClass}
                   value={slotIdx}
                   disabled={slots.length === 0}
-                  onValueChange={(v) => {
-                    setSlotIdx(v);
+                  onChange={(e) => {
+                    setSlotIdx(e.target.value);
                     setOvertimeId("");
                   }}
                 >
-                  <SelectTrigger className="h-11 text-base md:h-10 md:text-sm">
-                    <SelectValue
-                      placeholder={
-                        loadingConfig
-                          ? "Carregando horários..."
-                          : slots.length === 0
-                            ? "Nenhum horário disponível"
-                            : "Selecione"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {slots.map((s, i) => (
-                      <SelectItem key={s.start} value={String(i)}>
-                        {fmt(s.start)} às {fmt(s.end)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <option value="">
+                    {loadingConfig
+                      ? "Carregando horários..."
+                      : slots.length === 0
+                        ? "Nenhum horário disponível"
+                        : "Selecione"}
+                  </option>
+                  {slots.map((s, i) => (
+                    <option key={s.start} value={String(i)}>
+                      {fmt(s.start)} às {fmt(s.end)}
+                    </option>
+                  ))}
+                </select>
                 {!loadingConfig && (configError || slots.length === 0) ? (
                   <p className="text-xs text-destructive">
                     Não foi possível carregar os horários. Atualize a página ou faça login
@@ -292,32 +288,28 @@ export function MarcacaoProducao({
             </div>
 
             <div className="space-y-1.5">
-              <Label>Hora extra</Label>
-              <Select
+              <Label htmlFor="overtime-select">Hora extra</Label>
+              <select
+                id="overtime-select"
+                className={selectClass}
                 value={overtimeId}
                 disabled={overtimeSlots.length === 0}
-                onValueChange={(v) => {
-                  setOvertimeId(v);
-                  setSlotIdx("");
+                onChange={(e) => {
+                  setOvertimeId(e.target.value);
+                  if (e.target.value) setSlotIdx("");
                 }}
               >
-                <SelectTrigger className="h-11 text-base md:h-10 md:text-sm">
-                  <SelectValue
-                    placeholder={
-                      overtimeSlots.length === 0
-                        ? "Nenhum horário extra configurado"
-                        : "Selecione uma janela de hora extra"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {overtimeSlots.map((o) => (
-                    <SelectItem key={o.id} value={o.id}>
-                      {fmt(o.start_time)} às {fmt(o.end_time)} (extra)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <option value="">
+                  {overtimeSlots.length === 0
+                    ? "Nenhum horário extra configurado"
+                    : "Selecione uma janela de hora extra"}
+                </option>
+                {overtimeSlots.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {fmt(o.start_time)} às {fmt(o.end_time)} (extra)
+                  </option>
+                ))}
+              </select>
               {overtimeId ? (
                 <button
                   type="button"
