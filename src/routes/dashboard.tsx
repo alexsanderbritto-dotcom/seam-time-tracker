@@ -31,6 +31,7 @@ import {
   catalogOperationsQuery,
   employeesQuery,
   entriesQuery,
+  esteiraQuery,
   fmt,
   operationsQuery,
   overtimeSlotsQuery,
@@ -77,6 +78,12 @@ function DashboardPage() {
   const { data: allEntries = [] } = useQuery(entriesQuery());
   const { data: sectors = [] } = useQuery(sectorsQuery);
   const { data: catalogOps = [] } = useQuery(catalogOperationsQuery);
+  const { data: esteira = [] } = useQuery(esteiraQuery);
+
+  const esteiraProducts = useMemo(() => {
+    const ids = new Set(esteira.map((e) => e.produto_id));
+    return products.filter((p) => ids.has(p.id));
+  }, [esteira, products]);
 
   const { data: overtimeSlots = [] } = useQuery(overtimeSlotsQuery);
 
@@ -447,10 +454,12 @@ function DashboardPage() {
             <CardTitle className="text-base">Avanço por produto / OP</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            {products.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum produto cadastrado.</p>
+            {esteiraProducts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Nenhum produto na esteira de produção.
+              </p>
             ) : (
-              products.map((p) => {
+              esteiraProducts.map((p) => {
                 const { pct, done, perOperation } = productCompletion(
                   p,
                   visibleOperations,
