@@ -77,6 +77,8 @@ function ProdutosPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState(empty);
   const [selectedOps, setSelectedOps] = useState<string[]>([]);
+  /** setor -> operação do catálogo marcada como última daquele setor neste produto */
+  const [lastBySector, setLastBySector] = useState<Record<string, string>>({});
   const [opSearch, setOpSearch] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [pilotFiles, setPilotFiles] = useState<File[]>([]);
@@ -106,6 +108,7 @@ function ProdutosPage() {
     setEditing(null);
     setForm(empty);
     setSelectedOps([]);
+    setLastBySector({});
     setOpSearch("");
     setFile(null);
     setPilotFiles([]);
@@ -127,11 +130,15 @@ function ProdutosPage() {
       entry_date: p.entry_date ?? "",
       nf_number: p.nf_number ?? "",
     });
-    setSelectedOps(
-      operations
-        .filter((o) => o.product_id === p.id && o.catalog_operation_id)
-        .map((o) => o.catalog_operation_id as string),
-    );
+    const productOps = operations.filter((o) => o.product_id === p.id && o.catalog_operation_id);
+    setSelectedOps(productOps.map((o) => o.catalog_operation_id as string));
+    const lasts: Record<string, string> = {};
+    for (const o of productOps) {
+      if (!o.is_last_operation) continue;
+      const c = catalogOps.find((x) => x.id === o.catalog_operation_id);
+      if (c) lasts[c.sector_id] = c.id;
+    }
+    setLastBySector(lasts);
     setOpSearch("");
     setFile(null);
     setPilotFiles([]);
@@ -159,7 +166,9 @@ function ProdutosPage() {
       return Array.from(merged);
     });
     added = ops.filter((id) => !selectedOps.includes(id)).length;
-    toast.success(`${added} operação(ões) copiada(s) de ${src.reference}.`);
+    toast.success(
+      `${added} operação(ões) copiada(s) de ${src.reference}. Marque a última operação de cada setor.`,
+    );
   }
 
 
@@ -608,11 +617,7 @@ function ProdutosPage() {
                           <label key={o.id} className="flex items-center gap-2 text-sm">
                             <Checkbox
                               checked={selectedOps.includes(o.id)}
-                              onCheckedChange={(v) =>
-                                setSelectedOps((prev) =>
-                                  v ? [...prev, o.id] : prev.filter((id) => id !== o.id),
-                                )
-                              }
+                              onCheckedChange={(v) => toggleOp(o.id, s.id, v === true)}
                             />
                             <span>{o.name}</span>
                             {o.expected_per_hour != null ? (
