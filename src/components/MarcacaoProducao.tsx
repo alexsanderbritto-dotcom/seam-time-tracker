@@ -68,7 +68,7 @@ export function MarcacaoProducao({
   const { data: employees = [] } = useQuery(employeesQuery);
   const { data: products = [] } = useQuery(productsQuery);
   const { data: operations = [] } = useQuery(operationsQuery);
-  const { data: config } = useQuery(scheduleQuery);
+  const { data: config, isLoading: loadingConfig, isError: configError } = useQuery(scheduleQuery);
   const { data: entries = [] } = useQuery(entriesQuery(date));
   const { data: esteira = [] } = useQuery(esteiraQuery);
   const { data: overtimeSlots = [] } = useQuery(overtimeSlotsQuery);
@@ -256,13 +256,22 @@ export function MarcacaoProducao({
                 <Label>Horário</Label>
                 <Select
                   value={slotIdx}
+                  disabled={slots.length === 0}
                   onValueChange={(v) => {
                     setSlotIdx(v);
                     setOvertimeId("");
                   }}
                 >
                   <SelectTrigger className="h-11 text-base md:h-10 md:text-sm">
-                    <SelectValue placeholder="Selecione" />
+                    <SelectValue
+                      placeholder={
+                        loadingConfig
+                          ? "Carregando horários..."
+                          : slots.length === 0
+                            ? "Nenhum horário disponível"
+                            : "Selecione"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {slots.map((s, i) => (
@@ -272,7 +281,14 @@ export function MarcacaoProducao({
                     ))}
                   </SelectContent>
                 </Select>
+                {!loadingConfig && (configError || slots.length === 0) ? (
+                  <p className="text-xs text-destructive">
+                    Não foi possível carregar os horários. Atualize a página ou faça login
+                    novamente.
+                  </p>
+                ) : null}
               </div>
+
             </div>
 
             <div className="space-y-1.5">

@@ -1,5 +1,6 @@
+import { toast } from "sonner";
 import { dbMutate, dbSelect, storageSignedUrl, storageUpload } from "@/lib/data.functions";
-import { readSession } from "@/lib/marcador-session";
+import { clearSession, readSession } from "@/lib/marcador-session";
 import type { Filter } from "@/lib/data.functions";
 
 type Result<T> = { data: T; error: { message: string } | null };
@@ -7,6 +8,29 @@ type Result<T> = { data: T; error: { message: string } | null };
 function token() {
   return readSession()?.token ?? "";
 }
+
+let sessionNotified = false;
+
+/**
+ * Sessions expire after 12h. Without this, every query silently returns empty
+ * data and the screen looks broken (empty selects, nothing saves).
+ * Detect it, warn the user and drop back to the login screen.
+ */
+function guardSession<T>(res: Result<T>): Result<T> {
+  const msg = res?.error?.message ?? "";
+  if (/sess(ã|a)o (expirada|inv(á|a)lida)/i.test(msg)) {
+    clearSession();
+    if (!sessionNotified) {
+      sessionNotified = true;
+      toast.error("Sua sessão expirou. Faça login novamente.");
+      window.setTimeout(() => {
+        sessionNotified = false;
+      }, 4000);
+    }
+  }
+  return res;
+}
+
 
 class SelectBuilder<T> implements PromiseLike<Result<T>> {
   private filters: Filter[] = [];
@@ -58,7 +82,7 @@ class SelectBuilder<T> implements PromiseLike<Result<T>> {
         limit: this._limit,
         mode,
       },
-    }) as Promise<Result<T>>;
+    }).then((r) => guardSession(r as Result<T>)) as Promise<Result<T>>;
   }
 
   single() {
@@ -113,7 +137,7 @@ class MutateBuilder implements PromiseLike<Result<unknown>> {
         onConflict: this.onConflict,
         returning: this.returning,
       },
-    }) as Promise<Result<unknown>>;
+    }).then((r) => guardSession(r as Result<unknown>)) as Promise<Result<unknown>>;
   }
   then<R1 = Result<unknown>, R2 = never>(
     onfulfilled?: ((value: Result<unknown>) => R1 | PromiseLike<R1>) | null,
