@@ -137,6 +137,19 @@ function DashboardPage() {
     [operations],
   );
 
+  // operation id -> sector id (via catalog_operation)
+  const opSectorAll = useMemo(() => {
+    const catSector = new Map(catalogOps.map((c) => [c.id, c.sector_id]));
+    const map = new Map<string, string>();
+    for (const o of operations) {
+      if (o.catalog_operation_id) {
+        const sid = catSector.get(o.catalog_operation_id);
+        if (sid) map.set(o.id, sid);
+      }
+    }
+    return map;
+  }, [operations, catalogOps]);
+
   const matchesOp = (operationId: string) =>
     operationFilter === "all" || opCatalog.get(operationId) === operationFilter;
 
