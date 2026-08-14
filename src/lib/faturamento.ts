@@ -123,7 +123,7 @@ export type DayRow = {
   atingido: number;
   lines: DayProductLine[];
   /** meta impossível de diluir com coerência (ex: poucos dias restantes) */
-  warning?: string;
+  warning?: string | undefined;
 };
 
 /**
