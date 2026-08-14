@@ -144,6 +144,66 @@ export type Database = {
           },
         ]
       }
+      faturamento_mes_produtos: {
+        Row: {
+          created_at: string
+          id: string
+          mes_id: string
+          product_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mes_id: string
+          product_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mes_id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faturamento_mes_produtos_mes_id_fkey"
+            columns: ["mes_id"]
+            isOneToOne: false
+            referencedRelation: "faturamento_meses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faturamento_mes_produtos_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faturamento_meses: {
+        Row: {
+          ano: number
+          created_at: string
+          id: string
+          mes: number
+          updated_at: string
+        }
+        Insert: {
+          ano: number
+          created_at?: string
+          id?: string
+          mes: number
+          updated_at?: string
+        }
+        Update: {
+          ano?: number
+          created_at?: string
+          id?: string
+          mes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       marcadores: {
         Row: {
           cargo: string
@@ -170,6 +230,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      meta_setor_mes: {
+        Row: {
+          ano: number
+          created_at: string
+          feriados: string[]
+          id: string
+          mes: number
+          meta_dia: number
+          sector_id: string
+          updated_at: string
+        }
+        Insert: {
+          ano: number
+          created_at?: string
+          feriados?: string[]
+          id?: string
+          mes: number
+          meta_dia?: number
+          sector_id: string
+          updated_at?: string
+        }
+        Update: {
+          ano?: number
+          created_at?: string
+          feriados?: string[]
+          id?: string
+          mes?: number
+          meta_dia?: number
+          sector_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_setor_mes_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       operations: {
         Row: {
