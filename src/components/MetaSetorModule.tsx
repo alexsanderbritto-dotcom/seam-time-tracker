@@ -385,13 +385,15 @@ function DayGrid({
               {fmtDayLabel(r.date)}
               {!r.due ? (
                 <span className="text-[10px] font-normal uppercase text-muted-foreground">
-                  a vencer
+                  {simulated ? "sem simulação" : "a vencer"}
                 </span>
               ) : null}
             </div>
             <div className="flex-1 space-y-2 p-3">
               {!r.due ? (
-                <p className="text-xs text-muted-foreground">Dia ainda não vencido</p>
+                <p className="text-xs text-muted-foreground">
+                  {simulated ? "Nenhum produto simulado neste dia" : "Dia ainda não vencido"}
+                </p>
               ) : r.lines.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Sem produção</p>
               ) : (
