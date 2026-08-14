@@ -492,7 +492,9 @@ function SimulationBlock({
     products,
     allowedProductIds,
     simulated: sim,
+    allDue: true,
   });
+
 
   const add = () => {
     if (!day || !productId) return;
