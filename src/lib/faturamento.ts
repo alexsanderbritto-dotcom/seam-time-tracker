@@ -121,10 +121,21 @@ export type DayRow = {
   date: string;
   meta: number;
   atingido: number;
+  /** meta - atingido (só faz sentido em dias vencidos) */
+  resultado: number;
+  /** dia já vencido (hoje ou anterior) */
+  due: boolean;
   lines: DayProductLine[];
   /** meta impossível de diluir com coerência (ex: poucos dias restantes) */
   warning?: string | undefined;
 };
+
+/** data de hoje em ISO local (yyyy-mm-dd) */
+export function todayIso(): string {
+  const d = new Date();
+  return isoDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}
+
 
 /**
  * Operações (do produto) que são a última operação do setor informado.
@@ -148,9 +159,11 @@ export function lastOpsOfSector(
 export type SimEntry = { date: string; productId: string; quantity: number };
 
 /**
- * Monta as linhas de dia com meta redistribuída.
- * A meta de cada dia usa o que ainda falta para o total do mês dividido pelos
- * dias restantes — sobras reduzem e faltas aumentam a meta dos dias seguintes.
+ * Monta as linhas de dia.
+ * - "Atingido" só é computado em dias vencidos (hoje ou anteriores).
+ * - Dias anteriores a hoje mantêm a meta base; o saldo acumulado deles
+ *   (atingido - meta) é redistribuído entre hoje e os dias seguintes.
+ * - Na simulação (`allDue`) todos os dias são tratados como vencidos.
  */
 export function buildMonthRows(params: {
   days: string[];
@@ -160,8 +173,20 @@ export function buildMonthRows(params: {
   products: Product[];
   allowedProductIds: Set<string>;
   simulated?: SimEntry[];
+  allDue?: boolean;
+  today?: string;
 }): { rows: DayRow[]; metaTotal: number; atingidoTotal: number } {
-  const { days, metaDia, entries, opToProduct, products, allowedProductIds, simulated = [] } = params;
+  const {
+    days,
+    metaDia,
+    entries,
+    opToProduct,
+    products,
+    allowedProductIds,
+    simulated = [],
+    allDue = false,
+    today = todayIso(),
+  } = params;
   const productById = new Map(products.map((p) => [p.id, p] as const));
   const metaTotal = metaDia * days.length;
 
@@ -180,21 +205,7 @@ export function buildMonthRows(params: {
   }
   for (const s of simulated) push(s.date, s.productId, s.quantity);
 
-  const rows: DayRow[] = [];
-  let realizadoAcumulado = 0;
-
-  days.forEach((date, i) => {
-    const restante = days.length - i;
-    const faltante = metaTotal - realizadoAcumulado;
-    let meta = faltante / restante;
-    let warning: string | undefined;
-    if (meta < 0) {
-      warning = "Meta do mês já superada — nada restante a diluir.";
-      meta = 0;
-    } else if (restante <= 2 && meta > metaDia * 3 && metaDia > 0) {
-      warning = "Diferença grande para poucos dias úteis restantes.";
-    }
-
+  const valueOf = (date: string): DayProductLine[] => {
     const lines: DayProductLine[] = [];
     const dayMap = perDay.get(date);
     if (dayMap) {
@@ -211,10 +222,41 @@ export function buildMonthRows(params: {
       }
       lines.sort((a, b) => b.value - a.value);
     }
-    const atingido = lines.reduce((s, l) => s + l.value, 0);
-    realizadoAcumulado += atingido;
-    rows.push({ date, meta, atingido, lines, warning });
-  });
+    return lines;
+  };
 
-  return { rows, metaTotal, atingidoTotal: realizadoAcumulado };
+  const isDue = (date: string) => allDue || date <= today;
+
+  // saldo dos dias já encerrados (anteriores a hoje)
+  const closed = days.filter((d) => isDue(d) && d < today);
+  const saldoFechado = closed.reduce(
+    (s, d) => s + valueOf(d).reduce((a, l) => a + l.value, 0) - metaDia,
+    0,
+  );
+  const abertos = days.filter((d) => !closed.includes(d));
+  const ajuste = abertos.length > 0 ? -saldoFechado / abertos.length : 0;
+
+  const rows: DayRow[] = [];
+  let atingidoTotal = 0;
+
+  for (const date of days) {
+    const due = isDue(date);
+    const fechado = closed.includes(date);
+    let meta = fechado ? metaDia : metaDia + ajuste;
+    let warning: string | undefined;
+    if (meta < 0) {
+      warning = "Meta do mês já superada — nada restante a diluir.";
+      meta = 0;
+    } else if (!fechado && abertos.length <= 2 && metaDia > 0 && meta > metaDia * 3) {
+      warning = "Diferença grande para poucos dias úteis restantes.";
+    }
+
+    const lines = due ? valueOf(date) : [];
+    const atingido = lines.reduce((s, l) => s + l.value, 0);
+    if (due) atingidoTotal += atingido;
+    rows.push({ date, meta, atingido, resultado: atingido - meta, due, lines, warning });
+  }
+
+  return { rows, metaTotal, atingidoTotal };
 }
+

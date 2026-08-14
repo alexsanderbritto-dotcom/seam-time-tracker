@@ -371,18 +371,28 @@ function DayGrid({
   return (
     <div className="flex gap-3 overflow-x-auto pb-2">
       {rows.map((r) => {
-        const ok = r.atingido >= r.meta && r.meta > 0;
+        const ok = r.resultado >= 0 && r.meta > 0;
         return (
           <div
             key={r.date}
             className={cn(
               "flex w-56 shrink-0 flex-col rounded-lg border",
               simulated && "border-dashed",
+              !r.due && "border-dashed opacity-60",
             )}
           >
-            <div className="border-b px-3 py-2 text-sm font-medium">{fmtDayLabel(r.date)}</div>
+            <div className="flex items-center justify-between gap-2 border-b px-3 py-2 text-sm font-medium">
+              {fmtDayLabel(r.date)}
+              {!r.due ? (
+                <span className="text-[10px] font-normal uppercase text-muted-foreground">
+                  a vencer
+                </span>
+              ) : null}
+            </div>
             <div className="flex-1 space-y-2 p-3">
-              {r.lines.length === 0 ? (
+              {!r.due ? (
+                <p className="text-xs text-muted-foreground">Dia ainda não vencido</p>
+              ) : r.lines.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Sem produção</p>
               ) : (
                 r.lines.map((l) => (
@@ -403,13 +413,28 @@ function DayGrid({
             </div>
             <div className="space-y-0.5 border-t px-3 py-2 text-xs">
               <p className="text-muted-foreground">Meta: {brl(r.meta)}</p>
-              <p className={cn("font-semibold", ok ? "text-emerald-600" : "text-foreground")}>
-                Atingido: {brl(r.atingido)}
-              </p>
+              {r.due ? (
+                <>
+                  <p className={cn("font-semibold", ok ? "text-emerald-600" : "text-foreground")}>
+                    Atingido: {brl(r.atingido)}
+                  </p>
+                  <p
+                    className={cn(
+                      "font-semibold",
+                      r.resultado >= 0 ? "text-emerald-600" : "text-destructive",
+                    )}
+                  >
+                    Resultado: {brl(r.resultado)}
+                  </p>
+                </>
+              ) : (
+                <p className="text-muted-foreground">Atingido: —</p>
+              )}
             </div>
           </div>
         );
       })}
+
     </div>
   );
 }
@@ -467,7 +492,9 @@ function SimulationBlock({
     products,
     allowedProductIds,
     simulated: sim,
+    allDue: true,
   });
+
 
   const add = () => {
     if (!day || !productId) return;
