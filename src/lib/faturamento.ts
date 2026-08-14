@@ -164,6 +164,83 @@ export function lastOpsOfSector(
 export type SimEntry = { date: string; productId: string; quantity: number };
 
 /**
+ * Monta o cálculo de valor por dia.
+ * Regra: a quantidade real produzida (última operação do setor) é limitada à
+ * quantidade total do produto — o excedente não gera valor.
+ * Produtos hipotéticos da simulação não sofrem essa trava.
+ */
+function makeValueOf(params: {
+  days: string[];
+  entries: ProductionEntry[];
+  opToProduct: Map<string, string>;
+  products: Product[];
+  allowedProductIds: Set<string>;
+  simulated: SimEntry[];
+}): (date: string) => DayProductLine[] {
+  const { days, entries, opToProduct, products, allowedProductIds, simulated } = params;
+  const productById = new Map(products.map((p) => [p.id, p] as const));
+
+  const real = new Map<string, Map<string, number>>();
+  const sim = new Map<string, Map<string, number>>();
+  const add = (
+    target: Map<string, Map<string, number>>,
+    date: string,
+    productId: string,
+    qty: number,
+  ) => {
+    if (!allowedProductIds.has(productId)) return;
+    const m = target.get(date) ?? new Map<string, number>();
+    m.set(productId, (m.get(productId) ?? 0) + qty);
+    target.set(date, m);
+  };
+
+  for (const e of entries) {
+    const productId = opToProduct.get(e.operation_id);
+    if (!productId) continue;
+    add(real, e.entry_date, productId, e.quantity);
+  }
+  for (const s of simulated) add(sim, s.date, s.productId, s.quantity);
+
+  // trava cumulativa: limita o real ao total do produto, em ordem cronológica
+  const capped = new Map<string, Map<string, number>>();
+  const used = new Map<string, number>();
+  for (const date of [...days].sort()) {
+    const dayMap = real.get(date);
+    if (!dayMap) continue;
+    const out = new Map<string, number>();
+    for (const [productId, qty] of dayMap) {
+      const total = Number(productById.get(productId)?.total_quantity ?? 0);
+      const already = used.get(productId) ?? 0;
+      const allowed = Math.max(0, Math.min(qty, total - already));
+      used.set(productId, already + allowed);
+      if (allowed > 0) out.set(productId, allowed);
+    }
+    capped.set(date, out);
+  }
+
+  return (date: string): DayProductLine[] => {
+    const merged = new Map<string, number>(capped.get(date) ?? []);
+    for (const [productId, qty] of sim.get(date) ?? []) {
+      merged.set(productId, (merged.get(productId) ?? 0) + qty);
+    }
+    const lines: DayProductLine[] = [];
+    for (const [productId, qty] of merged) {
+      const p = productById.get(productId);
+      if (!p) continue;
+      lines.push({
+        productId,
+        opInterna: p.op_interna,
+        name: p.name,
+        quantity: qty,
+        value: qty * Number(p.unit_value ?? 0),
+      });
+    }
+    lines.sort((a, b) => b.value - a.value);
+    return lines;
+  };
+}
+
+/**
  * Monta as linhas de dia.
  * - "Atingido" só é computado em dias vencidos (hoje ou anteriores).
  * - Dias anteriores a hoje mantêm a meta base; o saldo acumulado deles
@@ -196,43 +273,16 @@ export function buildMonthRows(params: {
     closedDays = [],
   } = params;
   const manualClosed = new Set(closedDays);
-  const productById = new Map(products.map((p) => [p.id, p] as const));
   const metaTotal = metaDia * days.length;
 
-  const perDay = new Map<string, Map<string, number>>(); // date -> productId -> qty
-  const push = (date: string, productId: string, qty: number) => {
-    if (!allowedProductIds.has(productId)) return;
-    const m = perDay.get(date) ?? new Map<string, number>();
-    m.set(productId, (m.get(productId) ?? 0) + qty);
-    perDay.set(date, m);
-  };
-
-  for (const e of entries) {
-    const productId = opToProduct.get(e.operation_id);
-    if (!productId) continue;
-    push(e.entry_date, productId, e.quantity);
-  }
-  for (const s of simulated) push(s.date, s.productId, s.quantity);
-
-  const valueOf = (date: string): DayProductLine[] => {
-    const lines: DayProductLine[] = [];
-    const dayMap = perDay.get(date);
-    if (dayMap) {
-      for (const [productId, qty] of dayMap) {
-        const p = productById.get(productId);
-        if (!p) continue;
-        lines.push({
-          productId,
-          opInterna: p.op_interna,
-          name: p.name,
-          quantity: qty,
-          value: qty * Number(p.unit_value ?? 0),
-        });
-      }
-      lines.sort((a, b) => b.value - a.value);
-    }
-    return lines;
-  };
+  const valueOf = makeValueOf({
+    days,
+    entries,
+    opToProduct,
+    products,
+    allowedProductIds,
+    simulated,
+  });
 
   const isDue = (date: string) => allDue || date <= today;
 
@@ -311,40 +361,14 @@ export function buildSimulationRows(params: {
   } = params;
   const manualClosed = new Set(closedDays);
 
-  const productById = new Map(products.map((p) => [p.id, p] as const));
-  const perDay = new Map<string, Map<string, number>>();
-  const push = (date: string, productId: string, qty: number) => {
-    if (!allowedProductIds.has(productId)) return;
-    const m = perDay.get(date) ?? new Map<string, number>();
-    m.set(productId, (m.get(productId) ?? 0) + qty);
-    perDay.set(date, m);
-  };
-  for (const e of entries) {
-    const productId = opToProduct.get(e.operation_id);
-    if (!productId) continue;
-    push(e.entry_date, productId, e.quantity);
-  }
-  for (const s of simulated) push(s.date, s.productId, s.quantity);
-
-  const valueOf = (date: string): DayProductLine[] => {
-    const lines: DayProductLine[] = [];
-    const dayMap = perDay.get(date);
-    if (dayMap) {
-      for (const [productId, qty] of dayMap) {
-        const p = productById.get(productId);
-        if (!p) continue;
-        lines.push({
-          productId,
-          opInterna: p.op_interna,
-          name: p.name,
-          quantity: qty,
-          value: qty * Number(p.unit_value ?? 0),
-        });
-      }
-      lines.sort((a, b) => b.value - a.value);
-    }
-    return lines;
-  };
+  const valueOf = makeValueOf({
+    days,
+    entries,
+    opToProduct,
+    products,
+    allowedProductIds,
+    simulated,
+  });
 
   // saldo real dos dias já encerrados → meta base herdada dos dias abertos
   const closed = days.filter((d) => d < today || manualClosed.has(d));
