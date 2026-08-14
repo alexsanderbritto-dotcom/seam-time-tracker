@@ -121,10 +121,21 @@ export type DayRow = {
   date: string;
   meta: number;
   atingido: number;
+  /** meta - atingido (só faz sentido em dias vencidos) */
+  resultado: number;
+  /** dia já vencido (hoje ou anterior) */
+  due: boolean;
   lines: DayProductLine[];
   /** meta impossível de diluir com coerência (ex: poucos dias restantes) */
   warning?: string | undefined;
 };
+
+/** data de hoje em ISO local (yyyy-mm-dd) */
+export function todayIso(): string {
+  const d = new Date();
+  return isoDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}
+
 
 /**
  * Operações (do produto) que são a última operação do setor informado.
