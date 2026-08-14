@@ -210,9 +210,38 @@ function MetaMesBlock({ meta, sectorName }: { meta: MetaSetorMes; sectorName: st
         opToProduct,
         products,
         allowedProductIds,
+        closedDays: meta.dias_encerrados,
       }),
-    [days, meta.meta_dia, entries, opToProduct, products, allowedProductIds],
+    [days, meta.meta_dia, entries, opToProduct, products, allowedProductIds, meta.dias_encerrados],
   );
+
+  const encerrarDia = async (date: string) => {
+    const lista = [...new Set([...meta.dias_encerrados, date])].sort();
+    const { error } = await db
+      .from("meta_setor_mes")
+      .update({ dias_encerrados: lista })
+      .eq("id", meta.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Produção do dia encerrada — meta redistribuída para os próximos dias");
+    void qc.invalidateQueries({ queryKey: metaSetorMesQuery.queryKey });
+  };
+
+  const reabrirDia = async (date: string) => {
+    const lista = meta.dias_encerrados.filter((d) => d !== date);
+    const { error } = await db
+      .from("meta_setor_mes")
+      .update({ dias_encerrados: lista })
+      .eq("id", meta.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Dia reaberto");
+    void qc.invalidateQueries({ queryKey: metaSetorMesQuery.queryKey });
+  };
 
   const save = async () => {
     setSaving(true);
@@ -343,7 +372,13 @@ function MetaMesBlock({ meta, sectorName }: { meta: MetaSetorMes; sectorName: st
               </div>
             ) : null}
 
-            <DayGrid rows={real.rows} />
+            <DayGrid
+              rows={real.rows}
+              today={todayIso()}
+              canManage={isAdmin}
+              onEncerrar={(d) => void encerrarDia(d)}
+              onReabrir={(d) => void reabrirDia(d)}
+            />
 
             <SimulationBlock
               days={days}
@@ -352,6 +387,7 @@ function MetaMesBlock({ meta, sectorName }: { meta: MetaSetorMes; sectorName: st
               opToProduct={opToProduct}
               products={products}
               allowedProductIds={allowedProductIds}
+              closedDays={meta.dias_encerrados}
             />
           </div>
         </CollapsibleContent>
@@ -363,9 +399,17 @@ function MetaMesBlock({ meta, sectorName }: { meta: MetaSetorMes; sectorName: st
 function DayGrid({
   rows,
   simulated = false,
+  today,
+  canManage = false,
+  onEncerrar,
+  onReabrir,
 }: {
   rows: ReturnType<typeof buildMonthRows>["rows"];
   simulated?: boolean;
+  today?: string;
+  canManage?: boolean;
+  onEncerrar?: (date: string) => void;
+  onReabrir?: (date: string) => void;
 }) {
   if (rows.length === 0) {
     return <p className="text-sm text-muted-foreground">Nenhum dia útil neste mês.</p>;
@@ -374,6 +418,7 @@ function DayGrid({
     <div className="flex gap-3 overflow-x-auto pb-2">
       {rows.map((r) => {
         const ok = r.resultado >= 0 && r.meta > 0;
+        const emAndamento = !simulated && r.date === today && !r.closed;
         return (
           <div
             key={r.date}
@@ -388,6 +433,14 @@ function DayGrid({
               {!r.due ? (
                 <span className="text-[10px] font-normal uppercase text-muted-foreground">
                   {simulated ? "sem simulação" : "a vencer"}
+                </span>
+              ) : emAndamento ? (
+                <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium uppercase text-primary">
+                  em andamento
+                </span>
+              ) : !simulated && r.closed ? (
+                <span className="text-[10px] font-normal uppercase text-muted-foreground">
+                  encerrado
                 </span>
               ) : null}
             </div>
@@ -420,20 +473,57 @@ function DayGrid({
               {r.due ? (
                 <>
                   <p className={cn("font-semibold", ok ? "text-emerald-600" : "text-foreground")}>
-                    Atingido: {brl(r.atingido)}
+                    Atingido{emAndamento ? " (parcial)" : ""}: {brl(r.atingido)}
                   </p>
-                  <p
-                    className={cn(
-                      "font-semibold",
-                      r.resultado >= 0 ? "text-emerald-600" : "text-destructive",
-                    )}
-                  >
-                    Resultado: {brl(r.resultado)}
-                  </p>
+                  {emAndamento ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      Meta ainda não redistribuída — encerre o dia para diluir a diferença.
+                    </p>
+                  ) : (
+                    <p
+                      className={cn(
+                        "font-semibold",
+                        r.resultado >= 0 ? "text-emerald-600" : "text-destructive",
+                      )}
+                    >
+                      Resultado: {brl(r.resultado)}
+                    </p>
+                  )}
                 </>
               ) : (
                 <p className="text-muted-foreground">Atingido: —</p>
               )}
+              {canManage && emAndamento && onEncerrar ? (
+                <Button
+                  size="sm"
+                  className="mt-2 w-full"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Encerrar a produção de hoje? A diferença entre meta e atingido será redistribuída para os próximos dias úteis.",
+                      )
+                    )
+                      onEncerrar(r.date);
+                  }}
+                >
+                  Encerrar produção do dia
+                </Button>
+              ) : null}
+              {canManage && !simulated && r.closed && r.date === today && onReabrir ? (
+                <>
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    Dia encerrado. Novos lançamentos ainda recalculam o valor e a redistribuição.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-1 w-full"
+                    onClick={() => onReabrir(r.date)}
+                  >
+                    Reabrir dia
+                  </Button>
+                </>
+              ) : null}
             </div>
           </div>
         );
@@ -450,6 +540,7 @@ function SimulationBlock({
   opToProduct,
   products,
   allowedProductIds,
+  closedDays,
 }: {
   days: string[];
   metaDia: number;
@@ -457,11 +548,15 @@ function SimulationBlock({
   opToProduct: Map<string, string>;
   products: Product[];
   allowedProductIds: Set<string>;
+  closedDays: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [sim, setSim] = useState<SimEntry[]>([]);
   const today = todayIso();
-  const openDays = useMemo(() => days.filter((d) => d >= today), [days, today]);
+  const openDays = useMemo(
+    () => days.filter((d) => d >= today && !closedDays.includes(d)),
+    [days, today, closedDays],
+  );
   const [day, setDay] = useState(openDays[0] ?? "");
   const [productId, setProductId] = useState("");
   const [qty, setQty] = useState("");
@@ -503,6 +598,7 @@ function SimulationBlock({
     allowedProductIds,
     simulated: sim,
     today,
+    closedDays,
   });
 
 
