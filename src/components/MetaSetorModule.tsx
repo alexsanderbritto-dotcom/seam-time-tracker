@@ -30,7 +30,6 @@ import {
   faturamentoMesProdutosQuery,
   faturamentoMesesQuery,
   fmtDayLabel,
-  isoDate,
   lastOpsOfSector,
   MES_NOMES,
   mesLabel,

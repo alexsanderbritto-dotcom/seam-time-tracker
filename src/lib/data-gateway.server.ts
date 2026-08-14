@@ -13,6 +13,9 @@ const READABLE = new Set([
   "catalog_operations",
   "overtime_slots",
   "esteira_producao",
+  "faturamento_meses",
+  "faturamento_mes_produtos",
+  "meta_setor_mes",
 ]);
 
 // Tables any signed-in marcador (usuario or admin) may write to.
