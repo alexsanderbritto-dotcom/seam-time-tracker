@@ -458,9 +458,15 @@ function SimulationBlock({
 }) {
   const [open, setOpen] = useState(false);
   const [sim, setSim] = useState<SimEntry[]>([]);
-  const [day, setDay] = useState(days[0] ?? "");
+  const today = todayIso();
+  const openDays = useMemo(() => days.filter((d) => d >= today), [days, today]);
+  const [day, setDay] = useState(openDays[0] ?? "");
   const [productId, setProductId] = useState("");
   const [qty, setQty] = useState("");
+
+  useEffect(() => {
+    if (openDays.length > 0 && !openDays.includes(day)) setDay(openDays[0]!);
+  }, [openDays, day]);
 
   /** produzido na última operação do setor, por produto */
   const producedByProduct = useMemo(() => {
