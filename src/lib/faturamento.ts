@@ -23,6 +23,8 @@ export type MetaSetorMes = {
   ano: number;
   meta_dia: number;
   feriados: string[];
+  /** dias encerrados manualmente (yyyy-mm-dd) */
+  dias_encerrados: string[];
 };
 
 /* ---------- queries ---------- */
@@ -55,12 +57,13 @@ export const metaSetorMesQuery = {
   queryFn: async (): Promise<MetaSetorMes[]> => {
     const { data, error } = await db
       .from("meta_setor_mes")
-      .select("id,sector_id,mes,ano,meta_dia,feriados");
+      .select("id,sector_id,mes,ano,meta_dia,feriados,dias_encerrados");
     if (error) throw error;
     return ((data as MetaSetorMes[]) ?? []).map((m) => ({
       ...m,
       meta_dia: Number(m.meta_dia ?? 0),
       feriados: m.feriados ?? [],
+      dias_encerrados: m.dias_encerrados ?? [],
     }));
   },
 };
@@ -123,8 +126,10 @@ export type DayRow = {
   atingido: number;
   /** meta - atingido (só faz sentido em dias vencidos) */
   resultado: number;
-  /** dia já vencido (hoje ou anterior) */
+  /** dia já vencido (hoje ou anterior) — mostra o atingido */
   due: boolean;
+  /** dia encerrado (anterior a hoje ou encerrado manualmente) — entra na redistribuição */
+  closed: boolean;
   lines: DayProductLine[];
   /** meta impossível de diluir com coerência (ex: poucos dias restantes) */
   warning?: string | undefined;
@@ -175,6 +180,8 @@ export function buildMonthRows(params: {
   simulated?: SimEntry[];
   allDue?: boolean;
   today?: string;
+  /** dias encerrados manualmente */
+  closedDays?: string[];
 }): { rows: DayRow[]; metaTotal: number; atingidoTotal: number } {
   const {
     days,
@@ -186,7 +193,9 @@ export function buildMonthRows(params: {
     simulated = [],
     allDue = false,
     today = todayIso(),
+    closedDays = [],
   } = params;
+  const manualClosed = new Set(closedDays);
   const productById = new Map(products.map((p) => [p.id, p] as const));
   const metaTotal = metaDia * days.length;
 
@@ -228,7 +237,7 @@ export function buildMonthRows(params: {
   const isDue = (date: string) => allDue || date <= today;
 
   // saldo dos dias já encerrados (anteriores a hoje)
-  const closed = days.filter((d) => isDue(d) && d < today);
+  const closed = days.filter((d) => d < today || manualClosed.has(d));
   const saldoFechado = closed.reduce(
     (s, d) => s + valueOf(d).reduce((a, l) => a + l.value, 0) - metaDia,
     0,
@@ -254,7 +263,16 @@ export function buildMonthRows(params: {
     const lines = due ? valueOf(date) : [];
     const atingido = lines.reduce((s, l) => s + l.value, 0);
     if (due) atingidoTotal += atingido;
-    rows.push({ date, meta, atingido, resultado: atingido - meta, due, lines, warning });
+    rows.push({
+      date,
+      meta,
+      atingido,
+      resultado: atingido - meta,
+      due,
+      closed: fechado,
+      lines,
+      warning,
+    });
   }
 
   return { rows, metaTotal, atingidoTotal };
@@ -278,6 +296,7 @@ export function buildSimulationRows(params: {
   allowedProductIds: Set<string>;
   simulated?: SimEntry[];
   today?: string;
+  closedDays?: string[];
 }): { rows: DayRow[]; metaTotal: number; atingidoTotal: number } {
   const {
     days,
@@ -288,7 +307,9 @@ export function buildSimulationRows(params: {
     allowedProductIds,
     simulated = [],
     today = todayIso(),
+    closedDays = [],
   } = params;
+  const manualClosed = new Set(closedDays);
 
   const productById = new Map(products.map((p) => [p.id, p] as const));
   const perDay = new Map<string, Map<string, number>>();
@@ -326,8 +347,8 @@ export function buildSimulationRows(params: {
   };
 
   // saldo real dos dias já encerrados → meta base herdada dos dias abertos
-  const closed = days.filter((d) => d < today);
-  const abertos = days.filter((d) => d >= today);
+  const closed = days.filter((d) => d < today || manualClosed.has(d));
+  const abertos = days.filter((d) => !closed.includes(d));
   const saldoFechado = closed.reduce(
     (s, d) => s + valueOf(d).reduce((a, l) => a + l.value, 0) - metaDia,
     0,
@@ -358,7 +379,16 @@ export function buildSimulationRows(params: {
 
     metaTotal += meta;
     atingidoTotal += atingido;
-    rows.push({ date, meta, atingido, resultado: atingido - meta, due: hasData, lines, warning });
+    rows.push({
+      date,
+      meta,
+      atingido,
+      resultado: atingido - meta,
+      due: hasData,
+      closed: false,
+      lines,
+      warning,
+    });
   });
 
   return { rows, metaTotal, atingidoTotal };
