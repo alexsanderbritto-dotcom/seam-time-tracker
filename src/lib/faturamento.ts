@@ -273,43 +273,16 @@ export function buildMonthRows(params: {
     closedDays = [],
   } = params;
   const manualClosed = new Set(closedDays);
-  const productById = new Map(products.map((p) => [p.id, p] as const));
   const metaTotal = metaDia * days.length;
 
-  const perDay = new Map<string, Map<string, number>>(); // date -> productId -> qty
-  const push = (date: string, productId: string, qty: number) => {
-    if (!allowedProductIds.has(productId)) return;
-    const m = perDay.get(date) ?? new Map<string, number>();
-    m.set(productId, (m.get(productId) ?? 0) + qty);
-    perDay.set(date, m);
-  };
-
-  for (const e of entries) {
-    const productId = opToProduct.get(e.operation_id);
-    if (!productId) continue;
-    push(e.entry_date, productId, e.quantity);
-  }
-  for (const s of simulated) push(s.date, s.productId, s.quantity);
-
-  const valueOf = (date: string): DayProductLine[] => {
-    const lines: DayProductLine[] = [];
-    const dayMap = perDay.get(date);
-    if (dayMap) {
-      for (const [productId, qty] of dayMap) {
-        const p = productById.get(productId);
-        if (!p) continue;
-        lines.push({
-          productId,
-          opInterna: p.op_interna,
-          name: p.name,
-          quantity: qty,
-          value: qty * Number(p.unit_value ?? 0),
-        });
-      }
-      lines.sort((a, b) => b.value - a.value);
-    }
-    return lines;
-  };
+  const valueOf = makeValueOf({
+    days,
+    entries,
+    opToProduct,
+    products,
+    allowedProductIds,
+    simulated,
+  });
 
   const isDue = (date: string) => allDue || date <= today;
 
