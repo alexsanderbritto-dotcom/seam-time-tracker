@@ -235,6 +235,7 @@ export type Database = {
         Row: {
           ano: number
           created_at: string
+          dias_encerrados: string[]
           feriados: string[]
           id: string
           mes: number
@@ -245,6 +246,7 @@ export type Database = {
         Insert: {
           ano: number
           created_at?: string
+          dias_encerrados?: string[]
           feriados?: string[]
           id?: string
           mes: number
@@ -255,6 +257,7 @@ export type Database = {
         Update: {
           ano?: number
           created_at?: string
+          dias_encerrados?: string[]
           feriados?: string[]
           id?: string
           mes?: number

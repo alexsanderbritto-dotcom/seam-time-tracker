@@ -1,0 +1,1 @@
+ALTER TABLE public.meta_setor_mes ADD COLUMN IF NOT EXISTS dias_encerrados text[] NOT NULL DEFAULT '{}'::text[];
