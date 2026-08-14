@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ChevronDown, FlaskConical, Plus, Trash2, TriangleAlert } from "lucide-react";
@@ -27,6 +27,7 @@ import {
 } from "@/lib/production";
 import {
   buildMonthRows,
+  buildSimulationRows,
   faturamentoMesProdutosQuery,
   faturamentoMesesQuery,
   fmtDayLabel,
@@ -34,6 +35,7 @@ import {
   MES_NOMES,
   mesLabel,
   metaSetorMesQuery,
+  todayIso,
   workingDays,
   type MetaSetorMes,
   type SimEntry,
@@ -385,13 +387,15 @@ function DayGrid({
               {fmtDayLabel(r.date)}
               {!r.due ? (
                 <span className="text-[10px] font-normal uppercase text-muted-foreground">
-                  a vencer
+                  {simulated ? "sem simulação" : "a vencer"}
                 </span>
               ) : null}
             </div>
             <div className="flex-1 space-y-2 p-3">
               {!r.due ? (
-                <p className="text-xs text-muted-foreground">Dia ainda não vencido</p>
+                <p className="text-xs text-muted-foreground">
+                  {simulated ? "Nenhum produto simulado neste dia" : "Dia ainda não vencido"}
+                </p>
               ) : r.lines.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Sem produção</p>
               ) : (
@@ -456,9 +460,15 @@ function SimulationBlock({
 }) {
   const [open, setOpen] = useState(false);
   const [sim, setSim] = useState<SimEntry[]>([]);
-  const [day, setDay] = useState(days[0] ?? "");
+  const today = todayIso();
+  const openDays = useMemo(() => days.filter((d) => d >= today), [days, today]);
+  const [day, setDay] = useState(openDays[0] ?? "");
   const [productId, setProductId] = useState("");
   const [qty, setQty] = useState("");
+
+  useEffect(() => {
+    if (openDays.length > 0 && !openDays.includes(day)) setDay(openDays[0]!);
+  }, [openDays, day]);
 
   /** produzido na última operação do setor, por produto */
   const producedByProduct = useMemo(() => {
@@ -484,7 +494,7 @@ function SimulationBlock({
   );
 
   const selected = pending.find((x) => x.product.id === productId);
-  const result = buildMonthRows({
+  const result = buildSimulationRows({
     days,
     metaDia,
     entries,
@@ -492,7 +502,7 @@ function SimulationBlock({
     products,
     allowedProductIds,
     simulated: sim,
-    allDue: true,
+    today,
   });
 
 
@@ -528,7 +538,10 @@ function SimulationBlock({
         <CollapsibleContent>
           <div className="space-y-4 border-t border-dashed border-amber-500/60 p-4">
             <p className="text-xs text-amber-700 dark:text-amber-400">
-              Cenário hipotético — nada aqui altera produção, marcações ou a meta real.
+              Cenário hipotético — nada aqui altera produção, marcações ou a meta real. Só
+              aparecem hoje e os dias a vencer, e a meta diária exibida já parte da situação real
+              atual (com a diluição dos dias encerrados). Ao adicionar produtos em um dia, a
+              projeção propaga o impacto para os dias seguintes.
             </p>
 
             <div className="grid gap-3 md:grid-cols-4">
@@ -539,7 +552,7 @@ function SimulationBlock({
                   value={day}
                   onChange={(e) => setDay(e.target.value)}
                 >
-                  {days.map((d) => (
+                  {openDays.map((d) => (
                     <option key={d} value={d}>
                       {fmtDayLabel(d)}
                     </option>
@@ -607,7 +620,7 @@ function SimulationBlock({
                 <CardContent className="p-4">
                   <p className="text-xl font-semibold">{brl(result.metaTotal)}</p>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Meta total (simulada)
+                    Meta restante (hoje + dias a vencer)
                   </p>
                 </CardContent>
               </Card>

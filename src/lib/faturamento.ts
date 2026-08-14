@@ -260,3 +260,106 @@ export function buildMonthRows(params: {
   return { rows, metaTotal, atingidoTotal };
 }
 
+
+/**
+ * Linhas da SIMULAÇÃO.
+ * - Mostra apenas hoje e dias futuros (dias vencidos são omitidos).
+ * - A meta base de cada dia aberto é herdada do módulo real (já redistribuída
+ *   com o saldo dos dias encerrados).
+ * - Cada dia com produção simulada propaga a diferença (meta - atingido) para
+ *   os dias seguintes, em ordem cronológica e de forma acumulada.
+ */
+export function buildSimulationRows(params: {
+  days: string[];
+  metaDia: number;
+  entries: ProductionEntry[];
+  opToProduct: Map<string, string>;
+  products: Product[];
+  allowedProductIds: Set<string>;
+  simulated?: SimEntry[];
+  today?: string;
+}): { rows: DayRow[]; metaTotal: number; atingidoTotal: number } {
+  const {
+    days,
+    metaDia,
+    entries,
+    opToProduct,
+    products,
+    allowedProductIds,
+    simulated = [],
+    today = todayIso(),
+  } = params;
+
+  const productById = new Map(products.map((p) => [p.id, p] as const));
+  const perDay = new Map<string, Map<string, number>>();
+  const push = (date: string, productId: string, qty: number) => {
+    if (!allowedProductIds.has(productId)) return;
+    const m = perDay.get(date) ?? new Map<string, number>();
+    m.set(productId, (m.get(productId) ?? 0) + qty);
+    perDay.set(date, m);
+  };
+  for (const e of entries) {
+    const productId = opToProduct.get(e.operation_id);
+    if (!productId) continue;
+    push(e.entry_date, productId, e.quantity);
+  }
+  for (const s of simulated) push(s.date, s.productId, s.quantity);
+
+  const valueOf = (date: string): DayProductLine[] => {
+    const lines: DayProductLine[] = [];
+    const dayMap = perDay.get(date);
+    if (dayMap) {
+      for (const [productId, qty] of dayMap) {
+        const p = productById.get(productId);
+        if (!p) continue;
+        lines.push({
+          productId,
+          opInterna: p.op_interna,
+          name: p.name,
+          quantity: qty,
+          value: qty * Number(p.unit_value ?? 0),
+        });
+      }
+      lines.sort((a, b) => b.value - a.value);
+    }
+    return lines;
+  };
+
+  // saldo real dos dias já encerrados → meta base herdada dos dias abertos
+  const closed = days.filter((d) => d < today);
+  const abertos = days.filter((d) => d >= today);
+  const saldoFechado = closed.reduce(
+    (s, d) => s + valueOf(d).reduce((a, l) => a + l.value, 0) - metaDia,
+    0,
+  );
+  const baseMeta = metaDia + (abertos.length > 0 ? -saldoFechado / abertos.length : 0);
+
+  const rows: DayRow[] = [];
+  let metaTotal = 0;
+  let atingidoTotal = 0;
+  let deficit = 0; // valor ainda a diluir nos dias restantes
+
+  abertos.forEach((date, i) => {
+    const restantes = abertos.length - i;
+    let meta = baseMeta + deficit / restantes;
+    let warning: string | undefined;
+    if (meta < 0) {
+      warning = "Meta do mês já superada — nada restante a diluir.";
+      meta = 0;
+    } else if (restantes <= 2 && metaDia > 0 && meta > metaDia * 3) {
+      warning = "Diferença grande para poucos dias úteis restantes.";
+    }
+
+    const lines = valueOf(date);
+    const atingido = lines.reduce((s, l) => s + l.value, 0);
+    const hasData = lines.length > 0;
+
+    deficit = (deficit * (restantes - 1)) / restantes + (hasData ? meta - atingido : 0);
+
+    metaTotal += meta;
+    atingidoTotal += atingido;
+    rows.push({ date, meta, atingido, resultado: atingido - meta, due: hasData, lines, warning });
+  });
+
+  return { rows, metaTotal, atingidoTotal };
+}
