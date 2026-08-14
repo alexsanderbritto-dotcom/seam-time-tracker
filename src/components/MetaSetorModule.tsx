@@ -553,7 +553,10 @@ function SimulationBlock({
   const [open, setOpen] = useState(false);
   const [sim, setSim] = useState<SimEntry[]>([]);
   const today = todayIso();
-  const openDays = useMemo(() => days.filter((d) => d >= today), [days, today]);
+  const openDays = useMemo(
+    () => days.filter((d) => d >= today && !closedDays.includes(d)),
+    [days, today, closedDays],
+  );
   const [day, setDay] = useState(openDays[0] ?? "");
   const [productId, setProductId] = useState("");
   const [qty, setQty] = useState("");
