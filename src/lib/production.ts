@@ -94,6 +94,7 @@ export type ProductionEntry = {
   quantity: number;
   entry_date: string;
   is_overtime: boolean;
+  created_at?: string;
 };
 
 export type OvertimeSlot = {
