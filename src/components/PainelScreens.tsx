@@ -232,7 +232,7 @@ export function TelaColaboradores({
               <div
                 key={c.key}
                 className={cn(
-                  "relative flex items-center gap-5 overflow-hidden rounded-2xl border-2 bg-slate-900/70 p-5 transition-colors",
+                  "relative flex flex-col gap-4 overflow-hidden rounded-2xl border-2 bg-slate-900/70 p-5 transition-colors",
                   level === "ok"
                     ? "border-emerald-500/70"
                     : level === "near"
@@ -241,24 +241,34 @@ export function TelaColaboradores({
                 )}
               >
                 {party ? <Confetti /> : null}
-                <ProgressRing pct={c.pct} size={130} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-3xl font-bold leading-tight text-slate-50">
-                    {c.name}
-                  </p>
-                  <p className="mt-1 line-clamp-2 text-lg text-slate-400">
-                    {c.operations.join(" · ") || "—"}
-                  </p>
-                  <p className="mt-2 text-xl font-semibold tabular-nums text-slate-200">
-                    {c.produced} <span className="text-sm text-slate-500">peças</span>
-                  </p>
-                  {party ? (
-                    <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-3 py-1 text-sm font-bold text-emerald-300">
-                      <PartyPopper className="h-4 w-4" /> Meta batida!
+                <div className="flex items-center gap-5">
+                  <ProgressRing pct={c.pct} size={130} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-3xl font-bold leading-tight text-slate-50">
+                      {c.name}
                     </p>
-                  ) : null}
+                    <p className="mt-1 line-clamp-2 text-lg text-slate-400">
+                      {c.operations.join(" · ") || "—"}
+                    </p>
+                    <p className="mt-2 text-xl font-semibold tabular-nums text-slate-200">
+                      {c.produced} <span className="text-sm text-slate-500">peças</span>
+                    </p>
+                    {party ? (
+                      <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-3 py-1 text-sm font-bold text-emerald-300">
+                        <PartyPopper className="h-4 w-4" /> Meta batida!
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
+                {c.hours.length > 0 ? (
+                  <div className="grid max-h-52 grid-cols-2 gap-2 overflow-y-auto pr-1">
+                    {c.hours.map((h) => (
+                      <HourBlock key={h.key} h={h} />
+                    ))}
+                  </div>
+                ) : null}
               </div>
+
             );
           })}
         </div>
