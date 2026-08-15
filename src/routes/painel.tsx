@@ -78,9 +78,9 @@ type BuiltScreen = {
   cfg: ScreenConfig;
   slots: Slot[];
   slotLabel: string;
-  pastDateLabel?: string;
+  pastDateLabel?: string | undefined;
+  sector?: SectorScreenData | undefined;
   cards: EmployeeCardData[];
-  sector?: SectorScreenData;
 };
 
 function PainelPage() {
