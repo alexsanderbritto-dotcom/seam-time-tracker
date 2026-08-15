@@ -42,7 +42,7 @@ export function ScaledPreview({ children }: { children: ReactNode }) {
   );
 }
 
-function PastBadge({ label }: { label?: string }) {
+function PastBadge({ label }: { label?: string | undefined }) {
   if (!label) return null;
   return (
     <span className="inline-flex items-center gap-2 rounded-full bg-amber-500/20 px-4 py-1.5 text-lg font-bold text-amber-300">
@@ -152,7 +152,7 @@ export function TelaColaboradores({
   groupIndex: number;
   groupCount: number;
   isCelebrating: (key: string) => boolean;
-  pastDateLabel?: string;
+  pastDateLabel?: string | undefined;
 }) {
   return (
     <div className="flex h-full flex-col gap-6">
