@@ -231,6 +231,51 @@ export type Database = {
         }
         Relationships: []
       }
+      meta_producao_setor_dia: {
+        Row: {
+          created_at: string
+          data: string
+          id: string
+          product_id: string
+          quantidade: number
+          sector_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data: string
+          id?: string
+          product_id: string
+          quantidade?: number
+          sector_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          id?: string
+          product_id?: string
+          quantidade?: number
+          sector_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_producao_setor_dia_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_producao_setor_dia_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meta_setor_mes: {
         Row: {
           ano: number
