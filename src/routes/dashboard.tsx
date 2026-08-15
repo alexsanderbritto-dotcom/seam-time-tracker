@@ -22,7 +22,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  buildSlots,
   catalogOperationsQuery,
   employeesQuery,
   entriesQuery,
@@ -34,7 +33,6 @@ import {
   overtimeSlotsQuery,
   productCompletion,
   productsQuery,
-  scheduleQuery,
   sectorsQuery,
   todayISO,
   type Slot,
@@ -73,7 +71,6 @@ function DashboardPage() {
   const { data: employees = [] } = useQuery(employeesQuery);
   const { data: products = [] } = useQuery(productsQuery);
   const { data: operations = [] } = useQuery(operationsQuery);
-  const { data: config } = useQuery(scheduleQuery);
   const { data: dayEntries = [] } = useQuery(entriesQuery(date));
   const { data: allEntries = [] } = useQuery(entriesQuery());
   const { data: sectors = [] } = useQuery(sectorsQuery);
@@ -163,7 +160,7 @@ function DashboardPage() {
 
   const { data: overtimeSlots = [] } = useQuery(overtimeSlotsQuery);
 
-  const normalSlots = useMemo(() => buildSlots(config), [config]);
+  const { slots: normalSlots, slotMinutes: daySlotMinutes } = useDaySlots(date);
 
   // janelas de hora extra só aparecem quando houve marcação com quantidade
   const slots = useMemo<Slot[]>(() => {
