@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/table";
 import { db } from "@/lib/db";
 import {
-  buildSlots,
   employeesQuery,
   entriesQuery,
   esteiraQuery,
@@ -31,12 +30,12 @@ import {
   operationsQuery,
   overtimeSlotsQuery,
   productsQuery,
-  scheduleQuery,
   todayISO,
   type Employee,
   type Ocorrencia,
   type Operation,
 } from "@/lib/production";
+import { useDaySlots } from "@/lib/schedule";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { cn } from "@/lib/utils";
 import { Trash2, Check, LogOut, Search, ChevronDown, Plus } from "lucide-react";
@@ -71,13 +70,20 @@ export function MarcacaoProducao({
   const { data: employees = [] } = useQuery(employeesQuery);
   const { data: products = [] } = useQuery(productsQuery);
   const { data: operations = [] } = useQuery(operationsQuery);
-  const { data: config, isLoading: loadingConfig, isError: configError } = useQuery(scheduleQuery);
   const { data: entries = [] } = useQuery(entriesQuery(date));
   const { data: esteira = [] } = useQuery(esteiraQuery);
   const { data: overtimeSlots = [] } = useQuery(overtimeSlotsQuery);
   const { data: ocorrencias = [] } = useQuery(ocorrenciasQuery);
 
-  const slots = useMemo(() => buildSlots(config), [config]);
+  const {
+    slots,
+    folga,
+    feriado,
+    feriadoNome,
+    forcedOvertime,
+    isLoading: loadingConfig,
+    isError: configError,
+  } = useDaySlots(date);
   const productOps = useMemo(
     () => operations.filter((o) => o.product_id === productId),
     [operations, productId],
@@ -185,7 +191,7 @@ export function MarcacaoProducao({
     const slot = ot
       ? { start: fmt(ot.start_time), end: fmt(ot.end_time), overtime: true }
       : normal
-        ? { ...normal, overtime: false }
+        ? { ...normal, overtime: Boolean(normal.overtime) }
         : null;
     if (!employeeId || !productId || !slot) {
       toast.error("Preencha colaborador, produto e horário (normal ou hora extra).");
@@ -311,6 +317,13 @@ export function MarcacaoProducao({
                     </option>
                   ))}
                 </select>
+                {forcedOvertime ? (
+                  <p className="text-xs text-amber-500">
+                    {folga
+                      ? "Dia de folga: as marcações serão registradas como hora extra."
+                      : `Feriado${feriadoNome ? ` (${feriadoNome})` : ""}: as marcações serão registradas como hora extra.`}
+                  </p>
+                ) : null}
                 {!loadingConfig && (configError || slots.length === 0) ? (
                   <p className="text-xs text-destructive">
                     Não foi possível carregar os horários. Atualize a página ou faça login

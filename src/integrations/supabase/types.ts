@@ -207,6 +207,27 @@ export type Database = {
         }
         Relationships: []
       }
+      feriados: {
+        Row: {
+          created_at: string
+          data: string
+          id: string
+          nome: string | null
+        }
+        Insert: {
+          created_at?: string
+          data: string
+          id?: string
+          nome?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          id?: string
+          nome?: string | null
+        }
+        Relationships: []
+      }
       marcadores: {
         Row: {
           cargo: string
@@ -571,6 +592,42 @@ export type Database = {
           slot_minutes?: number
           start_time?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      schedule_day_config: {
+        Row: {
+          breaks: Json
+          created_at: string
+          end_time: string
+          id: string
+          is_folga: boolean
+          slot_minutes: number
+          start_time: string
+          updated_at: string
+          weekday: number
+        }
+        Insert: {
+          breaks?: Json
+          created_at?: string
+          end_time?: string
+          id?: string
+          is_folga?: boolean
+          slot_minutes?: number
+          start_time?: string
+          updated_at?: string
+          weekday: number
+        }
+        Update: {
+          breaks?: Json
+          created_at?: string
+          end_time?: string
+          id?: string
+          is_folga?: boolean
+          slot_minutes?: number
+          start_time?: string
+          updated_at?: string
+          weekday?: number
         }
         Relationships: []
       }

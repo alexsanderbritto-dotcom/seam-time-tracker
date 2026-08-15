@@ -40,6 +40,7 @@ import {
   type MetaSetorMes,
   type SimEntry,
 } from "@/lib/faturamento";
+import { feriadosQuery } from "@/lib/schedule";
 
 export function MetaSetorModule() {
   const { isAdmin } = useMarcadorSession();
@@ -185,9 +186,14 @@ function MetaMesBlock({ meta, sectorName }: { meta: MetaSetorMes; sectorName: st
   const { data: meses = [] } = useQuery(faturamentoMesesQuery);
   const { data: mesProdutos = [] } = useQuery(faturamentoMesProdutosQuery);
 
+  const { data: feriadosCentral = [] } = useQuery(feriadosQuery);
   const days = useMemo(
-    () => workingDays(meta.mes, meta.ano, meta.feriados),
-    [meta.mes, meta.ano, meta.feriados],
+    () =>
+      workingDays(meta.mes, meta.ano, [
+        ...meta.feriados,
+        ...feriadosCentral.map((f) => f.data),
+      ]),
+    [meta.mes, meta.ano, meta.feriados, feriadosCentral],
   );
 
   const opToProduct = useMemo(

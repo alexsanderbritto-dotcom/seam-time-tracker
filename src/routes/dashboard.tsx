@@ -10,6 +10,7 @@ import { MetaProducaoDialog } from "@/components/MetaProducaoDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDaySlots } from "@/lib/schedule";
 import { SearchableSelect, type SearchableOption } from "@/components/SearchableSelect";
 
 
@@ -22,7 +23,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  buildSlots,
   catalogOperationsQuery,
   employeesQuery,
   entriesQuery,
@@ -34,7 +34,6 @@ import {
   overtimeSlotsQuery,
   productCompletion,
   productsQuery,
-  scheduleQuery,
   sectorsQuery,
   todayISO,
   type Slot,
@@ -73,7 +72,6 @@ function DashboardPage() {
   const { data: employees = [] } = useQuery(employeesQuery);
   const { data: products = [] } = useQuery(productsQuery);
   const { data: operations = [] } = useQuery(operationsQuery);
-  const { data: config } = useQuery(scheduleQuery);
   const { data: dayEntries = [] } = useQuery(entriesQuery(date));
   const { data: allEntries = [] } = useQuery(entriesQuery());
   const { data: sectors = [] } = useQuery(sectorsQuery);
@@ -163,7 +161,7 @@ function DashboardPage() {
 
   const { data: overtimeSlots = [] } = useQuery(overtimeSlotsQuery);
 
-  const normalSlots = useMemo(() => buildSlots(config), [config]);
+  const { slots: normalSlots, slotMinutes: daySlotMinutes } = useDaySlots(date);
 
   // janelas de hora extra só aparecem quando houve marcação com quantidade
   const slots = useMemo<Slot[]>(() => {
@@ -273,7 +271,7 @@ function DashboardPage() {
     return map;
   }, [operations, catalogOps]);
 
-  const slotHours = (config?.slot_minutes ?? 60) / 60;
+  const slotHours = daySlotMinutes / 60;
 
   const productivity = useMemo(() => {
     const emps = employees.filter(
@@ -310,7 +308,7 @@ function DashboardPage() {
           for (const e of worked) {
             const key = opKeyOf(e.operation_id);
             const eph = expectedPerHour.get(e.operation_id);
-            const meta = eph != null ? eph * slotHours : null;
+            const meta = eph != null ? eph * ((s.workMinutes ?? daySlotMinutes) / 60) : null;
             const prev = byOp.get(key);
             const remaining = Math.max(0, 1 - usedFraction);
             const adjusted = meta != null ? meta * remaining : null;
@@ -380,7 +378,7 @@ function DashboardPage() {
         return { emp, rows, hourPcts, hourOccs, dayPct };
       })
       .filter((g) => g.rows.length > 0);
-  }, [employees, employeeFilter, filtered, slots, operations, opCatalog, expectedPerHour, slotHours, ocorrenciaName]);
+  }, [employees, employeeFilter, filtered, slots, operations, opCatalog, expectedPerHour, slotHours, daySlotMinutes, ocorrenciaName]);
 
   const workHours = useMemo(
     () => normalSlots.length * slotHours,
