@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { MetaProducaoDialog } from "@/components/MetaProducaoDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SearchableSelect, type SearchableOption } from "@/components/SearchableSelect";
 
@@ -26,6 +28,7 @@ import {
   entriesQuery,
   esteiraQuery,
   fmt,
+  metaProducaoQuery,
   operationsQuery,
   overtimeSlotsQuery,
   productCompletion,
@@ -62,6 +65,7 @@ function DashboardPage() {
   const [operationFilter, setOperationFilter] = useState("all");
   const [movementFilter, setMovementFilter] = useState("all");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [metaOpen, setMetaOpen] = useState(false);
 
 
   const { data: employees = [] } = useQuery(employeesQuery);
@@ -73,6 +77,7 @@ function DashboardPage() {
   const { data: sectors = [] } = useQuery(sectorsQuery);
   const { data: catalogOps = [] } = useQuery(catalogOperationsQuery);
   const { data: esteira = [] } = useQuery(esteiraQuery);
+  const { data: metas = [] } = useQuery(metaProducaoQuery(date));
 
   const esteiraProducts = useMemo(() => {
     const ids = new Set(esteira.map((e) => e.produto_id));
@@ -343,6 +348,24 @@ function DashboardPage() {
       .filter((g) => g.rows.length > 0);
   }, [employees, employeeFilter, filtered, slots, operations, opCatalog, expectedPerHour, slotHours]);
 
+  const workHours = useMemo(
+    () => normalSlots.length * slotHours,
+    [normalSlots, slotHours],
+  );
+
+  /** meta de peças por setor no dia selecionado */
+  const sectorMeta = useMemo(() => {
+    const map = new Map<string, { total: number; perHour: number }>();
+    for (const m of metas) {
+      const prev = map.get(m.sector_id)?.total ?? 0;
+      map.set(m.sector_id, { total: prev + (m.quantidade ?? 0), perHour: 0 });
+    }
+    for (const [k, v] of map) {
+      map.set(k, { total: v.total, perHour: workHours > 0 ? v.total / workHours : 0 });
+    }
+    return map;
+  }, [metas, workHours]);
+
   const perfClass = (produced: number, estimated: number | null) => {
     if (estimated == null || estimated <= 0) return "";
     const r = produced / estimated;
@@ -400,6 +423,17 @@ function DashboardPage() {
 
   return (
     <AppLayout title="Dashboard" subtitle="Acompanhamento da produção.">
+      <MetaProducaoDialog
+        open={metaOpen}
+        onOpenChange={setMetaOpen}
+        date={date}
+        sectors={sectors}
+        products={esteiraProducts}
+        operations={operations}
+        catalogOps={catalogOps}
+        entries={allEntries}
+        metas={metas}
+      />
       <div className="space-y-5">
         <Card>
           <CardContent className="flex flex-wrap items-end gap-4 pt-6">
