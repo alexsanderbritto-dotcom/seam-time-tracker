@@ -285,3 +285,50 @@ export const STATUS_LABEL: Record<string, string> = {
   em_producao: "Em produção",
   finalizado: "Finalizado",
 };
+
+/* ---------- meta de produção (peças) por setor e dia ---------- */
+
+export type MetaProducaoDia = {
+  id: string;
+  sector_id: string;
+  data: string;
+  product_id: string;
+  quantidade: number;
+};
+
+export const metaProducaoQuery = (date: string) => ({
+  queryKey: ["meta_producao_setor_dia", date],
+  queryFn: async (): Promise<MetaProducaoDia[]> => {
+    const { data, error } = await db
+      .from("meta_producao_setor_dia")
+      .select("id,sector_id,data,product_id,quantidade")
+      .eq("data", date);
+    if (error) throw error;
+    return data as MetaProducaoDia[];
+  },
+});
+
+/** Peças já produzidas na "última operação" do setor para um produto. */
+export function producedInSector(
+  productId: string,
+  sectorId: string,
+  operations: Operation[],
+  catalogOps: CatalogOperation[],
+  entries: Pick<ProductionEntry, "operation_id" | "quantity">[],
+): number {
+  const catSector = new Map(catalogOps.map((c) => [c.id, c.sector_id]));
+  const opIds = new Set(
+    operations
+      .filter(
+        (o) =>
+          o.product_id === productId &&
+          o.is_last_operation &&
+          o.catalog_operation_id &&
+          catSector.get(o.catalog_operation_id) === sectorId,
+      )
+      .map((o) => o.id),
+  );
+  return entries
+    .filter((e) => opIds.has(e.operation_id))
+    .reduce((s, e) => s + e.quantity, 0);
+}
