@@ -8,15 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect, type SearchableOption } from "@/components/SearchableSelect";
+
 
 import {
   Table,
@@ -67,6 +60,7 @@ function DashboardPage() {
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [productFilter, setProductFilter] = useState("all");
   const [operationFilter, setOperationFilter] = useState("all");
+  const [movementFilter, setMovementFilter] = useState("all");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
 
@@ -82,8 +76,64 @@ function DashboardPage() {
 
   const esteiraProducts = useMemo(() => {
     const ids = new Set(esteira.map((e) => e.produto_id));
-    return products.filter((p) => ids.has(p.id));
+    const num = (v: string | null) => {
+      const n = Number(String(v ?? "").replace(/\D/g, ""));
+      return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
+    };
+    return products
+      .filter((p) => ids.has(p.id))
+      .sort((a, b) => num(a.op_number) - num(b.op_number) || a.op_number.localeCompare(b.op_number));
   }, [esteira, products]);
+
+  const employeeOptions = useMemo<SearchableOption[]>(
+    () => [
+      { value: "all", label: "Todos", alwaysShow: true },
+      ...employees.map((e) => ({ value: e.id, label: e.name })),
+    ],
+    [employees],
+  );
+
+  const productOptions = useMemo<SearchableOption[]>(
+    () => [
+      { value: "all", label: "Todos", alwaysShow: true },
+      ...products.map((p) => ({
+        value: p.id,
+        label: `${p.name} · OP ${p.op_number}`,
+        searchText: `${p.op_number} ${p.op_interna ?? ""} ${p.reference}`,
+      })),
+    ],
+    [products],
+  );
+
+  const operationOptions = useMemo<SearchableOption[]>(() => {
+    const sectorName = new Map(sectors.map((s) => [s.id, s.name]));
+    return [
+      { value: "all", label: "Todas", alwaysShow: true },
+      ...catalogOps.map((c) => ({
+        value: c.id,
+        label: c.name,
+        searchText: sectorName.get(c.sector_id) ?? "",
+        node: (
+          <span>
+            {c.name}{" "}
+            <span className="text-xs text-muted-foreground">
+              {sectorName.get(c.sector_id) ?? ""}
+            </span>
+          </span>
+        ),
+      })),
+    ];
+  }, [catalogOps, sectors]);
+
+  const movementOptions = useMemo<SearchableOption[]>(
+    () => [
+      { value: "all", label: "Todos" },
+      { value: "movimento", label: "Em movimento" },
+      { value: "parado", label: "Parado" },
+    ],
+    [],
+  );
+
 
   const { data: overtimeSlots = [] } = useQuery(overtimeSlotsQuery);
 
@@ -181,10 +231,6 @@ function DashboardPage() {
   );
 
 
-  const activeEmployees = useMemo(() => {
-    const ids = new Set(filtered.map((e) => e.employee_id));
-    return employees.filter((e) => ids.has(e.id));
-  }, [filtered, employees]);
 
   const total = filtered.reduce((s, e) => s + e.quantity, 0);
 
@@ -309,8 +355,44 @@ function DashboardPage() {
   };
 
 
-  const cell = (empId: string, s: Slot) =>
-    filtered.filter((e) => e.employee_id === empId && inSlot(e, s));
+  const visibleProducts = useMemo(() => {
+    return esteiraProducts
+      .map((p) => {
+        const { pct, done, perOperation } = productCompletion(p, visibleOperations, allEntries);
+        const moving = perOperation.some((op) => op.pct > 0 && op.pct < 100);
+        return { p, pct, done, perOperation, moving };
+      })
+      .filter(
+        (r) =>
+          movementFilter === "all" ||
+          (movementFilter === "movimento" ? r.moving : !r.moving),
+      );
+  }, [esteiraProducts, visibleOperations, allEntries, movementFilter]);
+
+  // Produção por operação x horário (todos os colaboradores e produtos)
+  const opHourRows = useMemo(() => {
+    const keyOf = (operationId: string) => opCatalog.get(operationId) ?? `op:${operationId}`;
+    const name = new Map<string, string>();
+    for (const o of operations) if (!name.has(keyOf(o.id))) name.set(keyOf(o.id), o.name);
+    const base = dayEntries.filter((e) => matchesOp(e.operation_id));
+    const keys = Array.from(new Set(base.map((e) => keyOf(e.operation_id))));
+    return keys
+      .map((k) => {
+        const perSlot = slots.map((s) =>
+          base
+            .filter((e) => keyOf(e.operation_id) === k && inSlot(e, s))
+            .reduce((a, e) => a + e.quantity, 0),
+        );
+        return {
+          key: k,
+          name: name.get(k) ?? "Operação",
+          perSlot,
+          total: perSlot.reduce((a, b) => a + b, 0),
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [dayEntries, operations, opCatalog, slots, operationFilter]);
+
 
   return (
     <AppLayout title="Dashboard" subtitle="Acompanhamento da produção.">
@@ -326,143 +408,49 @@ function DashboardPage() {
                 onChange={(e) => setDate(e.target.value)}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="w-56 space-y-1.5">
               <Label>Colaborador</Label>
-              <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
-                <SelectTrigger className="w-56">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {employees.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>
-                      {e.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                searchOnly
+                options={employeeOptions}
+                value={employeeFilter}
+                onChange={setEmployeeFilter}
+                searchPlaceholder="Digite o nome..."
+              />
             </div>
-            <div className="space-y-1.5">
+            <div className="w-64 space-y-1.5">
               <Label>Produto / OP</Label>
-              <Select value={productFilter} onValueChange={setProductFilter}>
-                <SelectTrigger className="w-64">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {products.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name} · OP {p.op_number}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                searchOnly
+                options={productOptions}
+                value={productFilter}
+                onChange={setProductFilter}
+                searchPlaceholder="Digite nome ou OP..."
+              />
             </div>
-            <div className="space-y-1.5">
+            <div className="w-64 space-y-1.5">
               <Label>Operação</Label>
-              <Select value={operationFilter} onValueChange={setOperationFilter}>
-                <SelectTrigger className="w-64">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {sectors.map((sec) => {
-                    const ops = catalogOps.filter((c) => c.sector_id === sec.id);
-                    if (ops.length === 0) return null;
-                    return (
-                      <SelectGroup key={sec.id}>
-                        <SelectLabel>{sec.name}</SelectLabel>
-                        {ops.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                searchOnly
+                options={operationOptions}
+                value={operationFilter}
+                onChange={setOperationFilter}
+                searchPlaceholder="Digite a operação..."
+              />
             </div>
+            <div className="w-48 space-y-1.5">
+              <Label>Situação</Label>
+              <SearchableSelect
+                options={movementOptions}
+                value={movementFilter}
+                onChange={setMovementFilter}
+              />
+            </div>
+
 
             <div className="ml-auto rounded-md bg-secondary px-4 py-2 text-right">
               <p className="text-xs text-muted-foreground">Total no dia</p>
               <p className="text-2xl font-semibold tabular-nums">{total}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Grade por colaborador e horário</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="sticky left-0 bg-card">Colaborador</TableHead>
-                    {slots.map((s) => (
-                      <TableHead key={slotKey(s)} className="whitespace-nowrap text-center font-mono text-xs">
-                        <SlotHead s={s} />
-                      </TableHead>
-                    ))}
-
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {activeEmployees.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={slots.length + 2}
-                        className="py-10 text-center text-muted-foreground"
-                      >
-                        Nenhuma produção registrada com estes filtros.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    activeEmployees.map((emp) => {
-                      const empTotal = filtered
-                        .filter((e) => e.employee_id === emp.id)
-                        .reduce((s, e) => s + e.quantity, 0);
-                      return (
-                        <TableRow key={emp.id}>
-                          <TableCell className="sticky left-0 bg-card font-medium">
-                            {emp.name}
-                          </TableCell>
-                          {slots.map((s) => {
-                            const items = cell(emp.id, s);
-                            return (
-                              <TableCell key={slotKey(s)} className="align-top text-center">
-
-                                {items.length === 0 ? (
-                                  <span className="text-muted-foreground">–</span>
-                                ) : (
-                                  <div className="space-y-1">
-                                    {items.map((it) => (
-                                      <div key={it.id} className="text-xs leading-tight">
-                                        <span className="font-semibold tabular-nums">
-                                          {it.quantity}
-                                        </span>{" "}
-                                        <span className="text-muted-foreground">
-                                          {operations.find((o) => o.id === it.operation_id)?.name}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </TableCell>
-                            );
-                          })}
-                          <TableCell className="text-right font-semibold tabular-nums">
-                            {empTotal}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
             </div>
           </CardContent>
         </Card>
@@ -530,136 +518,6 @@ function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Avanço por produto / OP</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            {esteiraProducts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nenhum produto na esteira de produção.
-              </p>
-            ) : (
-              esteiraProducts.map((p) => {
-                const { pct, done, perOperation } = productCompletion(
-                  p,
-                  visibleOperations,
-                  allEntries,
-                );
-                const isOpen = !!expanded[p.id];
-                return (
-                  <div key={p.id} className="rounded-md border border-border p-4">
-                    <button
-                      type="button"
-                      className="w-full select-none text-left"
-                      onClick={() => setExpanded((s) => ({ ...s, [p.id]: !s[p.id] }))}
-                      aria-expanded={isOpen}
-                    >
-                      <div className="flex items-baseline justify-between gap-2">
-                        <p className="font-medium">
-                          {p.op_interna ? (
-                            <span className="font-bold">{p.op_interna} — </span>
-                          ) : null}
-                          {p.name}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <p className="font-mono text-xs text-muted-foreground">
-                            OP {p.op_number} · REF {p.reference}
-                          </p>
-                          <ChevronDown
-                            className={cn(
-                              "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
-                              isOpen && "rotate-180",
-                            )}
-                          />
-                        </div>
-                      </div>
-                      <Progress value={Math.min(pct, 100)} className="my-3" />
-                      <p className="text-sm text-muted-foreground">
-                        <span className="font-medium text-foreground">{pct.toFixed(0)}%</span>{" "}
-                        concluído · meta de {p.total_quantity} peças por operação
-                        {done ? " · finalizado" : ""}
-                      </p>
-                    </button>
-
-                    {isOpen ? (
-                      perOperation.length === 0 ? (
-                        <p className="mt-3 text-xs text-muted-foreground">
-                          Nenhuma operação cadastrada para este produto.
-                        </p>
-                      ) : (
-                        <div className="mt-3 space-y-3 animate-collapsible-down">
-                          {sectors
-                            .map((sec) => ({
-                              sector: sec,
-                              ops: perOperation.filter(
-                                (op) => opSectorAll.get(op.operationId) === sec.id,
-                              ),
-                            }))
-                            .filter((g) => g.ops.length > 0)
-                            .map((g) => (
-                              <div key={g.sector.id} className="space-y-1.5">
-                                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                  {g.sector.name}
-                                </p>
-                                <ul className="space-y-1.5">
-                                  {g.ops.map((op) => {
-                                    const excess = op.target > 0 && op.produced > op.target;
-                                    return (
-                                      <li
-                                        key={op.operationId}
-                                        className={cn(
-                                          "flex items-center gap-2 rounded px-1 py-0.5 text-xs",
-                                          excess && "bg-destructive/10 text-destructive",
-                                        )}
-                                      >
-                                        <span
-                                          className={cn(
-                                            "h-2 w-2 shrink-0 rounded-full",
-                                            excess
-                                              ? "bg-destructive"
-                                              : op.done
-                                                ? "bg-primary"
-                                                : "bg-muted-foreground/40",
-                                          )}
-                                        />
-                                        <span className="min-w-0 flex-1 truncate">{op.name}</span>
-                                        <span
-                                          className={cn(
-                                            "tabular-nums",
-                                            excess ? "font-semibold" : "text-muted-foreground",
-                                          )}
-                                        >
-                                          {op.produced}/{op.target}
-                                        </span>
-                                        <span
-                                          className={cn(
-                                            "w-10 text-right tabular-nums",
-                                            excess
-                                              ? "font-semibold"
-                                              : op.done
-                                                ? "font-semibold text-foreground"
-                                                : "text-muted-foreground",
-                                          )}
-                                        >
-                                          {op.pct.toFixed(0)}%
-                                        </span>
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
-                              </div>
-                            ))}
-                        </div>
-                      )
-                    ) : null}
-                  </div>
-                );
-              })
-            )}
-          </CardContent>
-
-        </Card>
 
         <Card>
           <CardHeader className="pb-3">
@@ -763,7 +621,204 @@ function DashboardPage() {
             )}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Avanço por produto / OP</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            {visibleProducts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Nenhum produto na esteira de produção.
+              </p>
+            ) : (
+              visibleProducts.map(({ p, pct, done, perOperation, moving }) => {
+                const isOpen = !!expanded[p.id];
+                return (
+
+                  <div key={p.id} className="rounded-md border border-border p-4">
+                    <button
+                      type="button"
+                      className="w-full select-none text-left"
+                      onClick={() => setExpanded((s) => ({ ...s, [p.id]: !s[p.id] }))}
+                      aria-expanded={isOpen}
+                    >
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="font-medium">
+                          {p.op_interna ? (
+                            <span className="font-bold">{p.op_interna} — </span>
+                          ) : null}
+                          {p.name}
+                          <span
+                            className={cn(
+                              "ml-2 rounded-full px-2 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide",
+                              moving
+                                ? "bg-primary/10 text-primary"
+                                : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {moving ? "Em movimento" : "Parado"}
+                          </span>
+                        </p>
+
+                        <div className="flex items-center gap-2">
+                          <p className="font-mono text-xs text-muted-foreground">
+                            OP {p.op_number} · REF {p.reference}
+                          </p>
+                          <ChevronDown
+                            className={cn(
+                              "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
+                              isOpen && "rotate-180",
+                            )}
+                          />
+                        </div>
+                      </div>
+                      <Progress value={Math.min(pct, 100)} className="my-3" />
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">{pct.toFixed(0)}%</span>{" "}
+                        concluído · meta de {p.total_quantity} peças por operação
+                        {done ? " · finalizado" : ""}
+                      </p>
+                    </button>
+
+                    {isOpen ? (
+                      perOperation.length === 0 ? (
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          Nenhuma operação cadastrada para este produto.
+                        </p>
+                      ) : (
+                        <div className="mt-3 space-y-3 animate-collapsible-down">
+                          {sectors
+                            .map((sec) => ({
+                              sector: sec,
+                              ops: perOperation.filter(
+                                (op) => opSectorAll.get(op.operationId) === sec.id,
+                              ),
+                            }))
+                            .filter((g) => g.ops.length > 0)
+                            .map((g) => (
+                              <div key={g.sector.id} className="space-y-1.5">
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                  {g.sector.name}
+                                </p>
+                                <ul className="space-y-1.5">
+                                  {g.ops.map((op) => {
+                                    const excess = op.target > 0 && op.produced > op.target;
+                                    return (
+                                      <li
+                                        key={op.operationId}
+                                        className={cn(
+                                          "flex items-center gap-2 rounded px-1 py-0.5 text-xs",
+                                          excess && "bg-destructive/10 text-destructive",
+                                        )}
+                                      >
+                                        <span
+                                          className={cn(
+                                            "h-2 w-2 shrink-0 rounded-full",
+                                            excess
+                                              ? "bg-destructive"
+                                              : op.done
+                                                ? "bg-primary"
+                                                : "bg-muted-foreground/40",
+                                          )}
+                                        />
+                                        <span className="min-w-0 flex-1 truncate">{op.name}</span>
+                                        <span
+                                          className={cn(
+                                            "tabular-nums",
+                                            excess ? "font-semibold" : "text-muted-foreground",
+                                          )}
+                                        >
+                                          {op.produced}/{op.target}
+                                        </span>
+                                        <span
+                                          className={cn(
+                                            "w-10 text-right tabular-nums",
+                                            excess
+                                              ? "font-semibold"
+                                              : op.done
+                                                ? "font-semibold text-foreground"
+                                                : "text-muted-foreground",
+                                          )}
+                                        >
+                                          {op.pct.toFixed(0)}%
+                                        </span>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              </div>
+                            ))}
+                        </div>
+                      )
+                    ) : null}
+                  </div>
+                );
+              })
+            )}
+          </CardContent>
+
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Produção por operação / hora</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Quantidade total produzida por operação em cada horário, somando todos os
+              colaboradores e produtos.
+            </p>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="sticky left-0 bg-card">Operação</TableHead>
+                    {slots.map((s) => (
+                      <TableHead
+                        key={slotKey(s)}
+                        className="whitespace-nowrap text-center font-mono text-xs"
+                      >
+                        <SlotHead s={s} />
+                      </TableHead>
+                    ))}
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {opHourRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={slots.length + 2}
+                        className="py-10 text-center text-muted-foreground"
+                      >
+                        Nenhuma produção registrada nesta data.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    opHourRows.map((r) => (
+                      <TableRow key={r.key}>
+                        <TableCell className="sticky left-0 bg-card font-medium">
+                          {r.name}
+                        </TableCell>
+                        {r.perSlot.map((v, i) => (
+                          <TableCell key={slotKey(slots[i]!)} className="text-center tabular-nums">
+                            {v > 0 ? v : <span className="text-muted-foreground">–</span>}
+                          </TableCell>
+                        ))}
+                        <TableCell className="text-right font-semibold tabular-nums">
+                          {r.total}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
     </AppLayout>
   );
 }
