@@ -128,7 +128,17 @@ export const overtimeSlotsQuery = {
   },
 };
 
-export type Slot = { start: string; end: string; overtime?: boolean };
+export type Slot = {
+  start: string;
+  end: string;
+  overtime?: boolean;
+  /** minutos de trabalho efetivo da janela (descontando pausas) */
+  workMinutes?: number;
+  /** janela resultante da fusão de duas ou mais janelas cortadas por uma pausa */
+  merged?: boolean;
+  /** fusão que não resulta no tempo útil de uma janela inteira */
+  ambiguous?: boolean;
+};
 
 
 export const toMinutes = (t: string) => {
