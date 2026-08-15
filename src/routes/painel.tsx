@@ -22,6 +22,7 @@ import {
   type SectorScreenData,
 } from "@/components/PainelScreens";
 import { findCurrentSlot, useCelebration } from "@/lib/painel";
+import { buildDaySlots, daySchedulesQuery, feriadosQuery } from "@/lib/schedule";
 import {
   DEFAULT_SCREEN_CONFIG,
   formatDateBR,
