@@ -88,7 +88,8 @@ export function SearchableSelect({
           />
           <CommandList className="max-h-[45vh]">
             {filtered.length === 0 ? (
-              <CommandEmpty>{emptyMessage}</CommandEmpty>
+              <CommandEmpty>{searchOnly && !term ? searchHint : emptyMessage}</CommandEmpty>
+
             ) : (
               <CommandGroup>
                 {filtered.map((o) => (
