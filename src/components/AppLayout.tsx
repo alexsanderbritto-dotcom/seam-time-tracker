@@ -31,6 +31,7 @@ const nav = [
   { to: "/faturamento", label: "Faturamento", icon: Receipt, adminOnly: true },
   { to: "/gargalo", label: "Gargalo na Produção", icon: AlertTriangle, adminOnly: true },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: true },
+  { to: "/painel", label: "Painel (TV)", icon: MonitorPlay, adminOnly: true },
 
 ] as const;
 
