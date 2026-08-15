@@ -166,8 +166,8 @@ export function MarcacaoProducao({
     const { data, error } = await db
       .from("ocorrencias")
       .insert({ nome })
-      .select("id,nome")
-      .maybeSingle();
+      .select()
+      .single();
     if (error) {
       toast.error("Erro ao criar ocorrência: " + error.message);
       return;
