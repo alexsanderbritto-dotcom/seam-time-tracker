@@ -1,6 +1,56 @@
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { PERF_COLOR, PERF_TEXT, perfLevel } from "@/lib/painel";
 import { cn } from "@/lib/utils";
-import { ArrowDownRight, ArrowUpRight, PartyPopper } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, CalendarClock, PartyPopper } from "lucide-react";
+
+/* ---------------- prévia em escala reduzida ---------------- */
+
+const BASE_W = 1280;
+const BASE_H = 720;
+
+export function ScaledPreview({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.5);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setScale(el.clientWidth / BASE_W));
+    ro.observe(el);
+    setScale(el.clientWidth / BASE_W);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className="w-full overflow-hidden rounded-xl bg-slate-950"
+      style={{ height: BASE_H * scale }}
+    >
+      <div
+        className="p-8 text-slate-100"
+        style={{
+          width: BASE_W,
+          height: BASE_H,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function PastBadge({ label }: { label?: string }) {
+  if (!label) return null;
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full bg-amber-500/20 px-4 py-1.5 text-lg font-bold text-amber-300">
+      <CalendarClock className="h-5 w-5" /> Dados de {label}
+    </span>
+  );
+}
+
 
 /* ---------------- confete leve (CSS puro) ---------------- */
 
