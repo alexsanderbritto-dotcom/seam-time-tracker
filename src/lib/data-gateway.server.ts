@@ -17,10 +17,11 @@ const READABLE = new Set([
   "faturamento_mes_produtos",
   "meta_setor_mes",
   "meta_producao_setor_dia",
+  "ocorrencias",
 ]);
 
 // Tables any signed-in marcador (usuario or admin) may write to.
-const USER_WRITABLE = new Set(["production_entries"]);
+const USER_WRITABLE = new Set(["production_entries", "ocorrencias"]);
 
 const BUCKET = "product-files";
 const SAFE_PATH = /^(fichas|piloto)\/[A-Za-z0-9._-]+$/;
