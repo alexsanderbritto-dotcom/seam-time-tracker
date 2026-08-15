@@ -231,10 +231,6 @@ function DashboardPage() {
   );
 
 
-  const activeEmployees = useMemo(() => {
-    const ids = new Set(filtered.map((e) => e.employee_id));
-    return employees.filter((e) => ids.has(e.id));
-  }, [filtered, employees]);
 
   const total = filtered.reduce((s, e) => s + e.quantity, 0);
 
