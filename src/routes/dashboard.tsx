@@ -82,7 +82,11 @@ function DashboardPage() {
     };
     return products
       .filter((p) => ids.has(p.id))
-      .sort((a, b) => num(a.op_number) - num(b.op_number) || a.op_number.localeCompare(b.op_number));
+      .sort(
+        (a, b) =>
+          num(a.op_interna) - num(b.op_interna) ||
+          (a.op_interna ?? "").localeCompare(b.op_interna ?? ""),
+      );
   }, [esteira, products]);
 
   const employeeOptions = useMemo<SearchableOption[]>(
