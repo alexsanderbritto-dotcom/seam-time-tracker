@@ -151,21 +151,75 @@ export const toTime = (min: number) =>
 
 export const fmt = (t: string) => t.slice(0, 5);
 
-export function buildSlots(config: ScheduleConfig | null | undefined): Slot[] {
+type SlotSource = Pick<ScheduleConfig, "start_time" | "end_time" | "slot_minutes" | "breaks">;
+
+/**
+ * Gera as janelas de marcação. Pausas alinhadas ao início/fim das janelas
+ * simplesmente removem a janela; pausas desalinhadas fundem as janelas
+ * atingidas em uma única janela, cujo tempo útil é a soma dos minutos
+ * trabalhados antes e depois da pausa.
+ */
+export function buildSlots(config: SlotSource | null | undefined): Slot[] {
   if (!config) return [];
   const start = toMinutes(config.start_time);
   const end = toMinutes(config.end_time);
   // A non-positive step would loop forever and freeze/crash the tab.
   const rawStep = Number(config.slot_minutes);
   const step = Number.isFinite(rawStep) && rawStep > 0 ? rawStep : 60;
-  const breaks = (config.breaks ?? []).map((b) => ({
-    start: toMinutes(b.start),
-    end: toMinutes(b.end),
-  }));
-  const slots: Slot[] = [];
+  const breaks = (config.breaks ?? [])
+    .map((b) => ({ start: toMinutes(b.start), end: toMinutes(b.end) }))
+    .filter((b) => Number.isFinite(b.start) && Number.isFinite(b.end) && b.end > b.start);
+
+  const grid: { s: number; e: number; work: number }[] = [];
   for (let cur = start; cur + step <= end; cur += step) {
-    const overlaps = breaks.some((b) => cur < b.end && cur + step > b.start);
-    if (!overlaps) slots.push({ start: toTime(cur), end: toTime(cur + step) });
+    const busy = breaks.reduce(
+      (acc, b) => acc + Math.max(0, Math.min(cur + step, b.end) - Math.max(cur, b.start)),
+      0,
+    );
+    grid.push({ s: cur, e: cur + step, work: Math.max(0, step - busy) });
+  }
+
+  // união das janelas cortadas por uma mesma pausa desalinhada
+  const parent = grid.map((_, i) => i);
+  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i]!)));
+  const union = (a: number, b: number) => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent[Math.max(ra, rb)] = Math.min(ra, rb);
+  };
+  for (const b of breaks) {
+    const touched = grid
+      .map((g, i) => ({ g, i }))
+      .filter(({ g }) => g.s < b.end && g.e > b.start)
+      .map(({ i }) => i);
+    if (touched.length < 2) continue;
+    // pausa alinhada: todas as janelas atingidas ficam sem tempo útil
+    if (touched.every((i) => grid[i]!.work === 0)) continue;
+    for (const i of touched) union(touched[0]!, i);
+  }
+
+  const groups = new Map<number, number[]>();
+  grid.forEach((_, i) => {
+    const root = find(i);
+    const list = groups.get(root);
+    if (list) list.push(i);
+    else groups.set(root, [i]);
+  });
+
+  const slots: Slot[] = [];
+  for (const [, idx] of Array.from(groups.entries()).sort((a, b) => a[0] - b[0])) {
+    const work = idx.reduce((sum, i) => sum + grid[i]!.work, 0);
+    if (work <= 0) continue;
+    const first = grid[idx[0]!]!;
+    const last = grid[idx[idx.length - 1]!]!;
+    const merged = idx.length > 1;
+    slots.push({
+      start: toTime(first.s),
+      end: toTime(last.e),
+      workMinutes: work,
+      merged,
+      ambiguous: merged && work !== step,
+    });
   }
   return slots;
 }
