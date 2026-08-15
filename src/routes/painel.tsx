@@ -289,7 +289,8 @@ function PainelPage() {
               pcts.length > 0 ? pcts.reduce((a, b) => a + b, 0) / pcts.length : null;
             return {
               key: `${keyBase}:${emp.id}`,
-              name: emp.name,
+              // Compliance: no Painel exibimos apenas o ID anônimo do colaborador.
+              name: `Colaborador-${emp.numero_id}`,
               operations: Array.from(ops),
               produced,
               pct: avgPct,
