@@ -230,7 +230,7 @@ function PainelPage() {
         active.some(
           (s) => fmt(e.slot_start) === fmt(s.start) && Boolean(e.is_overtime) === Boolean(s.overtime),
         );
-      const windowHours = Math.max(active.length, 1) * slotHours;
+      
       const keyBase = `${def.id}:${cfg.date}:${active.map((s) => s.start).join("_")}`;
 
       const inSlot = (e: { slot_start: string; is_overtime: boolean }, s: Slot) =>
