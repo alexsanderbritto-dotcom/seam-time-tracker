@@ -251,9 +251,11 @@ export type SectorScreenData = {
 export function TelaSetor({
   data,
   isCelebrating,
+  pastDateLabel,
 }: {
   data: SectorScreenData;
   isCelebrating: (key: string) => boolean;
+  pastDateLabel?: string | undefined;
 }) {
   const level = perfLevel(data.pct);
   const resultado = data.atingido - data.metaHora;
@@ -267,7 +269,11 @@ export function TelaSetor({
           {data.sectorName}
         </h2>
         <p className="mt-1 text-xl text-slate-400">Janela {data.slotLabel}</p>
+        <div className="mt-2">
+          <PastBadge label={pastDateLabel} />
+        </div>
       </header>
+
 
       <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-8 rounded-2xl border-2 border-slate-800 bg-slate-900/70 p-6">
         <ProgressRing pct={data.pct} size={180} label="da hora" />
