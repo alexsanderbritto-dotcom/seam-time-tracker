@@ -58,7 +58,7 @@ export const feriadosQuery = {
 /** Dia da semana (0-6) de uma data ISO, sem depender de fuso horário. */
 export const weekdayOf = (iso: string) => {
   const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, (m ?? 1) - 1, d ?? 1).getDay();
+  return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1).getDay();
 };
 
 export type DaySlots = {
