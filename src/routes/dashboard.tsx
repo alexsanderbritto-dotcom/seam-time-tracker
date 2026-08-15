@@ -763,7 +763,66 @@ function DashboardPage() {
           </CardContent>
 
         </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Produção por operação / hora</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Quantidade total produzida por operação em cada horário, somando todos os
+              colaboradores e produtos.
+            </p>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="sticky left-0 bg-card">Operação</TableHead>
+                    {slots.map((s) => (
+                      <TableHead
+                        key={slotKey(s)}
+                        className="whitespace-nowrap text-center font-mono text-xs"
+                      >
+                        <SlotHead s={s} />
+                      </TableHead>
+                    ))}
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {opHourRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={slots.length + 2}
+                        className="py-10 text-center text-muted-foreground"
+                      >
+                        Nenhuma produção registrada nesta data.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    opHourRows.map((r) => (
+                      <TableRow key={r.key}>
+                        <TableCell className="sticky left-0 bg-card font-medium">
+                          {r.name}
+                        </TableCell>
+                        {r.perSlot.map((v, i) => (
+                          <TableCell key={slotKey(slots[i]!)} className="text-center tabular-nums">
+                            {v > 0 ? v : <span className="text-muted-foreground">–</span>}
+                          </TableCell>
+                        ))}
+                        <TableCell className="text-right font-semibold tabular-nums">
+                          {r.total}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
     </AppLayout>
   );
 }
