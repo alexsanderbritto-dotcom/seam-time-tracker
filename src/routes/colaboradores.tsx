@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/table";
 import { db } from "@/lib/db";
 import {
-  buildSlots,
   catalogOperationsQuery,
   employeesQuery,
   entriesQuery,
@@ -81,7 +80,6 @@ function ColaboradoresPage() {
   const { data: config } = useQuery(scheduleQuery);
 
   const slotHours = (config?.slot_minutes ?? 60) / 60;
-  void buildSlots;
 
   const expectedPerHour = useMemo(() => {
     const byCatalog = new Map(catalogOps.map((c) => [c.id, c.expected_per_hour]));
@@ -240,8 +238,8 @@ function ColaboradoresPage() {
                   const open = openId === e.id;
                   const months = monthlyByEmployee.get(e.id) ?? [];
                   return (
-                    <>
-                      <TableRow key={e.id}>
+                    <Fragment key={e.id}>
+                      <TableRow>
                         <TableCell className="text-muted-foreground tabular-nums">
                           {e.numero_id}
                         </TableCell>
@@ -275,7 +273,7 @@ function ColaboradoresPage() {
                           </Button>
                         </TableCell>
                       </TableRow>
-                      <TableRow key={`${e.id}-detail`} className="hover:bg-transparent">
+                      <TableRow className="hover:bg-transparent">
                         <TableCell colSpan={5} className="p-0">
                           <div
                             className={`grid transition-all duration-300 ease-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
@@ -309,7 +307,7 @@ function ColaboradoresPage() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    </>
+                    </Fragment>
                   );
                 })
               )}
