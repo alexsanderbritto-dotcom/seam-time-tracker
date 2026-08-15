@@ -451,12 +451,3 @@ function MiniStat({ label, value, tone }: { label: string; value: number; tone: 
     </div>
   );
 }
-
-function Stat({ label, value, tone }: { label: string; value: number; tone: string }) {
-  return (
-    <div>
-      <p className="text-sm uppercase tracking-widest text-slate-400">{label}</p>
-      <p className={cn("text-6xl font-black tabular-nums", tone)}>{value}</p>
-    </div>
-  );
-}
