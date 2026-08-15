@@ -31,6 +31,8 @@ export function SearchableSelect({
   searchPlaceholder = "Buscar...",
   emptyMessage = "Nenhum resultado encontrado.",
   disabled = false,
+  searchOnly = false,
+  searchHint = "Digite para buscar...",
 }: {
   options: SearchableOption[];
   value: string;
@@ -39,6 +41,9 @@ export function SearchableSelect({
   searchPlaceholder?: string;
   emptyMessage?: string;
   disabled?: boolean;
+  /** não lista opções até o usuário digitar */
+  searchOnly?: boolean;
+  searchHint?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -48,13 +53,15 @@ export function SearchableSelect({
     [options, value],
   );
 
+  const term = search.trim().toLowerCase();
+
   const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return options;
+    if (!term) return searchOnly ? [] : options;
     return options.filter((o) =>
       `${o.label} ${o.searchText ?? ""}`.toLowerCase().includes(term),
     );
-  }, [options, search]);
+  }, [options, term, searchOnly]);
+
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
