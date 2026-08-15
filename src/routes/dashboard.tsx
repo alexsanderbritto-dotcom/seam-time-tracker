@@ -359,8 +359,44 @@ function DashboardPage() {
   };
 
 
-  const cell = (empId: string, s: Slot) =>
-    filtered.filter((e) => e.employee_id === empId && inSlot(e, s));
+  const visibleProducts = useMemo(() => {
+    return esteiraProducts
+      .map((p) => {
+        const { pct, done, perOperation } = productCompletion(p, visibleOperations, allEntries);
+        const moving = perOperation.some((op) => op.pct > 0 && op.pct < 100);
+        return { p, pct, done, perOperation, moving };
+      })
+      .filter(
+        (r) =>
+          movementFilter === "all" ||
+          (movementFilter === "movimento" ? r.moving : !r.moving),
+      );
+  }, [esteiraProducts, visibleOperations, allEntries, movementFilter]);
+
+  // Produção por operação x horário (todos os colaboradores e produtos)
+  const opHourRows = useMemo(() => {
+    const keyOf = (operationId: string) => opCatalog.get(operationId) ?? `op:${operationId}`;
+    const name = new Map<string, string>();
+    for (const o of operations) if (!name.has(keyOf(o.id))) name.set(keyOf(o.id), o.name);
+    const base = dayEntries.filter((e) => matchesOp(e.operation_id));
+    const keys = Array.from(new Set(base.map((e) => keyOf(e.operation_id))));
+    return keys
+      .map((k) => {
+        const perSlot = slots.map((s) =>
+          base
+            .filter((e) => keyOf(e.operation_id) === k && inSlot(e, s))
+            .reduce((a, e) => a + e.quantity, 0),
+        );
+        return {
+          key: k,
+          name: name.get(k) ?? "Operação",
+          perSlot,
+          total: perSlot.reduce((a, b) => a + b, 0),
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [dayEntries, operations, opCatalog, slots, operationFilter]);
+
 
   return (
     <AppLayout title="Dashboard" subtitle="Acompanhamento da produção.">
