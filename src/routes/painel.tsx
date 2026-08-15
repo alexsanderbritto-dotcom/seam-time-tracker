@@ -233,6 +233,9 @@ function PainelPage() {
       const windowHours = Math.max(active.length, 1) * slotHours;
       const keyBase = `${def.id}:${cfg.date}:${active.map((s) => s.start).join("_")}`;
 
+      const inSlot = (e: { slot_start: string; is_overtime: boolean }, s: Slot) =>
+        fmt(e.slot_start) === fmt(s.start) && Boolean(e.is_overtime) === Boolean(s.overtime);
+
       if (def.kind === "employees") {
         const hourEntries = entries.filter(inActive);
         const cards = employees
@@ -249,12 +252,34 @@ function PainelPage() {
               produced += e.quantity;
               ops.add(opName.get(e.operation_id) ?? "Operação");
             }
+            const hours = active
+              .map((s) => {
+                const rows = mine.filter((e) => inSlot(e, s));
+                if (rows.length === 0) return null;
+                let f = 0;
+                let prod = 0;
+                for (const e of rows) {
+                  const eph = expectedPerHour.get(e.operation_id);
+                  const meta = eph != null ? eph * slotHours : null;
+                  if (meta != null && meta > 0) f += e.quantity / meta;
+                  prod += e.quantity;
+                }
+                return {
+                  key: `${s.start}-${s.overtime ? "x" : "n"}`,
+                  label: `${s.start}–${s.end}${s.overtime ? " (extra)" : ""}`,
+                  produced: prod,
+                  meta: f > 0 ? prod / f : null,
+                  pct: f > 0 ? f * 100 : null,
+                };
+              })
+              .filter((h): h is NonNullable<typeof h> => h !== null);
             return {
               key: `${keyBase}:${emp.id}`,
               name: emp.name,
               operations: Array.from(ops),
               produced,
               pct: fraction * 100,
+              hours,
             };
           })
           .filter((c): c is EmployeeCardData => c !== null)
@@ -266,11 +291,25 @@ function PainelPage() {
       const sectorName = sectors.find((s) => s.id === sectorId)?.name ?? "Setor";
       const rows = (metasByDate.get(cfg.date) ?? []).filter((m) => m.sector_id === sectorId);
       const totalMeta = rows.reduce((a, m) => a + (m.quantidade ?? 0), 0);
+      const metaSlot = workHours > 0 ? (totalMeta / workHours) * slotHours : 0;
       const metaHora =
         workHours > 0 ? (totalMeta / workHours) * Math.max(active.length, 1) : 0;
-      const atingido = entries
-        .filter((e) => opSectorLast.get(e.operation_id) === sectorId && inActive(e))
+      const sectorEntries = entries.filter((e) => opSectorLast.get(e.operation_id) === sectorId);
+      const atingido = sectorEntries
+        .filter((e) => inActive(e))
         .reduce((a, e) => a + e.quantity, 0);
+      const hours = active.map((s) => {
+        const done = sectorEntries
+          .filter((e) => inSlot(e, s))
+          .reduce((a, e) => a + e.quantity, 0);
+        return {
+          key: `${s.start}-${s.overtime ? "x" : "n"}`,
+          label: `${s.start}–${s.end}${s.overtime ? " (extra)" : ""}`,
+          meta: metaSlot,
+          atingido: done,
+          pct: metaSlot > 0 ? (done / metaSlot) * 100 : null,
+        };
+      });
       const sector: SectorScreenData = {
         key: keyBase,
         sectorName,
@@ -278,6 +317,7 @@ function PainelPage() {
         metaHora,
         atingido,
         pct: metaHora > 0 ? (atingido / metaHora) * 100 : null,
+        hours,
         products: rows
           .map((m) => {
             const p = productById.get(m.product_id);
@@ -300,6 +340,7 @@ function PainelPage() {
           .sort((a, b) => a.opInterna.localeCompare(b.opInterna, "pt-BR", { numeric: true })),
       };
       return { def, cfg, slots, slotLabel, pastDateLabel, cards: [], sector };
+
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
