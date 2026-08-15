@@ -131,13 +131,50 @@ export function ProgressRing({
 
 /* ---------------- Tela A ---------------- */
 
+export type HourBlockData = {
+  key: string;
+  label: string;
+  produced: number;
+  meta: number | null;
+  pct: number | null;
+};
+
 export type EmployeeCardData = {
   key: string;
   name: string;
   operations: string[];
   produced: number;
   pct: number | null;
+  hours: HourBlockData[];
 };
+
+function HourBlock({ h }: { h: HourBlockData }) {
+  const lv = perfLevel(h.pct);
+  return (
+    <div
+      className={cn(
+        "rounded-lg border px-3 py-2",
+        lv === "ok"
+          ? "border-emerald-500/60 bg-emerald-500/10"
+          : lv === "near"
+            ? "border-amber-500/60 bg-amber-500/10"
+            : "border-red-500/50 bg-red-500/10",
+      )}
+    >
+      <p className="text-sm font-semibold tracking-wide text-slate-300">{h.label}</p>
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-xl font-bold tabular-nums text-slate-100">
+          {h.produced}
+          <span className="text-slate-500">/{h.meta == null ? "–" : Math.round(h.meta)}</span>
+        </p>
+        <p className={cn("text-xl font-black tabular-nums", PERF_TEXT[lv])}>
+          {h.pct == null ? "–" : Math.round(h.pct)}%
+        </p>
+      </div>
+    </div>
+  );
+}
+
 
 export function TelaColaboradores({
   slotLabel,
