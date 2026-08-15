@@ -72,6 +72,7 @@ export type Employee = {
   name: string;
   role: string | null;
   active: boolean;
+  numero_id: number;
 };
 
 export type Break = { start: string; end: string; label: string };
