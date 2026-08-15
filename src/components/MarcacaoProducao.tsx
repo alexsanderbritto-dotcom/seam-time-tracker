@@ -27,17 +27,19 @@ import {
   entriesQuery,
   esteiraQuery,
   fmt,
+  ocorrenciasQuery,
   operationsQuery,
   overtimeSlotsQuery,
   productsQuery,
   scheduleQuery,
   todayISO,
   type Employee,
+  type Ocorrencia,
   type Operation,
 } from "@/lib/production";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { cn } from "@/lib/utils";
-import { Trash2, Check, LogOut, Search, ChevronDown } from "lucide-react";
+import { Trash2, Check, LogOut, Search, ChevronDown, Plus } from "lucide-react";
 
 /** Native select: mobile browsers render their own picker, avoiding the
  * portal/scroll-lock crashes seen with the custom dropdown on some devices. */
@@ -57,6 +59,9 @@ export function MarcacaoProducao({
   const [productId, setProductId] = useState("");
   const [slotIdx, setSlotIdx] = useState("");
   const [overtimeId, setOvertimeId] = useState("");
+  const [ocorrenciaId, setOcorrenciaId] = useState("");
+  const [novaOcorrencia, setNovaOcorrencia] = useState("");
+  const [criandoOcorrencia, setCriandoOcorrencia] = useState(false);
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [opSearch, setOpSearch] = useState("");
@@ -70,6 +75,7 @@ export function MarcacaoProducao({
   const { data: entries = [] } = useQuery(entriesQuery(date));
   const { data: esteira = [] } = useQuery(esteiraQuery);
   const { data: overtimeSlots = [] } = useQuery(overtimeSlotsQuery);
+  const { data: ocorrencias = [] } = useQuery(ocorrenciasQuery);
 
   const slots = useMemo(() => buildSlots(config), [config]);
   const productOps = useMemo(
@@ -145,6 +151,34 @@ export function MarcacaoProducao({
     opInputRefs.current.get(nextId)?.focus();
   }
 
+  async function criarOcorrencia() {
+    const nome = novaOcorrencia.trim();
+    if (!nome) return;
+    const existente = ocorrencias.find(
+      (o: Ocorrencia) => o.nome.toLowerCase() === nome.toLowerCase(),
+    );
+    if (existente) {
+      setOcorrenciaId(existente.id);
+      setNovaOcorrencia("");
+      setCriandoOcorrencia(false);
+      return;
+    }
+    const { data, error } = await db
+      .from("ocorrencias")
+      .insert({ nome })
+      .select()
+      .single();
+    if (error) {
+      toast.error("Erro ao criar ocorrência: " + error.message);
+      return;
+    }
+    await qc.invalidateQueries({ queryKey: ["ocorrencias"] });
+    if (data) setOcorrenciaId((data as Ocorrencia).id);
+    setNovaOcorrencia("");
+    setCriandoOcorrencia(false);
+    toast.success("Ocorrência criada.");
+  }
+
   async function save() {
     const ot = overtimeSlots.find((o) => o.id === overtimeId);
     const normal = slots[Number(slotIdx)];
@@ -166,6 +200,7 @@ export function MarcacaoProducao({
         slot_start: slot.start,
         slot_end: slot.end,
         is_overtime: slot.overtime,
+        ocorrencia_id: ocorrenciaId || null,
         quantity: Number(v),
         entry_date: date,
       }));
@@ -186,6 +221,7 @@ export function MarcacaoProducao({
     toast.success(`${rows.length} marcação(ões) registrada(s).`);
     setSelected({});
     setOpSearch("");
+    setOcorrenciaId("");
     qc.invalidateQueries({ queryKey: ["production_entries"] });
   }
 
@@ -319,6 +355,56 @@ export function MarcacaoProducao({
               ) : null}
             </div>
 
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="ocorrencia-select">Ocorrência (opcional)</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setCriandoOcorrencia((v) => !v)}
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Criar ocorrência
+                </Button>
+              </div>
+              <SearchableSelect
+                options={[
+                  { value: "", label: "Sem ocorrência", alwaysShow: true },
+                  ...ocorrencias.map((o: Ocorrencia) => ({ value: o.id, label: o.nome })),
+                ]}
+                value={ocorrenciaId}
+                onChange={setOcorrenciaId}
+                placeholder="Sem ocorrência"
+                searchPlaceholder="Buscar ocorrência..."
+                emptyMessage="Nenhuma ocorrência cadastrada."
+              />
+              {criandoOcorrencia ? (
+                <div className="flex gap-2">
+                  <Input
+                    autoFocus
+                    className="h-11 text-base md:h-10 md:text-sm"
+                    placeholder="Ex.: Máquina parada"
+                    value={novaOcorrencia}
+                    onChange={(e) => setNovaOcorrencia(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void criarOcorrencia();
+                      }
+                    }}
+                  />
+                  <Button type="button" onClick={() => void criarOcorrencia()}>
+                    Salvar
+                  </Button>
+                </div>
+              ) : null}
+              <p className="text-xs text-muted-foreground">
+                Horários com ocorrência não geram percentual de produtividade do colaborador.
+              </p>
+            </div>
 
             <div className="space-y-1.5">
               <Label>Colaborador</Label>
@@ -504,7 +590,15 @@ export function MarcacaoProducao({
                               <TableCell className="text-sm text-muted-foreground">
                                 {p ? `${p.name} · OP ${p.op_number}` : "—"}
                               </TableCell>
-                              <TableCell>{op?.name ?? "—"}</TableCell>
+                              <TableCell>
+                                {op?.name ?? "—"}
+                                {e.ocorrencia_id ? (
+                                  <span className="block text-xs text-destructive">
+                                    {ocorrencias.find((o: Ocorrencia) => o.id === e.ocorrencia_id)
+                                      ?.nome ?? "Ocorrência"}
+                                  </span>
+                                ) : null}
+                              </TableCell>
                               <TableCell>
                                 <Input
                                   type="number"

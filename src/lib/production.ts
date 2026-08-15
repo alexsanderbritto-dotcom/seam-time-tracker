@@ -94,7 +94,19 @@ export type ProductionEntry = {
   quantity: number;
   entry_date: string;
   is_overtime: boolean;
+  ocorrencia_id: string | null;
   created_at?: string;
+};
+
+export type Ocorrencia = { id: string; nome: string };
+
+export const ocorrenciasQuery = {
+  queryKey: ["ocorrencias"],
+  queryFn: async (): Promise<Ocorrencia[]> => {
+    const { data, error } = await db.from("ocorrencias").select("id,nome").order("nome");
+    if (error) throw error;
+    return data as Ocorrencia[];
+  },
 };
 
 export type OvertimeSlot = {

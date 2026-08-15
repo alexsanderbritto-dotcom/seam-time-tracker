@@ -29,6 +29,7 @@ import {
   esteiraQuery,
   fmt,
   metaProducaoQuery,
+  ocorrenciasQuery,
   operationsQuery,
   overtimeSlotsQuery,
   productCompletion,
@@ -64,6 +65,7 @@ function DashboardPage() {
   const [productFilter, setProductFilter] = useState("all");
   const [operationFilter, setOperationFilter] = useState("all");
   const [movementFilter, setMovementFilter] = useState("all");
+  const [ocorrenciaFilter, setOcorrenciaFilter] = useState("all");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [metaOpen, setMetaOpen] = useState(false);
 
@@ -78,6 +80,21 @@ function DashboardPage() {
   const { data: catalogOps = [] } = useQuery(catalogOperationsQuery);
   const { data: esteira = [] } = useQuery(esteiraQuery);
   const { data: metas = [] } = useQuery(metaProducaoQuery(date));
+  const { data: ocorrencias = [] } = useQuery(ocorrenciasQuery);
+
+  const ocorrenciaName = useMemo(
+    () => new Map(ocorrencias.map((o) => [o.id, o.nome] as const)),
+    [ocorrencias],
+  );
+
+  const ocorrenciaOptions = useMemo<SearchableOption[]>(
+    () => [
+      { value: "all", label: "Todas", alwaysShow: true },
+      { value: "any", label: "Com ocorrência", alwaysShow: true },
+      ...ocorrencias.map((o) => ({ value: o.id, label: o.nome })),
+    ],
+    [ocorrencias],
+  );
 
   const esteiraProducts = useMemo(() => {
     const ids = new Set(esteira.map((e) => e.produto_id));
@@ -234,9 +251,13 @@ function DashboardPage() {
         (e) =>
           (employeeFilter === "all" || e.employee_id === employeeFilter) &&
           (productFilter === "all" || e.product_id === productFilter) &&
-          (operationFilter === "all" || opCatalog.get(e.operation_id) === operationFilter),
+          (operationFilter === "all" || opCatalog.get(e.operation_id) === operationFilter) &&
+          (ocorrenciaFilter === "all" ||
+            (ocorrenciaFilter === "any"
+              ? !!e.ocorrencia_id
+              : e.ocorrencia_id === ocorrenciaFilter)),
       ),
-    [dayEntries, employeeFilter, productFilter, operationFilter, opCatalog],
+    [dayEntries, employeeFilter, productFilter, operationFilter, ocorrenciaFilter, opCatalog],
   );
 
 
@@ -312,7 +333,19 @@ function DashboardPage() {
               });
             }
           }
-          return { byOp, hourPct: worked.length > 0 ? usedFraction * 100 : null };
+          const occNames = Array.from(
+            new Set(
+              worked
+                .filter((e) => e.ocorrencia_id)
+                .map((e) => ocorrenciaName.get(e.ocorrencia_id!) ?? "Ocorrência"),
+            ),
+          );
+          return {
+            byOp,
+            occNames,
+            // Horário com ocorrência não gera percentual de produtividade.
+            hourPct: occNames.length > 0 ? null : worked.length > 0 ? usedFraction * 100 : null,
+          };
         });
 
         const rows = opKeys.map((opId) => {
@@ -339,14 +372,15 @@ function DashboardPage() {
         });
 
         const hourPcts = slotInfo.map((i) => i.hourPct);
+        const hourOccs = slotInfo.map((i) => i.occNames);
         const dayPct = (() => {
           const vals = hourPcts.filter((v): v is number => v != null);
           return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
         })();
-        return { emp, rows, hourPcts, dayPct };
+        return { emp, rows, hourPcts, hourOccs, dayPct };
       })
       .filter((g) => g.rows.length > 0);
-  }, [employees, employeeFilter, filtered, slots, operations, opCatalog, expectedPerHour, slotHours]);
+  }, [employees, employeeFilter, filtered, slots, operations, opCatalog, expectedPerHour, slotHours, ocorrenciaName]);
 
   const workHours = useMemo(
     () => normalSlots.length * slotHours,
@@ -474,6 +508,15 @@ function DashboardPage() {
                 value={operationFilter}
                 onChange={setOperationFilter}
                 searchPlaceholder="Digite a operação..."
+              />
+            </div>
+            <div className="w-56 space-y-1.5">
+              <Label>Ocorrência</Label>
+              <SearchableSelect
+                options={ocorrenciaOptions}
+                value={ocorrenciaFilter}
+                onChange={setOcorrenciaFilter}
+                searchPlaceholder="Digite a ocorrência..."
               />
             </div>
             <div className="w-48 space-y-1.5">
@@ -656,7 +699,7 @@ function DashboardPage() {
                 Nenhuma produção registrada com estes filtros.
               </p>
             ) : (
-              productivity.map(({ emp, rows, hourPcts, dayPct }) => (
+              productivity.map(({ emp, rows, hourPcts, hourOccs, dayPct }) => (
                 <div key={emp.id} className="space-y-2">
                   <p className="font-medium">{emp.name}</p>
                   <div className="overflow-x-auto rounded-md border border-border">
@@ -718,19 +761,29 @@ function DashboardPage() {
                           <TableCell className="sticky left-0 bg-card font-medium">
                             % da hora
                           </TableCell>
-                          {hourPcts.map((p, i) => (
-                            <TableCell
-                              key={slotKey(slots[i]!)}
-                              className={`text-center text-xs tabular-nums ${pctClass(p)}`}
-                            >
-                              {p != null ? `${p.toFixed(1)}%` : "–"}
-                            </TableCell>
-                          ))}
+                          {hourPcts.map((p, i) => {
+                            const occ = hourOccs[i] ?? [];
+                            return (
+                              <TableCell
+                                key={slotKey(slots[i]!)}
+                                className={`text-center text-xs tabular-nums ${pctClass(p)}`}
+                              >
+                                {p != null ? `${p.toFixed(1)}%` : "–"}
+                                {occ.length > 0 ? (
+                                  <span className="block text-[10px] font-medium leading-tight text-destructive">
+                                    {occ.join(" · ")}
+                                  </span>
+                                ) : null}
+                              </TableCell>
+                            );
+                          })}
                           <TableCell
                             colSpan={2}
                             className={`text-right text-xs tabular-nums ${pctClass(dayPct)}`}
                           >
-                            {dayPct != null ? `Média do dia ${dayPct.toFixed(1)}%` : "—"}
+                            {dayPct != null
+                              ? `Média do dia ${dayPct.toFixed(1)}% (apenas horários sem ocorrência)`
+                              : "—"}
                           </TableCell>
                         </TableRow>
                       </TableBody>

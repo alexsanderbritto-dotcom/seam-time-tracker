@@ -137,6 +137,7 @@ export type HourBlockData = {
   produced: number;
   meta: number | null;
   pct: number | null;
+  occurrence?: string | null;
 };
 
 export type EmployeeCardData = {
@@ -168,9 +169,12 @@ function HourBlock({ h }: { h: HourBlockData }) {
           <span className="text-slate-500">/{h.meta == null ? "–" : Math.round(h.meta)}</span>
         </p>
         <p className={cn("text-xl font-black tabular-nums", PERF_TEXT[lv])}>
-          {h.pct == null ? "–" : Math.round(h.pct)}%
+          {h.pct == null ? "–" : `${Math.round(h.pct)}%`}
         </p>
       </div>
+      {h.occurrence ? (
+        <p className="mt-0.5 text-sm font-semibold leading-tight text-red-400">{h.occurrence}</p>
+      ) : null}
     </div>
   );
 }

@@ -320,6 +320,24 @@ export type Database = {
           },
         ]
       }
+      ocorrencias: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       operations: {
         Row: {
           catalog_operation_id: string | null
@@ -396,6 +414,7 @@ export type Database = {
           entry_date: string
           id: string
           is_overtime: boolean
+          ocorrencia_id: string | null
           operation_id: string
           product_id: string
           quantity: number
@@ -408,6 +427,7 @@ export type Database = {
           entry_date?: string
           id?: string
           is_overtime?: boolean
+          ocorrencia_id?: string | null
           operation_id: string
           product_id: string
           quantity?: number
@@ -420,6 +440,7 @@ export type Database = {
           entry_date?: string
           id?: string
           is_overtime?: boolean
+          ocorrencia_id?: string | null
           operation_id?: string
           product_id?: string
           quantity?: number
@@ -432,6 +453,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_entries_ocorrencia_id_fkey"
+            columns: ["ocorrencia_id"]
+            isOneToOne: false
+            referencedRelation: "ocorrencias"
             referencedColumns: ["id"]
           },
           {

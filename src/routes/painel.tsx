@@ -35,6 +35,7 @@ import {
   entriesQuery,
   fmt,
   metaProducaoQuery,
+  ocorrenciasQuery,
   operationsQuery,
   overtimeSlotsQuery,
   producedInSector,
@@ -98,6 +99,7 @@ function PainelPage() {
   const { data: config } = useQuery(scheduleQuery);
   const { data: overtimeSlots = [] } = useQuery(overtimeSlotsQuery);
   const { data: allEntries = [] } = useQuery({ ...entriesQuery(), refetchInterval: 30000 });
+  const { data: ocorrencias = [] } = useQuery({ ...ocorrenciasQuery, refetchInterval: REFETCH });
 
   const [display, setDisplay] = useState(false);
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -206,6 +208,10 @@ function PainelPage() {
   }, [operations, catalogOps]);
 
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
+  const ocorrenciaName = useMemo(
+    () => new Map(ocorrencias.map((o) => [o.id, o.nome] as const)),
+    [ocorrencias],
+  );
 
   /* ---------- montagem das telas ---------- */
   const built = useMemo<BuiltScreen[]>(() => {
@@ -254,22 +260,28 @@ function PainelPage() {
                 if (rows.length === 0) return null;
                 let f = 0;
                 let prod = 0;
+                const occ = new Set<string>();
                 for (const e of rows) {
                   const eph = expectedPerHour.get(e.operation_id);
                   const meta = eph != null ? eph * slotHours : null;
                   if (meta != null && meta > 0) f += e.quantity / meta;
                   prod += e.quantity;
+                  if (e.ocorrencia_id)
+                    occ.add(ocorrenciaName.get(e.ocorrencia_id) ?? "Ocorrência");
                 }
+                const hasOcc = occ.size > 0;
                 return {
                   key: `${s.start}-${s.overtime ? "x" : "n"}`,
                   label: `${s.start}–${s.end}${s.overtime ? " (extra)" : ""}`,
                   produced: prod,
-                  meta: f > 0 ? prod / f : null,
-                  pct: f > 0 ? f * 100 : null,
+                  meta: hasOcc ? null : f > 0 ? prod / f : null,
+                  // Horário com ocorrência não gera percentual.
+                  pct: hasOcc ? null : f > 0 ? f * 100 : null,
+                  occurrence: hasOcc ? Array.from(occ).join(" · ") : null,
                 };
               })
               .filter((h): h is NonNullable<typeof h> => h !== null);
-            // Média apenas dos horários com marcação (horas sem lançamento não entram).
+            // Média apenas dos horários com marcação e sem ocorrência.
             const pcts = hours
               .map((h) => h.pct)
               .filter((p): p is number => p != null);
@@ -357,6 +369,7 @@ function PainelPage() {
     opName,
     opSectorLast,
     productById,
+    ocorrenciaName,
     operations,
     catalogOps,
     allEntries,
