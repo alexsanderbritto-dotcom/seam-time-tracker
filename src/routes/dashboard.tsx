@@ -595,19 +595,15 @@ function DashboardPage() {
             <CardTitle className="text-base">Avanço por produto / OP</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            {esteiraProducts.length === 0 ? (
+            {visibleProducts.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Nenhum produto na esteira de produção.
               </p>
             ) : (
-              esteiraProducts.map((p) => {
-                const { pct, done, perOperation } = productCompletion(
-                  p,
-                  visibleOperations,
-                  allEntries,
-                );
+              visibleProducts.map(({ p, pct, done, perOperation, moving }) => {
                 const isOpen = !!expanded[p.id];
                 return (
+
                   <div key={p.id} className="rounded-md border border-border p-4">
                     <button
                       type="button"
