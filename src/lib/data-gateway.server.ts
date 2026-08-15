@@ -18,6 +18,8 @@ const READABLE = new Set([
   "meta_setor_mes",
   "meta_producao_setor_dia",
   "ocorrencias",
+  "schedule_day_config",
+  "feriados",
 ]);
 
 // Tables any signed-in marcador (usuario or admin) may write to.
