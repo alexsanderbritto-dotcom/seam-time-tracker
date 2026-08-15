@@ -1,6 +1,56 @@
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { PERF_COLOR, PERF_TEXT, perfLevel } from "@/lib/painel";
 import { cn } from "@/lib/utils";
-import { ArrowDownRight, ArrowUpRight, PartyPopper } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, CalendarClock, PartyPopper } from "lucide-react";
+
+/* ---------------- prévia em escala reduzida ---------------- */
+
+const BASE_W = 1280;
+const BASE_H = 720;
+
+export function ScaledPreview({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.5);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setScale(el.clientWidth / BASE_W));
+    ro.observe(el);
+    setScale(el.clientWidth / BASE_W);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className="w-full overflow-hidden rounded-xl bg-slate-950"
+      style={{ height: BASE_H * scale }}
+    >
+      <div
+        className="p-8 text-slate-100"
+        style={{
+          width: BASE_W,
+          height: BASE_H,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function PastBadge({ label }: { label?: string | undefined }) {
+  if (!label) return null;
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full bg-amber-500/20 px-4 py-1.5 text-lg font-bold text-amber-300">
+      <CalendarClock className="h-5 w-5" /> Dados de {label}
+    </span>
+  );
+}
+
 
 /* ---------------- confete leve (CSS puro) ---------------- */
 
@@ -95,12 +145,14 @@ export function TelaColaboradores({
   groupIndex,
   groupCount,
   isCelebrating,
+  pastDateLabel,
 }: {
   slotLabel: string;
   cards: EmployeeCardData[];
   groupIndex: number;
   groupCount: number;
   isCelebrating: (key: string) => boolean;
+  pastDateLabel?: string | undefined;
 }) {
   return (
     <div className="flex h-full flex-col gap-6">
@@ -110,6 +162,9 @@ export function TelaColaboradores({
             Produtividade da hora
           </p>
           <h2 className="text-5xl font-black tracking-tight text-slate-50">{slotLabel}</h2>
+          <div className="mt-2">
+            <PastBadge label={pastDateLabel} />
+          </div>
         </div>
         {groupCount > 1 ? (
           <div className="flex items-center gap-2">
@@ -125,6 +180,7 @@ export function TelaColaboradores({
           </div>
         ) : null}
       </header>
+
 
       {cards.length === 0 ? (
         <div className="flex flex-1 items-center justify-center text-3xl font-semibold text-slate-500">
@@ -195,9 +251,11 @@ export type SectorScreenData = {
 export function TelaSetor({
   data,
   isCelebrating,
+  pastDateLabel,
 }: {
   data: SectorScreenData;
   isCelebrating: (key: string) => boolean;
+  pastDateLabel?: string | undefined;
 }) {
   const level = perfLevel(data.pct);
   const resultado = data.atingido - data.metaHora;
@@ -211,7 +269,11 @@ export function TelaSetor({
           {data.sectorName}
         </h2>
         <p className="mt-1 text-xl text-slate-400">Janela {data.slotLabel}</p>
+        <div className="mt-2">
+          <PastBadge label={pastDateLabel} />
+        </div>
       </header>
+
 
       <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-8 rounded-2xl border-2 border-slate-800 bg-slate-900/70 p-6">
         <ProgressRing pct={data.pct} size={180} label="da hora" />
