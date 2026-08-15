@@ -443,6 +443,15 @@ export function TelaSetor({
   );
 }
 
+function MiniStat({ label, value, tone }: { label: string; value: number; tone: string }) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-widest text-slate-400">{label}</p>
+      <p className={cn("text-2xl font-black tabular-nums", tone)}>{value}</p>
+    </div>
+  );
+}
+
 function Stat({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
     <div>
