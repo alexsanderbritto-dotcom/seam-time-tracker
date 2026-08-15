@@ -145,12 +145,14 @@ export function TelaColaboradores({
   groupIndex,
   groupCount,
   isCelebrating,
+  pastDateLabel,
 }: {
   slotLabel: string;
   cards: EmployeeCardData[];
   groupIndex: number;
   groupCount: number;
   isCelebrating: (key: string) => boolean;
+  pastDateLabel?: string;
 }) {
   return (
     <div className="flex h-full flex-col gap-6">
@@ -160,6 +162,9 @@ export function TelaColaboradores({
             Produtividade da hora
           </p>
           <h2 className="text-5xl font-black tracking-tight text-slate-50">{slotLabel}</h2>
+          <div className="mt-2">
+            <PastBadge label={pastDateLabel} />
+          </div>
         </div>
         {groupCount > 1 ? (
           <div className="flex items-center gap-2">
@@ -175,6 +180,7 @@ export function TelaColaboradores({
           </div>
         ) : null}
       </header>
+
 
       {cards.length === 0 ? (
         <div className="flex flex-1 items-center justify-center text-3xl font-semibold text-slate-500">
