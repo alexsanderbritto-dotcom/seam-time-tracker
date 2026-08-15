@@ -29,7 +29,6 @@ import {
   type ScreenConfig,
 } from "@/lib/painel-config";
 import {
-  buildSlots,
   catalogOperationsQuery,
   employeesQuery,
   entriesQuery,
@@ -40,7 +39,6 @@ import {
   overtimeSlotsQuery,
   producedInSector,
   productsQuery,
-  scheduleQuery,
   sectorsQuery,
   todayISO,
   type Slot,
@@ -96,7 +94,6 @@ function PainelPage() {
     refetchInterval: REFETCH,
   });
   const { data: sectors = [] } = useQuery({ ...sectorsQuery, refetchInterval: REFETCH });
-  const { data: config } = useQuery(scheduleQuery);
   const { data: overtimeSlots = [] } = useQuery(overtimeSlotsQuery);
   const { data: allEntries = [] } = useQuery({ ...entriesQuery(), refetchInterval: 30000 });
   const { data: ocorrencias = [] } = useQuery({ ...ocorrenciasQuery, refetchInterval: REFETCH });
@@ -158,8 +155,14 @@ function PainelPage() {
   }, [dates, metaResults.map((r) => r.dataUpdatedAt).join(",")]);
 
   /* ---------- janelas ---------- */
-  const normalSlots = useMemo(() => buildSlots(config), [config]);
-  const slotHours = (config?.slot_minutes ?? 60) / 60;
+  const { data: daySchedules = [] } = useQuery(daySchedulesQuery);
+  const { data: feriados = [] } = useQuery(feriadosQuery);
+  const baseDay = useMemo(
+    () => buildDaySlots(daySchedules, feriados, todayISO()),
+    [daySchedules, feriados],
+  );
+  const normalSlots = baseDay.slots;
+  const slotHours = baseDay.slotMinutes / 60;
   const workHours = normalSlots.length * slotHours;
 
   const slotsForDate = useMemo(() => {
@@ -174,14 +177,15 @@ function PainelPage() {
       const extras = overtimeSlots
         .filter((o) => used.has(fmt(o.start_time)))
         .map((o) => ({ start: fmt(o.start_time), end: fmt(o.end_time), overtime: true }));
+      const dayCfg = buildDaySlots(daySchedules, feriados, date);
       const out: Slot[] = [
-        ...normalSlots.map((s) => ({ ...s, overtime: false })),
+        ...dayCfg.slots.map((s) => ({ ...s, overtime: Boolean(s.overtime) })),
         ...extras.sort((a, b) => a.start.localeCompare(b.start)),
       ];
       cache.set(date, out);
       return out;
     };
-  }, [normalSlots, overtimeSlots, entriesByDate]);
+  }, [daySchedules, feriados, overtimeSlots, entriesByDate]);
 
   const opName = useMemo(
     () => new Map(operations.map((o) => [o.id, o.name] as const)),

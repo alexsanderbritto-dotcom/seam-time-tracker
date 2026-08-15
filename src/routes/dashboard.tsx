@@ -378,7 +378,7 @@ function DashboardPage() {
         return { emp, rows, hourPcts, hourOccs, dayPct };
       })
       .filter((g) => g.rows.length > 0);
-  }, [employees, employeeFilter, filtered, slots, operations, opCatalog, expectedPerHour, slotHours, ocorrenciaName]);
+  }, [employees, employeeFilter, filtered, slots, operations, opCatalog, expectedPerHour, slotHours, daySlotMinutes, ocorrenciaName]);
 
   const workHours = useMemo(
     () => normalSlots.length * slotHours,
