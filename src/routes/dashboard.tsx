@@ -645,9 +645,10 @@ function DashboardPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Produtividade por colaborador e operação</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Estimado (quantidade por hora esperada × horas trabalhadas) comparado ao produzido em
-              cada janela de horário. Verde: na meta ou acima · amarelo: perto da meta · vermelho:
-              abaixo.
+              O atingimento de cada hora é a soma direta das frações de cada operação (produzido ÷
+              meta original), sem limite em 100% e independente da ordem de lançamento. A meta
+              ajustada exibida em cada célula é apenas explicativa (tempo restante na hora conforme a
+              ordem das marcações).
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -656,7 +657,7 @@ function DashboardPage() {
                 Nenhuma produção registrada com estes filtros.
               </p>
             ) : (
-              productivity.map(({ emp, rows }) => (
+              productivity.map(({ emp, rows, hourPcts, dayPct }) => (
                 <div key={emp.id} className="space-y-2">
                   <p className="font-medium">{emp.name}</p>
                   <div className="overflow-x-auto rounded-md border border-border">
@@ -686,13 +687,21 @@ function DashboardPage() {
                                 {!c.active ? (
                                   <span className="text-muted-foreground">–</span>
                                 ) : (
-                                  <span className={`tabular-nums ${perfClass(c.produced, c.estimated)}`}>
-                                    {c.produced}
-                                    <span className="text-muted-foreground">
-                                      {" / "}
-                                      {c.estimated != null ? Math.round(c.estimated) : "—"}
+                                  <div className="leading-tight">
+                                    <span className={`tabular-nums ${perfClass(c.produced, c.estimated)}`}>
+                                      {c.produced}
+                                      <span className="text-muted-foreground">
+                                        {" / "}
+                                        {c.estimated != null ? Math.round(c.estimated) : "—"}
+                                      </span>
                                     </span>
-                                  </span>
+                                    <div className="text-[10px] tabular-nums text-muted-foreground">
+                                      {c.opPct != null ? `${c.opPct.toFixed(1)}%` : "—"}
+                                      {c.adjusted != null
+                                        ? ` · aj. ${Math.round(c.adjusted)}`
+                                        : ""}
+                                    </div>
+                                  </div>
                                 )}
                               </TableCell>
                             ))}
@@ -706,10 +715,30 @@ function DashboardPage() {
                             </TableCell>
                           </TableRow>
                         ))}
+                        <TableRow className="bg-secondary/50">
+                          <TableCell className="sticky left-0 bg-card font-medium">
+                            % da hora
+                          </TableCell>
+                          {hourPcts.map((p, i) => (
+                            <TableCell
+                              key={slotKey(slots[i]!)}
+                              className={`text-center text-xs tabular-nums ${pctClass(p)}`}
+                            >
+                              {p != null ? `${p.toFixed(1)}%` : "–"}
+                            </TableCell>
+                          ))}
+                          <TableCell
+                            colSpan={2}
+                            className={`text-right text-xs tabular-nums ${pctClass(dayPct)}`}
+                          >
+                            {dayPct != null ? `Média do dia ${dayPct.toFixed(1)}%` : "—"}
+                          </TableCell>
+                        </TableRow>
                       </TableBody>
                     </Table>
                   </div>
                 </div>
+
               ))
             )}
           </CardContent>
