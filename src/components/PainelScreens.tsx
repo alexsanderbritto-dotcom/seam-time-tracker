@@ -314,8 +314,8 @@ export function TelaSetor({
   isCelebrating: (key: string) => boolean;
   pastDateLabel?: string | undefined;
 }) {
-  const level = perfLevel(data.pct);
-  const resultado = data.atingido - data.metaHora;
+  const party0 = null;
+
   const party = isCelebrating(data.key);
   return (
     <div className="relative flex h-full flex-col gap-6 overflow-hidden">
