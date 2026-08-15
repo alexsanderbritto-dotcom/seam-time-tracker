@@ -60,6 +60,7 @@ function DashboardPage() {
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [productFilter, setProductFilter] = useState("all");
   const [operationFilter, setOperationFilter] = useState("all");
+  const [movementFilter, setMovementFilter] = useState("all");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
 
@@ -75,8 +76,64 @@ function DashboardPage() {
 
   const esteiraProducts = useMemo(() => {
     const ids = new Set(esteira.map((e) => e.produto_id));
-    return products.filter((p) => ids.has(p.id));
+    const num = (v: string | null) => {
+      const n = Number(String(v ?? "").replace(/\D/g, ""));
+      return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
+    };
+    return products
+      .filter((p) => ids.has(p.id))
+      .sort((a, b) => num(a.op_number) - num(b.op_number) || a.op_number.localeCompare(b.op_number));
   }, [esteira, products]);
+
+  const employeeOptions = useMemo<SearchableOption[]>(
+    () => [
+      { value: "all", label: "Todos", alwaysShow: true },
+      ...employees.map((e) => ({ value: e.id, label: e.name })),
+    ],
+    [employees],
+  );
+
+  const productOptions = useMemo<SearchableOption[]>(
+    () => [
+      { value: "all", label: "Todos", alwaysShow: true },
+      ...products.map((p) => ({
+        value: p.id,
+        label: `${p.name} · OP ${p.op_number}`,
+        searchText: `${p.op_number} ${p.op_interna ?? ""} ${p.reference}`,
+      })),
+    ],
+    [products],
+  );
+
+  const operationOptions = useMemo<SearchableOption[]>(() => {
+    const sectorName = new Map(sectors.map((s) => [s.id, s.name]));
+    return [
+      { value: "all", label: "Todas", alwaysShow: true },
+      ...catalogOps.map((c) => ({
+        value: c.id,
+        label: c.name,
+        searchText: sectorName.get(c.sector_id) ?? "",
+        node: (
+          <span>
+            {c.name}{" "}
+            <span className="text-xs text-muted-foreground">
+              {sectorName.get(c.sector_id) ?? ""}
+            </span>
+          </span>
+        ),
+      })),
+    ];
+  }, [catalogOps, sectors]);
+
+  const movementOptions = useMemo<SearchableOption[]>(
+    () => [
+      { value: "all", label: "Todos" },
+      { value: "movimento", label: "Em movimento" },
+      { value: "parado", label: "Parado" },
+    ],
+    [],
+  );
+
 
   const { data: overtimeSlots = [] } = useQuery(overtimeSlotsQuery);
 
