@@ -396,7 +396,7 @@ export function TelaSetor({
         </div>
       </div>
 
-      </div>
+
 
       <div className="min-h-0 flex-1">
         <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-slate-400">
