@@ -203,10 +203,16 @@ function DashboardPage() {
     const emps = employees.filter(
       (e) => employeeFilter === "all" || e.id === employeeFilter,
     );
+    // Agrupa por operação de catálogo (mesma operação em produtos diferentes = 1 linha)
+    const opKeyOf = (operationId: string) =>
+      opCatalog.get(operationId) ?? `op:${operationId}`;
+    const opName = new Map<string, string>();
+    for (const o of operations) if (!opName.has(opKeyOf(o.id))) opName.set(opKeyOf(o.id), o.name);
+
     return emps
       .map((emp) => {
         const empEntries = filtered.filter((e) => e.employee_id === emp.id);
-        const opIds = Array.from(new Set(empEntries.map((e) => e.operation_id)));
+        const opKeys = Array.from(new Set(empEntries.map((e) => opKeyOf(e.operation_id))));
 
         // Para cada janela: soma direta das frações (produzido / meta original).
         // A "meta ajustada" é apenas explicativa e segue a ordem cronológica de lançamento.
@@ -216,33 +222,45 @@ function DashboardPage() {
           );
           const byOp = new Map<
             string,
-            { produced: number; meta: number | null; adjusted: number | null; opPct: number | null }
+            {
+              produced: number;
+              meta: number | null;
+              adjusted: number | null;
+              opPct: number | null;
+              byProduct: Map<string, number>;
+            }
           >();
           let usedFraction = 0;
           for (const e of worked) {
+            const key = opKeyOf(e.operation_id);
             const eph = expectedPerHour.get(e.operation_id);
             const meta = eph != null ? eph * slotHours : null;
-            const prev = byOp.get(e.operation_id);
+            const prev = byOp.get(key);
             const remaining = Math.max(0, 1 - usedFraction);
             const adjusted = meta != null ? meta * remaining : null;
             const fraction = meta != null && meta > 0 ? e.quantity / meta : 0;
             usedFraction += fraction;
             if (prev) {
               prev.produced += e.quantity;
+              prev.byProduct.set(
+                e.product_id,
+                (prev.byProduct.get(e.product_id) ?? 0) + e.quantity,
+              );
               prev.opPct = prev.meta != null && prev.meta > 0 ? (prev.produced / prev.meta) * 100 : null;
             } else {
-              byOp.set(e.operation_id, {
+              byOp.set(key, {
                 produced: e.quantity,
                 meta,
                 adjusted,
                 opPct: meta != null && meta > 0 ? (e.quantity / meta) * 100 : null,
+                byProduct: new Map([[e.product_id, e.quantity]]),
               });
             }
           }
           return { byOp, hourPct: worked.length > 0 ? usedFraction * 100 : null };
         });
 
-        const rows = opIds.map((opId) => {
+        const rows = opKeys.map((opId) => {
           const perSlot = slotInfo.map((info) => {
             const d = info.byOp.get(opId);
             return {
@@ -251,18 +269,20 @@ function DashboardPage() {
               adjusted: d?.adjusted ?? null,
               opPct: d?.opPct ?? null,
               active: !!d,
+              byProduct: d ? Array.from(d.byProduct.entries()) : [],
             };
           });
           const totalProduced = perSlot.reduce((a, c) => a + c.produced, 0);
           const totalEstimated = perSlot.reduce((a, c) => a + (c.estimated ?? 0), 0);
           return {
             opId,
-            name: operations.find((o) => o.id === opId)?.name ?? "Operação",
+            name: opName.get(opId) ?? "Operação",
             perSlot,
             totalProduced,
             totalEstimated,
           };
         });
+
         const hourPcts = slotInfo.map((i) => i.hourPct);
         const dayPct = (() => {
           const vals = hourPcts.filter((v): v is number => v != null);
@@ -271,7 +291,7 @@ function DashboardPage() {
         return { emp, rows, hourPcts, dayPct };
       })
       .filter((g) => g.rows.length > 0);
-  }, [employees, employeeFilter, filtered, slots, operations, expectedPerHour, slotHours]);
+  }, [employees, employeeFilter, filtered, slots, operations, opCatalog, expectedPerHour, slotHours]);
 
   const perfClass = (produced: number, estimated: number | null) => {
     if (estimated == null || estimated <= 0) return "";
