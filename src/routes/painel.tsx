@@ -20,7 +20,6 @@ import {
   catalogOperationsQuery,
   employeesQuery,
   entriesQuery,
-  esteiraQuery,
   fmt,
   metaProducaoQuery,
   operationsQuery,
@@ -70,7 +69,6 @@ function PainelPage() {
   const { data: dayEntries = [] } = useQuery({ ...entriesQuery(date), refetchInterval: 10000 });
   const { data: allEntries = [] } = useQuery({ ...entriesQuery(), refetchInterval: 30000 });
   const { data: metas = [] } = useQuery({ ...metaProducaoQuery(date), refetchInterval: REFETCH });
-  const { data: esteira = [] } = useQuery({ ...esteiraQuery, refetchInterval: REFETCH });
 
   /* ---------- configuração ---------- */
   const [telaAOn, setTelaAOn] = useState(true);
@@ -132,7 +130,7 @@ function PainelPage() {
     if (!slot) return [];
     const hourEntries = dayEntries.filter(inSlot);
     return employees
-      .map((emp) => {
+      .map((emp): EmployeeCardData | null => {
         const mine = hourEntries.filter((e) => e.employee_id === emp.id);
         if (mine.length === 0) return null;
         let fraction = 0;
@@ -151,7 +149,7 @@ function PainelPage() {
           operations: Array.from(ops),
           produced,
           pct: fraction * 100,
-        } satisfies EmployeeCardData;
+        };
       })
       .filter((c): c is EmployeeCardData => c !== null)
       .sort((a, b) => (b.pct ?? 0) - (a.pct ?? 0));
@@ -177,7 +175,6 @@ function PainelPage() {
   }, [operations, catalogOps]);
 
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
-  const esteiraIds = useMemo(() => new Set(esteira.map((e) => e.produto_id)), [esteira]);
 
   const sectorScreens = useMemo<SectorScreenData[]>(
     () =>
@@ -212,7 +209,6 @@ function PainelPage() {
                 meta,
                 produced,
                 pct: meta > 0 ? (produced / meta) * 100 : 0,
-                inEsteira: esteiraIds.has(m.product_id),
               };
             })
             .sort((a, b) => a.opInterna.localeCompare(b.opInterna, "pt-BR", { numeric: true })),
@@ -230,7 +226,6 @@ function PainelPage() {
       operations,
       catalogOps,
       allEntries,
-      esteiraIds,
     ],
   );
 

@@ -19,6 +19,7 @@ import { Route as HorariosRouteImport } from './routes/horarios'
 import { Route as MarcacaoProducaoRouteImport } from './routes/marcacao-producao'
 import { Route as MarcadoresRouteImport } from './routes/marcadores'
 import { Route as OperacoesRouteImport } from './routes/operacoes'
+import { Route as PainelRouteImport } from './routes/painel'
 import { Route as ProdutosRouteImport } from './routes/produtos'
 
 const IndexRoute = IndexRouteImport.update({
@@ -71,6 +72,11 @@ const OperacoesRoute = OperacoesRouteImport.update({
   path: '/operacoes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PainelRoute = PainelRouteImport.update({
+  id: '/painel',
+  path: '/painel',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProdutosRoute = ProdutosRouteImport.update({
   id: '/produtos',
   path: '/produtos',
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/marcacao-producao': typeof MarcacaoProducaoRoute
   '/marcadores': typeof MarcadoresRoute
   '/operacoes': typeof OperacoesRoute
+  '/painel': typeof PainelRoute
   '/produtos': typeof ProdutosRoute
 }
 export interface FileRoutesByTo {
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/marcacao-producao': typeof MarcacaoProducaoRoute
   '/marcadores': typeof MarcadoresRoute
   '/operacoes': typeof OperacoesRoute
+  '/painel': typeof PainelRoute
   '/produtos': typeof ProdutosRoute
 }
 export interface FileRoutesById {
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   '/marcacao-producao': typeof MarcacaoProducaoRoute
   '/marcadores': typeof MarcadoresRoute
   '/operacoes': typeof OperacoesRoute
+  '/painel': typeof PainelRoute
   '/produtos': typeof ProdutosRoute
 }
 export interface FileRouteTypes {
@@ -130,6 +139,7 @@ export interface FileRouteTypes {
     | '/marcacao-producao'
     | '/marcadores'
     | '/operacoes'
+    | '/painel'
     | '/produtos'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -143,6 +153,7 @@ export interface FileRouteTypes {
     | '/marcacao-producao'
     | '/marcadores'
     | '/operacoes'
+    | '/painel'
     | '/produtos'
   id:
     | '__root__'
@@ -156,6 +167,7 @@ export interface FileRouteTypes {
     | '/marcacao-producao'
     | '/marcadores'
     | '/operacoes'
+    | '/painel'
     | '/produtos'
   fileRoutesById: FileRoutesById
 }
@@ -170,6 +182,7 @@ export interface RootRouteChildren {
   MarcacaoProducaoRoute: typeof MarcacaoProducaoRoute
   MarcadoresRoute: typeof MarcadoresRoute
   OperacoesRoute: typeof OperacoesRoute
+  PainelRoute: typeof PainelRoute
   ProdutosRoute: typeof ProdutosRoute
 }
 
@@ -245,6 +258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OperacoesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/painel': {
+      id: '/painel'
+      path: '/painel'
+      fullPath: '/painel'
+      preLoaderRoute: typeof PainelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/produtos': {
       id: '/produtos'
       path: '/produtos'
@@ -266,6 +286,7 @@ const rootRouteChildren: RootRouteChildren = {
   MarcacaoProducaoRoute: MarcacaoProducaoRoute,
   MarcadoresRoute: MarcadoresRoute,
   OperacoesRoute: OperacoesRoute,
+  PainelRoute: PainelRoute,
   ProdutosRoute: ProdutosRoute,
 }
 export const routeTree = rootRouteImport
