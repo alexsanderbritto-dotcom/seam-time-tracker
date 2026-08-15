@@ -207,16 +207,51 @@ function DashboardPage() {
       .map((emp) => {
         const empEntries = filtered.filter((e) => e.employee_id === emp.id);
         const opIds = Array.from(new Set(empEntries.map((e) => e.operation_id)));
-        const rows = opIds.map((opId) => {
-          const perSlot = slots.map((s) => {
-            const worked = empEntries.filter(
-              (e) => e.operation_id === opId && inSlot(e, s),
-            );
 
-            const produced = worked.reduce((a, e) => a + e.quantity, 0);
-            const eph = expectedPerHour.get(opId);
-            const estimated = worked.length > 0 && eph != null ? eph * slotHours : null;
-            return { produced, estimated, active: worked.length > 0 };
+        // Para cada janela: soma direta das frações (produzido / meta original).
+        // A "meta ajustada" é apenas explicativa e segue a ordem cronológica de lançamento.
+        const slotInfo = slots.map((s) => {
+          const worked = [...empEntries.filter((e) => inSlot(e, s))].sort((a, b) =>
+            (a.created_at ?? "").localeCompare(b.created_at ?? "") || a.id.localeCompare(b.id),
+          );
+          const byOp = new Map<
+            string,
+            { produced: number; meta: number | null; adjusted: number | null; opPct: number | null }
+          >();
+          let usedFraction = 0;
+          for (const e of worked) {
+            const eph = expectedPerHour.get(e.operation_id);
+            const meta = eph != null ? eph * slotHours : null;
+            const prev = byOp.get(e.operation_id);
+            const remaining = Math.max(0, 1 - usedFraction);
+            const adjusted = meta != null ? meta * remaining : null;
+            const fraction = meta != null && meta > 0 ? e.quantity / meta : 0;
+            usedFraction += fraction;
+            if (prev) {
+              prev.produced += e.quantity;
+              prev.opPct = prev.meta != null && prev.meta > 0 ? (prev.produced / prev.meta) * 100 : null;
+            } else {
+              byOp.set(e.operation_id, {
+                produced: e.quantity,
+                meta,
+                adjusted,
+                opPct: meta != null && meta > 0 ? (e.quantity / meta) * 100 : null,
+              });
+            }
+          }
+          return { byOp, hourPct: worked.length > 0 ? usedFraction * 100 : null };
+        });
+
+        const rows = opIds.map((opId) => {
+          const perSlot = slotInfo.map((info) => {
+            const d = info.byOp.get(opId);
+            return {
+              produced: d?.produced ?? 0,
+              estimated: d?.meta ?? null,
+              adjusted: d?.adjusted ?? null,
+              opPct: d?.opPct ?? null,
+              active: !!d,
+            };
           });
           const totalProduced = perSlot.reduce((a, c) => a + c.produced, 0);
           const totalEstimated = perSlot.reduce((a, c) => a + (c.estimated ?? 0), 0);
@@ -228,7 +263,12 @@ function DashboardPage() {
             totalEstimated,
           };
         });
-        return { emp, rows };
+        const hourPcts = slotInfo.map((i) => i.hourPct);
+        const dayPct = (() => {
+          const vals = hourPcts.filter((v): v is number => v != null);
+          return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+        })();
+        return { emp, rows, hourPcts, dayPct };
       })
       .filter((g) => g.rows.length > 0);
   }, [employees, employeeFilter, filtered, slots, operations, expectedPerHour, slotHours]);
@@ -240,6 +280,14 @@ function DashboardPage() {
     if (r >= 0.8) return "text-amber-600 dark:text-amber-400 font-medium";
     return "text-destructive font-medium";
   };
+
+  const pctClass = (pct: number | null) => {
+    if (pct == null) return "text-muted-foreground";
+    if (pct >= 100) return "text-emerald-600 dark:text-emerald-400 font-semibold";
+    if (pct >= 80) return "text-amber-600 dark:text-amber-400 font-medium";
+    return "text-destructive font-medium";
+  };
+
 
   const cell = (empId: string, s: Slot) =>
     filtered.filter((e) => e.employee_id === empId && inSlot(e, s));
