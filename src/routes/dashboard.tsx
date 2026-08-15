@@ -617,7 +617,18 @@ function DashboardPage() {
                             <span className="font-bold">{p.op_interna} — </span>
                           ) : null}
                           {p.name}
+                          <span
+                            className={cn(
+                              "ml-2 rounded-full px-2 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide",
+                              moving
+                                ? "bg-primary/10 text-primary"
+                                : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {moving ? "Em movimento" : "Parado"}
+                          </span>
                         </p>
+
                         <div className="flex items-center gap-2">
                           <p className="font-mono text-xs text-muted-foreground">
                             OP {p.op_number} · REF {p.reference}
