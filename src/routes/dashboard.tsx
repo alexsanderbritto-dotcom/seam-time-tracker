@@ -291,7 +291,7 @@ function DashboardPage() {
         return { emp, rows, hourPcts, dayPct };
       })
       .filter((g) => g.rows.length > 0);
-  }, [employees, employeeFilter, filtered, slots, operations, expectedPerHour, slotHours]);
+  }, [employees, employeeFilter, filtered, slots, operations, opCatalog, expectedPerHour, slotHours]);
 
   const perfClass = (produced: number, estimated: number | null) => {
     if (estimated == null || estimated <= 0) return "";
