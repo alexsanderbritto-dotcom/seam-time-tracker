@@ -16,6 +16,7 @@ const READABLE = new Set([
   "faturamento_meses",
   "faturamento_mes_produtos",
   "meta_setor_mes",
+  "meta_producao_setor_dia",
 ]);
 
 // Tables any signed-in marcador (usuario or admin) may write to.
