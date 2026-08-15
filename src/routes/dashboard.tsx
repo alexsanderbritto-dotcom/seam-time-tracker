@@ -10,6 +10,7 @@ import { MetaProducaoDialog } from "@/components/MetaProducaoDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDaySlots } from "@/lib/schedule";
 import { SearchableSelect, type SearchableOption } from "@/components/SearchableSelect";
 
 
@@ -270,7 +271,7 @@ function DashboardPage() {
     return map;
   }, [operations, catalogOps]);
 
-  const slotHours = (config?.slot_minutes ?? 60) / 60;
+  const slotHours = daySlotMinutes / 60;
 
   const productivity = useMemo(() => {
     const emps = employees.filter(
@@ -307,7 +308,7 @@ function DashboardPage() {
           for (const e of worked) {
             const key = opKeyOf(e.operation_id);
             const eph = expectedPerHour.get(e.operation_id);
-            const meta = eph != null ? eph * slotHours : null;
+            const meta = eph != null ? eph * ((s.workMinutes ?? daySlotMinutes) / 60) : null;
             const prev = byOp.get(key);
             const remaining = Math.max(0, 1 - usedFraction);
             const adjusted = meta != null ? meta * remaining : null;
