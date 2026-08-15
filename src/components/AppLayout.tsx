@@ -13,6 +13,7 @@ import {
   LogOut,
   Menu,
   AlertTriangle,
+  MonitorPlay,
 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
