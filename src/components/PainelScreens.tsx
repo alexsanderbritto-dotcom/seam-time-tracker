@@ -279,6 +279,14 @@ export function TelaColaboradores({
 
 /* ---------------- Tela B ---------------- */
 
+export type SectorHourData = {
+  key: string;
+  label: string;
+  meta: number;
+  atingido: number;
+  pct: number | null;
+};
+
 export type SectorScreenData = {
   key: string;
   sectorName: string;
@@ -286,6 +294,7 @@ export type SectorScreenData = {
   metaHora: number;
   atingido: number;
   pct: number | null;
+  hours: SectorHourData[];
   products: {
     id: string;
     opInterna: string;
@@ -294,6 +303,7 @@ export type SectorScreenData = {
     pct: number;
   }[];
 };
+
 
 export function TelaSetor({
   data,
