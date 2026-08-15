@@ -314,7 +314,7 @@ export function TelaSetor({
   isCelebrating: (key: string) => boolean;
   pastDateLabel?: string | undefined;
 }) {
-  const party0 = null;
+  
 
   const party = isCelebrating(data.key);
   return (
