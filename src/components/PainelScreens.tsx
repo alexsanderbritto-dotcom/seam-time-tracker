@@ -332,40 +332,70 @@ export function TelaSetor({
       </header>
 
 
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-8 rounded-2xl border-2 border-slate-800 bg-slate-900/70 p-6">
-        <ProgressRing pct={data.pct} size={180} label="da hora" />
-        <div className="grid grid-cols-3 gap-6">
-          <Stat label="Meta da hora" value={Math.round(data.metaHora)} tone="text-slate-100" />
-          <Stat label="Atingido" value={data.atingido} tone={PERF_TEXT[level]} />
-          <div>
-            <p className="text-sm uppercase tracking-widest text-slate-400">Resultado</p>
-            <p
-              className={cn(
-                "flex items-center gap-2 text-6xl font-black tabular-nums",
-                resultado >= 0 ? "text-emerald-400" : "text-red-400",
-              )}
-            >
-              {resultado >= 0 ? (
-                <ArrowUpRight className="h-10 w-10" />
-              ) : (
-                <ArrowDownRight className="h-10 w-10" />
-              )}
-              {resultado > 0 ? "+" : ""}
-              {Math.round(resultado)}
-            </p>
-          </div>
-          <div className="col-span-3">
-            <div className="h-5 w-full overflow-hidden rounded-full bg-slate-800">
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{
-                  width: `${Math.min(data.pct ?? 0, 100)}%`,
-                  backgroundColor: PERF_COLOR[level],
-                }}
-              />
-            </div>
-          </div>
+      <div className="flex items-center gap-8 rounded-2xl border-2 border-slate-800 bg-slate-900/70 p-6">
+        <ProgressRing pct={data.pct} size={180} label="do período" />
+        <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 xl:grid-cols-3">
+          {data.hours.length === 0 ? (
+            <p className="text-2xl text-slate-500">Nenhuma janela selecionada.</p>
+          ) : (
+            data.hours.map((h) => {
+              const lv = perfLevel(h.pct);
+              const res = h.atingido - h.meta;
+              return (
+                <div
+                  key={h.key}
+                  className={cn(
+                    "rounded-xl border-2 p-4",
+                    lv === "ok"
+                      ? "border-emerald-500/60 bg-emerald-500/10"
+                      : lv === "near"
+                        ? "border-amber-500/60 bg-amber-500/10"
+                        : "border-red-500/50 bg-red-500/10",
+                  )}
+                >
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="text-2xl font-black text-slate-50">{h.label}</p>
+                    <p className={cn("text-2xl font-black tabular-nums", PERF_TEXT[lv])}>
+                      {h.pct == null ? "–" : Math.round(h.pct)}%
+                    </p>
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    <MiniStat label="Meta" value={Math.round(h.meta)} tone="text-slate-100" />
+                    <MiniStat label="Atingido" value={h.atingido} tone={PERF_TEXT[lv]} />
+                    <div>
+                      <p className="text-xs uppercase tracking-widest text-slate-400">Resultado</p>
+                      <p
+                        className={cn(
+                          "flex items-center gap-1 text-2xl font-black tabular-nums",
+                          res >= 0 ? "text-emerald-400" : "text-red-400",
+                        )}
+                      >
+                        {res >= 0 ? (
+                          <ArrowUpRight className="h-5 w-5" />
+                        ) : (
+                          <ArrowDownRight className="h-5 w-5" />
+                        )}
+                        {res > 0 ? "+" : ""}
+                        {Math.round(res)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-slate-800">
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{
+                        width: `${Math.min(h.pct ?? 0, 100)}%`,
+                        backgroundColor: PERF_COLOR[lv],
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
+      </div>
+
       </div>
 
       <div className="min-h-0 flex-1">
