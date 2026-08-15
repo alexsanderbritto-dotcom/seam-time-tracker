@@ -17,6 +17,9 @@ export type SearchableOption = {
   label: string;
   /** extra text used for matching (ex: OP interna) */
   searchText?: string;
+  /** sempre visível, mesmo sem termo de busca (ex: "Todos") */
+  alwaysShow?: boolean;
+
   /** custom rendering inside the list */
   node?: ReactNode;
   /** custom rendering in the trigger when selected */
