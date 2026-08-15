@@ -319,63 +319,45 @@ function DashboardPage() {
                 onChange={(e) => setDate(e.target.value)}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="w-56 space-y-1.5">
               <Label>Colaborador</Label>
-              <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
-                <SelectTrigger className="w-56">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {employees.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>
-                      {e.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                searchOnly
+                options={employeeOptions}
+                value={employeeFilter}
+                onChange={setEmployeeFilter}
+                searchPlaceholder="Digite o nome..."
+              />
             </div>
-            <div className="space-y-1.5">
+            <div className="w-64 space-y-1.5">
               <Label>Produto / OP</Label>
-              <Select value={productFilter} onValueChange={setProductFilter}>
-                <SelectTrigger className="w-64">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {products.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name} · OP {p.op_number}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                searchOnly
+                options={productOptions}
+                value={productFilter}
+                onChange={setProductFilter}
+                searchPlaceholder="Digite nome ou OP..."
+              />
             </div>
-            <div className="space-y-1.5">
+            <div className="w-64 space-y-1.5">
               <Label>Operação</Label>
-              <Select value={operationFilter} onValueChange={setOperationFilter}>
-                <SelectTrigger className="w-64">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {sectors.map((sec) => {
-                    const ops = catalogOps.filter((c) => c.sector_id === sec.id);
-                    if (ops.length === 0) return null;
-                    return (
-                      <SelectGroup key={sec.id}>
-                        <SelectLabel>{sec.name}</SelectLabel>
-                        {ops.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                searchOnly
+                options={operationOptions}
+                value={operationFilter}
+                onChange={setOperationFilter}
+                searchPlaceholder="Digite a operação..."
+              />
             </div>
+            <div className="w-48 space-y-1.5">
+              <Label>Situação</Label>
+              <SearchableSelect
+                options={movementOptions}
+                value={movementFilter}
+                onChange={setMovementFilter}
+              />
+            </div>
+
 
             <div className="ml-auto rounded-md bg-secondary px-4 py-2 text-right">
               <p className="text-xs text-muted-foreground">Total no dia</p>
