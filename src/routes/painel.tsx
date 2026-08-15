@@ -230,7 +230,7 @@ function PainelPage() {
         active.some(
           (s) => fmt(e.slot_start) === fmt(s.start) && Boolean(e.is_overtime) === Boolean(s.overtime),
         );
-      const windowHours = Math.max(active.length, 1) * slotHours;
+      
       const keyBase = `${def.id}:${cfg.date}:${active.map((s) => s.start).join("_")}`;
 
       const inSlot = (e: { slot_start: string; is_overtime: boolean }, s: Slot) =>
@@ -242,13 +242,9 @@ function PainelPage() {
           .map((emp): EmployeeCardData | null => {
             const mine = hourEntries.filter((e) => e.employee_id === emp.id);
             if (mine.length === 0) return null;
-            let fraction = 0;
             let produced = 0;
             const ops = new Set<string>();
             for (const e of mine) {
-              const eph = expectedPerHour.get(e.operation_id);
-              const meta = eph != null ? eph * windowHours : null;
-              if (meta != null && meta > 0) fraction += e.quantity / meta;
               produced += e.quantity;
               ops.add(opName.get(e.operation_id) ?? "Operação");
             }
@@ -273,14 +269,21 @@ function PainelPage() {
                 };
               })
               .filter((h): h is NonNullable<typeof h> => h !== null);
+            // Média apenas dos horários com marcação (horas sem lançamento não entram).
+            const pcts = hours
+              .map((h) => h.pct)
+              .filter((p): p is number => p != null);
+            const avgPct =
+              pcts.length > 0 ? pcts.reduce((a, b) => a + b, 0) / pcts.length : null;
             return {
               key: `${keyBase}:${emp.id}`,
               name: emp.name,
               operations: Array.from(ops),
               produced,
-              pct: fraction * 100,
+              pct: avgPct,
               hours,
             };
+
           })
           .filter((c): c is EmployeeCardData => c !== null)
           .sort((a, b) => (b.pct ?? 0) - (a.pct ?? 0));
