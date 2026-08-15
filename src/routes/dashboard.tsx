@@ -425,82 +425,6 @@ function DashboardPage() {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Grade por colaborador e horário</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="sticky left-0 bg-card">Colaborador</TableHead>
-                    {slots.map((s) => (
-                      <TableHead key={slotKey(s)} className="whitespace-nowrap text-center font-mono text-xs">
-                        <SlotHead s={s} />
-                      </TableHead>
-                    ))}
-
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {activeEmployees.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={slots.length + 2}
-                        className="py-10 text-center text-muted-foreground"
-                      >
-                        Nenhuma produção registrada com estes filtros.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    activeEmployees.map((emp) => {
-                      const empTotal = filtered
-                        .filter((e) => e.employee_id === emp.id)
-                        .reduce((s, e) => s + e.quantity, 0);
-                      return (
-                        <TableRow key={emp.id}>
-                          <TableCell className="sticky left-0 bg-card font-medium">
-                            {emp.name}
-                          </TableCell>
-                          {slots.map((s) => {
-                            const items = cell(emp.id, s);
-                            return (
-                              <TableCell key={slotKey(s)} className="align-top text-center">
-
-                                {items.length === 0 ? (
-                                  <span className="text-muted-foreground">–</span>
-                                ) : (
-                                  <div className="space-y-1">
-                                    {items.map((it) => (
-                                      <div key={it.id} className="text-xs leading-tight">
-                                        <span className="font-semibold tabular-nums">
-                                          {it.quantity}
-                                        </span>{" "}
-                                        <span className="text-muted-foreground">
-                                          {operations.find((o) => o.id === it.operation_id)?.name}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </TableCell>
-                            );
-                          })}
-                          <TableCell className="text-right font-semibold tabular-nums">
-                            {empTotal}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
             <CardTitle className="text-base">Produção por hora e por setor</CardTitle>
             <p className="text-sm text-muted-foreground">
               Total de peças concluídas por setor, com base nas operações marcadas como última
@@ -559,6 +483,110 @@ function DashboardPage() {
                 </TableBody>
               </Table>
             </div>
+          </CardContent>
+        </Card>
+
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Produtividade por colaborador e operação</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              O atingimento de cada hora é a soma direta das frações de cada operação (produzido ÷
+              meta original), sem limite em 100% e independente da ordem de lançamento. A meta
+              ajustada exibida em cada célula é apenas explicativa (tempo restante na hora conforme a
+              ordem das marcações).
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {productivity.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Nenhuma produção registrada com estes filtros.
+              </p>
+            ) : (
+              productivity.map(({ emp, rows, hourPcts, dayPct }) => (
+                <div key={emp.id} className="space-y-2">
+                  <p className="font-medium">{emp.name}</p>
+                  <div className="overflow-x-auto rounded-md border border-border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="sticky left-0 bg-card">Operação</TableHead>
+                          {slots.map((s) => (
+                            <TableHead
+                              key={slotKey(s)}
+                              className="whitespace-nowrap text-center font-mono text-xs"
+                            >
+                              <SlotHead s={s} />
+                            </TableHead>
+                          ))}
+                          <TableHead className="text-right">Total prod.</TableHead>
+                          <TableHead className="text-right">Total est.</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {rows.map((r) => (
+                          <TableRow key={r.opId}>
+                            <TableCell className="sticky left-0 bg-card">{r.name}</TableCell>
+                            {r.perSlot.map((c, i) => (
+                              <TableCell key={slotKey(slots[i]!)} className="text-center text-xs">
+
+                                {!c.active ? (
+                                  <span className="text-muted-foreground">–</span>
+                                ) : (
+                                  <div className="leading-tight">
+                                    <span className={`tabular-nums ${perfClass(c.produced, c.estimated)}`}>
+                                      {c.produced}
+                                      <span className="text-muted-foreground">
+                                        {" / "}
+                                        {c.estimated != null ? Math.round(c.estimated) : "—"}
+                                      </span>
+                                    </span>
+                                    <div className="text-[10px] tabular-nums text-muted-foreground">
+                                      {c.opPct != null ? `${c.opPct.toFixed(1)}%` : "—"}
+                                      {c.adjusted != null
+                                        ? ` · aj. ${Math.round(c.adjusted)}`
+                                        : ""}
+                                    </div>
+                                  </div>
+                                )}
+                              </TableCell>
+                            ))}
+                            <TableCell
+                              className={`text-right tabular-nums ${perfClass(r.totalProduced, r.totalEstimated || null)}`}
+                            >
+                              {r.totalProduced}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums text-muted-foreground">
+                              {r.totalEstimated > 0 ? Math.round(r.totalEstimated) : "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow className="bg-secondary/50">
+                          <TableCell className="sticky left-0 bg-card font-medium">
+                            % da hora
+                          </TableCell>
+                          {hourPcts.map((p, i) => (
+                            <TableCell
+                              key={slotKey(slots[i]!)}
+                              className={`text-center text-xs tabular-nums ${pctClass(p)}`}
+                            >
+                              {p != null ? `${p.toFixed(1)}%` : "–"}
+                            </TableCell>
+                          ))}
+                          <TableCell
+                            colSpan={2}
+                            className={`text-right text-xs tabular-nums ${pctClass(dayPct)}`}
+                          >
+                            {dayPct != null ? `Média do dia ${dayPct.toFixed(1)}%` : "—"}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+              ))
+            )}
           </CardContent>
         </Card>
 
@@ -691,109 +719,6 @@ function DashboardPage() {
             )}
           </CardContent>
 
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Produtividade por colaborador e operação</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              O atingimento de cada hora é a soma direta das frações de cada operação (produzido ÷
-              meta original), sem limite em 100% e independente da ordem de lançamento. A meta
-              ajustada exibida em cada célula é apenas explicativa (tempo restante na hora conforme a
-              ordem das marcações).
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {productivity.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nenhuma produção registrada com estes filtros.
-              </p>
-            ) : (
-              productivity.map(({ emp, rows, hourPcts, dayPct }) => (
-                <div key={emp.id} className="space-y-2">
-                  <p className="font-medium">{emp.name}</p>
-                  <div className="overflow-x-auto rounded-md border border-border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="sticky left-0 bg-card">Operação</TableHead>
-                          {slots.map((s) => (
-                            <TableHead
-                              key={slotKey(s)}
-                              className="whitespace-nowrap text-center font-mono text-xs"
-                            >
-                              <SlotHead s={s} />
-                            </TableHead>
-                          ))}
-                          <TableHead className="text-right">Total prod.</TableHead>
-                          <TableHead className="text-right">Total est.</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {rows.map((r) => (
-                          <TableRow key={r.opId}>
-                            <TableCell className="sticky left-0 bg-card">{r.name}</TableCell>
-                            {r.perSlot.map((c, i) => (
-                              <TableCell key={slotKey(slots[i]!)} className="text-center text-xs">
-
-                                {!c.active ? (
-                                  <span className="text-muted-foreground">–</span>
-                                ) : (
-                                  <div className="leading-tight">
-                                    <span className={`tabular-nums ${perfClass(c.produced, c.estimated)}`}>
-                                      {c.produced}
-                                      <span className="text-muted-foreground">
-                                        {" / "}
-                                        {c.estimated != null ? Math.round(c.estimated) : "—"}
-                                      </span>
-                                    </span>
-                                    <div className="text-[10px] tabular-nums text-muted-foreground">
-                                      {c.opPct != null ? `${c.opPct.toFixed(1)}%` : "—"}
-                                      {c.adjusted != null
-                                        ? ` · aj. ${Math.round(c.adjusted)}`
-                                        : ""}
-                                    </div>
-                                  </div>
-                                )}
-                              </TableCell>
-                            ))}
-                            <TableCell
-                              className={`text-right tabular-nums ${perfClass(r.totalProduced, r.totalEstimated || null)}`}
-                            >
-                              {r.totalProduced}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums text-muted-foreground">
-                              {r.totalEstimated > 0 ? Math.round(r.totalEstimated) : "—"}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        <TableRow className="bg-secondary/50">
-                          <TableCell className="sticky left-0 bg-card font-medium">
-                            % da hora
-                          </TableCell>
-                          {hourPcts.map((p, i) => (
-                            <TableCell
-                              key={slotKey(slots[i]!)}
-                              className={`text-center text-xs tabular-nums ${pctClass(p)}`}
-                            >
-                              {p != null ? `${p.toFixed(1)}%` : "–"}
-                            </TableCell>
-                          ))}
-                          <TableCell
-                            colSpan={2}
-                            className={`text-right text-xs tabular-nums ${pctClass(dayPct)}`}
-                          >
-                            {dayPct != null ? `Média do dia ${dayPct.toFixed(1)}%` : "—"}
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-
-              ))
-            )}
-          </CardContent>
         </Card>
       </div>
     </AppLayout>
