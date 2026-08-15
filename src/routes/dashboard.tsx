@@ -461,11 +461,19 @@ function DashboardPage() {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Produção por hora e por setor</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Total de peças concluídas por setor, com base nas operações marcadas como última
-              etapa.
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle className="text-base">Produção por hora e por setor</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Total de peças concluídas por setor, com base nas operações marcadas como última
+                  etapa.
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setMetaOpen(true)}>
+                <Plus className="mr-1.5 h-4 w-4" />
+                Adicionar meta
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -498,24 +506,99 @@ function DashboardPage() {
                     sectors.map((sec) => {
                       const row = slots.map((s) => sectorSlotTotal(sec.id, s));
                       const totalRow = row.reduce((a, b) => a + b, 0);
+                      const meta = sectorMeta.get(sec.id);
                       return (
-                        <TableRow key={sec.id}>
-                          <TableCell className="sticky left-0 bg-card font-medium">
-                            {sec.name}
-                          </TableCell>
-                          {row.map((v, i) => (
-                            <TableCell key={slotKey(slots[i]!)} className="text-center tabular-nums">
-
-                              {v > 0 ? v : <span className="text-muted-foreground">–</span>}
+                        <Fragment key={sec.id}>
+                          <TableRow>
+                            <TableCell className="sticky left-0 bg-card font-medium">
+                              {sec.name}
                             </TableCell>
-                          ))}
-                          <TableCell className="text-right font-semibold tabular-nums">
-                            {totalRow}
-                          </TableCell>
-                        </TableRow>
+                            {row.map((v, i) => (
+                              <TableCell key={slotKey(slots[i]!)} className="text-center tabular-nums">
+
+                                {v > 0 ? v : <span className="text-muted-foreground">–</span>}
+                              </TableCell>
+                            ))}
+                            <TableCell className="text-right font-semibold tabular-nums">
+                              {totalRow}
+                            </TableCell>
+                          </TableRow>
+                          {meta ? (
+                            <>
+                              <TableRow className="bg-muted/40">
+                                <TableCell className="sticky left-0 bg-card py-1.5 pl-6 text-xs text-muted-foreground">
+                                  Meta / hora
+                                </TableCell>
+                                {slots.map((s) => (
+                                  <TableCell
+                                    key={slotKey(s)}
+                                    className="py-1.5 text-center text-xs tabular-nums"
+                                  >
+                                    {s.overtime ? (
+                                      <span className="text-muted-foreground">–</span>
+                                    ) : (
+                                      Math.round(meta.perHour)
+                                    )}
+                                  </TableCell>
+                                ))}
+                                <TableCell className="py-1.5 text-right text-xs font-medium tabular-nums">
+                                  {meta.total}
+                                </TableCell>
+                              </TableRow>
+                              <TableRow className="bg-muted/40">
+                                <TableCell className="sticky left-0 bg-card py-1.5 pl-6 text-xs text-muted-foreground">
+                                  Resultado
+                                </TableCell>
+                                {slots.map((s, i) => {
+                                  const produced = row[i] ?? 0;
+                                  if (s.overtime || meta.perHour <= 0)
+                                    return (
+                                      <TableCell
+                                        key={slotKey(s)}
+                                        className="py-1.5 text-center text-xs text-muted-foreground"
+                                      >
+                                        –
+                                      </TableCell>
+                                    );
+                                  const diff = produced - meta.perHour;
+                                  const pct = (produced / meta.perHour) * 100;
+                                  return (
+                                    <TableCell
+                                      key={slotKey(s)}
+                                      className={cn(
+                                        "py-1.5 text-center text-xs tabular-nums",
+                                        pctClass(pct),
+                                      )}
+                                    >
+                                      <div className="leading-tight">
+                                        <div>
+                                          {diff >= 0 ? "+" : ""}
+                                          {Math.round(diff)}
+                                        </div>
+                                        <div className="text-[10px] opacity-80">
+                                          {Math.round(pct)}%
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                  );
+                                })}
+                                <TableCell
+                                  className={cn(
+                                    "py-1.5 text-right text-xs tabular-nums",
+                                    pctClass(meta.total > 0 ? (totalRow / meta.total) * 100 : null),
+                                  )}
+                                >
+                                  {totalRow - meta.total >= 0 ? "+" : ""}
+                                  {totalRow - meta.total}
+                                </TableCell>
+                              </TableRow>
+                            </>
+                          ) : null}
+                        </Fragment>
                       );
                     })
                   )}
+
                 </TableBody>
               </Table>
             </div>
