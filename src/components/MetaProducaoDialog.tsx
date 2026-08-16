@@ -24,6 +24,7 @@ import {
   type ProductionEntry,
   type Sector,
 } from "@/lib/production";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 
 type Row = {
   key: string;
@@ -255,9 +256,15 @@ export function MetaProducaoDialog({
                         onChange={(e) => patch(r.key, { quantidade: Number(e.target.value) })}
                       />
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => remove(r)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <ConfirmDelete
+                      title="Remover meta?"
+                      description="Esta linha de meta de produção será removida."
+                      onConfirm={() => remove(r)}
+                    >
+                      <Button variant="ghost" size="icon">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </ConfirmDelete>
                   </div>
                 );
               })}

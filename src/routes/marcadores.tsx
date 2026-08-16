@@ -33,6 +33,7 @@ import {
 } from "@/lib/marcadores.functions";
 import { useMarcadorSession, type MarcadorCargo } from "@/lib/marcador-session";
 import { KeyRound, Trash2, UserPlus } from "lucide-react";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 
 export const Route = createFileRoute("/marcadores")({
   head: () => ({
@@ -289,14 +290,16 @@ function MarcadoresPage() {
                               <KeyRound className="mr-2 h-4 w-4" />
                               Trocar senha
                             </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => deleteMut.mutate(m.id)}
-                              aria-label={`Remover ${m.nome}`}
+                            <ConfirmDelete
+                              title="Remover marcador?"
+                              description={`O acesso de ${m.nome} será removido permanentemente.`}
+                              confirmLabel="Remover"
+                              onConfirm={() => deleteMut.mutate(m.id)}
                             >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                              <Button size="icon" variant="ghost" aria-label={`Remover ${m.nome}`}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </ConfirmDelete>
                           </div>
                         )}
                       </TableCell>

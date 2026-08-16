@@ -17,6 +17,7 @@ import {
 import { db } from "@/lib/db";
 import { catalogOperationsQuery, sectorsQuery, type CatalogOperation } from "@/lib/production";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 
 export const Route = createFileRoute("/operacoes")({
   head: () => ({
@@ -149,9 +150,15 @@ function OperacoesSetorPage() {
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => removeSector(s.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <ConfirmDelete
+                      title="Excluir setor?"
+                      description={`O setor ${s.name} e suas operações do catálogo serão excluídos permanentemente.`}
+                      onConfirm={() => void removeSector(s.id)}
+                    >
+                      <Button variant="ghost" size="icon">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </ConfirmDelete>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -175,9 +182,15 @@ function OperacoesSetorPage() {
                           <Button variant="ghost" size="icon" onClick={() => openOp(s.id, o)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => removeOp(o.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <ConfirmDelete
+                            title="Excluir operação?"
+                            description={`A operação ${o.name} será excluída do catálogo.`}
+                            onConfirm={() => void removeOp(o.id)}
+                          >
+                            <Button variant="ghost" size="icon">
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </ConfirmDelete>
                         </div>
                       </div>
                     ))
