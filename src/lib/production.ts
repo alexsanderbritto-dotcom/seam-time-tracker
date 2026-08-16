@@ -12,7 +12,7 @@ export type Product = {
   entry_date: string | null;
   nf_number: string | null;
   photo_url: string | null;
-  pilot_photos: string[] | null;
+  peca_piloto: "sim" | "nao" | "devolvido" | null;
   status: string;
   created_at: string;
   delivery_date: string | null;
@@ -20,6 +20,32 @@ export type Product = {
   nf_out_number: string | null;
   op_interna: string | null;
 };
+
+export const PECA_PILOTO_OPTIONS = [
+  { value: "sim", label: "SIM" },
+  { value: "nao", label: "NÃO" },
+  { value: "devolvido", label: "DEVOLVIDO" },
+] as const;
+
+export const PECA_PILOTO_LABEL: Record<string, string> = {
+  sim: "SIM",
+  nao: "NÃO",
+  devolvido: "DEVOLVIDO",
+};
+
+/** ordena por OP interna crescente (numérica quando possível) */
+export function sortByOpInterna<T extends { op_interna: string | null }>(list: T[]): T[] {
+  const key = (v: string | null) => {
+    const n = Number(String(v ?? "").replace(/\D/g, ""));
+    return Number.isFinite(n) && String(v ?? "").trim() !== "" ? n : Number.POSITIVE_INFINITY;
+  };
+  return [...list].sort(
+    (a, b) =>
+      key(a.op_interna) - key(b.op_interna) ||
+      String(a.op_interna ?? "").localeCompare(String(b.op_interna ?? "")),
+  );
+}
+
 
 export type EsteiraItem = {
   id: string;
