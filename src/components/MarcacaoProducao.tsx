@@ -39,6 +39,7 @@ import { useDaySlots } from "@/lib/schedule";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { cn } from "@/lib/utils";
 import { Trash2, Check, LogOut, Search, ChevronDown, Plus } from "lucide-react";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 
 /** Native select: mobile browsers render their own picker, avoiding the
  * portal/scroll-lock crashes seen with the custom dropdown on some devices. */
@@ -624,9 +625,15 @@ export function MarcacaoProducao({
                                 />
                               </TableCell>
                               <TableCell>
-                                <Button variant="ghost" size="icon" onClick={() => remove(e.id)}>
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
+                                <ConfirmDelete
+                                  title="Excluir marcação?"
+                                  description="Esta marcação de produção será removida permanentemente."
+                                  onConfirm={() => void remove(e.id)}
+                                >
+                                  <Button variant="ghost" size="icon">
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </ConfirmDelete>
                               </TableCell>
                             </TableRow>
                           );

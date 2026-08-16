@@ -18,6 +18,7 @@ import {
   type DaySchedule,
 } from "@/lib/schedule";
 import { AlertTriangle, CalendarPlus, Plus, Save, Trash2 } from "lucide-react";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 
 export const Route = createFileRoute("/horarios")({
   head: () => ({
@@ -389,14 +390,16 @@ function FeriadosCard() {
               >
                 <span className="font-mono">{f.data.split("-").reverse().join("/")}</span>
                 {f.nome ? <span className="opacity-80">{f.nome}</span> : null}
-                <button
-                  type="button"
-                  className="text-destructive"
-                  onClick={() => remove(f.id)}
-                  aria-label="Remover feriado"
+                <ConfirmDelete
+                  title="Remover feriado?"
+                  description={`O feriado ${f.data.split("-").reverse().join("/")} será removido do calendário.`}
+                  confirmLabel="Remover"
+                  onConfirm={() => void remove(f.id)}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                  <button type="button" className="text-destructive" aria-label="Remover feriado">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </ConfirmDelete>
               </span>
             ))}
           </div>
@@ -504,9 +507,16 @@ function OvertimeCard() {
                   value={fmt(o.end_time)}
                   onChange={(e) => update(o.id, { end_time: e.target.value })}
                 />
-                <Button variant="ghost" size="icon" onClick={() => remove(o.id)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                <ConfirmDelete
+                  title="Remover janela de hora extra?"
+                  description="Esta janela de hora extra será removida."
+                  confirmLabel="Remover"
+                  onConfirm={() => void remove(o.id)}
+                >
+                  <Button variant="ghost" size="icon">
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </ConfirmDelete>
               </div>
             ))}
           </div>

@@ -40,6 +40,7 @@ import {
   MES_NOMES,
   mesLabel,
 } from "@/lib/faturamento";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 
 export const Route = createFileRoute("/faturamento")({
   component: FaturamentoPage,
@@ -433,14 +434,15 @@ function FaturamentoPage() {
                         >
                           {editingProdutos === m.id ? "Fechar seleção" : "Selecionar produtos"}
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive"
-                          onClick={() => void removerMes(m.id)}
+                        <ConfirmDelete
+                          title="Excluir mês?"
+                          description={`O mês ${mesLabel(m.mes, m.ano)} será excluído e os produtos vinculados voltarão a ficar disponíveis para seleção.`}
+                          onConfirm={() => void removerMes(m.id)}
                         >
-                          Excluir mês
-                        </Button>
+                          <Button variant="ghost" size="sm" className="text-destructive">
+                            Excluir mês
+                          </Button>
+                        </ConfirmDelete>
                       </div>
                     ) : null}
 

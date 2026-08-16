@@ -54,6 +54,7 @@ import {
   type Product,
 } from "@/lib/production";
 import { Plus, Trash2, Pencil, Copy, ChevronDown } from "lucide-react";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 
 export const Route = createFileRoute("/produtos")({
   head: () => ({
@@ -535,13 +536,15 @@ function ProdutosPage() {
                                     <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
                                       <Pencil className="h-4 w-4" />
                                     </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => removeProduct(p.id)}
+                                    <ConfirmDelete
+                                      title="Excluir produto?"
+                                      description={`O produto ${p.name} (OP ${p.op_number}) e suas operações serão excluídos permanentemente.`}
+                                      onConfirm={() => void removeProduct(p.id)}
                                     >
-                                      <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
+                                      <Button variant="ghost" size="icon">
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                    </ConfirmDelete>
                                   </div>
                                 </TableCell>
                               </TableRow>
