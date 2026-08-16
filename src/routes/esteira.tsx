@@ -26,10 +26,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { SearchableSelect } from "@/components/SearchableSelect";
-import { ProductPhotoCell, PilotPhotoCell } from "@/components/ProductPhoto";
+import { ProductPhotoCell } from "@/components/ProductPhoto";
 import { addToEsteira, removeFromEsteira } from "@/lib/esteira.functions";
 import { useMarcadorSession } from "@/lib/marcador-session";
-import { esteiraQuery, productsQuery, STATUS_LABEL, type Product } from "@/lib/production";
+import {
+  esteiraQuery,
+  productsQuery,
+  sortByOpInterna,
+  PECA_PILOTO_LABEL,
+  STATUS_LABEL,
+  type Product,
+} from "@/lib/production";
 import { Plus, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/esteira")({
@@ -72,13 +79,13 @@ function EsteiraPage() {
     [products],
   );
 
-  const items = useMemo(
-    () =>
-      esteira
-        .map((e) => ({ entry: e, product: productById.get(e.produto_id) }))
-        .filter((x): x is { entry: (typeof esteira)[number]; product: Product } => !!x.product),
-    [esteira, productById],
-  );
+  const items = useMemo(() => {
+    const list = esteira
+      .map((e) => ({ entry: e, product: productById.get(e.produto_id) }))
+      .filter((x): x is { entry: (typeof esteira)[number]; product: Product } => !!x.product);
+    // ordenação padrão: OP interna crescente
+    return sortByOpInterna(list.map((x) => ({ ...x, op_interna: x.product.op_interna })));
+  }, [esteira, productById]);
 
   const options = useMemo(
     () =>
@@ -222,7 +229,9 @@ function EsteiraPage() {
                     <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
                       Peça piloto
                     </p>
-                    <PilotPhotoCell paths={p.pilot_photos ?? []} title={p.name} />
+                    <Badge variant={p.peca_piloto === "sim" ? "default" : "outline"}>
+                      {p.peca_piloto ? PECA_PILOTO_LABEL[p.peca_piloto] : "—"}
+                    </Badge>
                   </div>
                 </div>
 

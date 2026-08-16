@@ -25,7 +25,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { db } from "@/lib/db";
-import { ProductPhotoCell, PilotGallery, PilotPhotoCell } from "@/components/ProductPhoto";
+import { ProductPhotoCell } from "@/components/ProductPhoto";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  ColumnFilter,
+  applyColumnFilters,
+  valueOf,
+  type ColumnFilterState,
+} from "@/components/ColumnFilter";
+import { cn } from "@/lib/utils";
 import {
   brl,
   catalogOperationsQuery,
@@ -35,10 +47,13 @@ import {
   operationsQuery,
   productsQuery,
   sectorsQuery,
+  sortByOpInterna,
+  PECA_PILOTO_LABEL,
+  PECA_PILOTO_OPTIONS,
   STATUS_LABEL,
   type Product,
 } from "@/lib/production";
-import { Plus, Trash2, Pencil, Copy } from "lucide-react";
+import { Plus, Trash2, Pencil, Copy, ChevronDown } from "lucide-react";
 
 export const Route = createFileRoute("/produtos")({
   head: () => ({
@@ -69,6 +84,7 @@ const empty = {
   unit_value: "",
   entry_date: "",
   nf_number: "",
+  peca_piloto: "",
 };
 
 function ProdutosPage() {
@@ -81,10 +97,10 @@ function ProdutosPage() {
   const [lastBySector, setLastBySector] = useState<Record<string, string>>({});
   const [opSearch, setOpSearch] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [pilotFiles, setPilotFiles] = useState<File[]>([]);
-  const [pilotPaths, setPilotPaths] = useState<string[]>([]);
   const [dupValue, setDupValue] = useState("");
   const [saving, setSaving] = useState(false);
+  const [colFilters, setColFilters] = useState<ColumnFilterState>({});
+  const [openBlocks, setOpenBlocks] = useState<Record<string, boolean>>({});
 
   const { data: products = [] } = useQuery(productsQuery);
   const { data: operations = [] } = useQuery(operationsQuery);
@@ -111,8 +127,6 @@ function ProdutosPage() {
     setLastBySector({});
     setOpSearch("");
     setFile(null);
-    setPilotFiles([]);
-    setPilotPaths([]);
     setDupValue("");
     setOpen(true);
   }
@@ -129,6 +143,7 @@ function ProdutosPage() {
       unit_value: String(p.unit_value ?? ""),
       entry_date: p.entry_date ?? "",
       nf_number: p.nf_number ?? "",
+      peca_piloto: p.peca_piloto ?? "",
     });
     const productOps = operations.filter((o) => o.product_id === p.id && o.catalog_operation_id);
     setSelectedOps(productOps.map((o) => o.catalog_operation_id as string));
@@ -141,8 +156,6 @@ function ProdutosPage() {
     setLastBySector(lasts);
     setOpSearch("");
     setFile(null);
-    setPilotFiles([]);
-    setPilotPaths(p.pilot_photos ?? []);
     setDupValue("");
     setOpen(true);
   }
@@ -197,21 +210,6 @@ function ProdutosPage() {
     );
   }
 
-
-  async function uploadPilotFiles(): Promise<string[]> {
-    const paths: string[] = [];
-    for (const f of pilotFiles) {
-      const ext = f.name.split(".").pop() ?? "jpg";
-      const path = `piloto/${crypto.randomUUID()}.${ext}`;
-      const { error } = await db.storage.from("product-files").upload(path, f);
-      if (error) {
-        toast.error("Erro ao enviar foto da peça piloto: " + error.message);
-        continue;
-      }
-      paths.push(path);
-    }
-    return paths;
-  }
 
   async function ensureName(table: "companies" | "clients", value: string, list: { name: string }[]) {
     const name = value.trim();
@@ -289,6 +287,10 @@ function ProdutosPage() {
       toast.error("Nome, referência e OP são obrigatórios.");
       return;
     }
+    if (!form.peca_piloto) {
+      toast.error("Selecione a situação da peça piloto (SIM, NÃO ou DEVOLVIDO).");
+      return;
+    }
     if (missingLast.length > 0) {
       toast.error(
         `Marque a última operação do setor: ${missingLast.map((s) => s.name).join(", ")}.`,
@@ -300,8 +302,6 @@ function ProdutosPage() {
       const empresa = await ensureName("companies", form.empresa, companies);
       const cliente = await ensureName("clients", form.cliente, clients);
       const photoPath = await uploadFile();
-      const newPilots = await uploadPilotFiles();
-      const allPilots = [...pilotPaths, ...newPilots];
 
       const payload = {
         name: form.name,
@@ -313,7 +313,7 @@ function ProdutosPage() {
         unit_value: Number(form.unit_value.replace(",", ".")) || 0,
         entry_date: form.entry_date || null,
         nf_number: form.nf_number || null,
-        pilot_photos: allPilots,
+        peca_piloto: form.peca_piloto,
         ...(photoPath ? { photo_url: photoPath } : {}),
       };
 
@@ -335,8 +335,6 @@ function ProdutosPage() {
       setSelectedOps([]);
       setLastBySector({});
       setFile(null);
-      setPilotFiles([]);
-      setPilotPaths([]);
       qc.invalidateQueries({ queryKey: ["products"] });
       qc.invalidateQueries({ queryKey: ["operations"] });
     } catch (e) {
@@ -365,8 +363,42 @@ function ProdutosPage() {
     return acc;
   }, [products]);
 
+  const accessors = useMemo(
+    () => ({
+      cliente: (p: Product) => p.cliente,
+      empresa: (p: Product) => p.empresa,
+      op_number: (p: Product) => p.op_number,
+      op_interna: (p: Product) => p.op_interna,
+    }),
+    [],
+  );
+
+  const optionsFor = (key: keyof typeof accessors) =>
+    Array.from(new Set(products.map((p) => valueOf(accessors[key](p))))).sort((a, b) =>
+      a.localeCompare(b, "pt-BR", { numeric: true }),
+    );
+
+  const filtered = useMemo(
+    () => sortByOpInterna(applyColumnFilters(products, colFilters, accessors)),
+    [products, colFilters, accessors],
+  );
+
+  const setFilter = (key: string, values: string[]) =>
+    setColFilters((prev) => ({ ...prev, [key]: values }));
+
+  const blocks = (["em_estoque", "em_producao", "finalizado"] as const).map((st) => ({
+    status: st,
+    rows: filtered.filter((p) => p.status === st),
+  }));
+
   return (
     <AppLayout title="Produtos" subtitle="Ordens de produção e suas operações.">
+      <div className="mb-4 flex justify-end">
+        <Button onClick={openCreate}>
+          <Plus className="mr-2 h-4 w-4" /> Novo produto
+        </Button>
+      </div>
+
       <div className="mb-5 grid gap-4 sm:grid-cols-3">
         {(["em_estoque", "em_producao", "finalizado"] as const).map((s) => (
           <Card key={s}>
@@ -380,100 +412,152 @@ function ProdutosPage() {
         ))}
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
-          <CardTitle className="text-base">Produtos cadastrados</CardTitle>
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="mr-2 h-4 w-4" /> Novo produto
-          </Button>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-16">Ficha</TableHead>
-                  <TableHead className="w-16">Peça piloto</TableHead>
+      <div className="space-y-4">
+        {blocks.map(({ status, rows }) => {
+          const isOpen = openBlocks[status] ?? status === "em_producao";
+          return (
+            <Card key={status}>
+              <Collapsible
+                open={isOpen}
+                onOpenChange={(v) => setOpenBlocks((prev) => ({ ...prev, [status]: v }))}
+              >
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="flex cursor-pointer flex-row items-center justify-between gap-3 pb-3">
+                    <CardTitle className="text-base">
+                      {STATUS_LABEL[status] ?? status}{" "}
+                      <span className="text-muted-foreground">({rows.length})</span>
+                    </CardTitle>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                        isOpen && "rotate-180",
+                      )}
+                    />
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-16">Ficha</TableHead>
+                            <TableHead className="w-24">Peça piloto</TableHead>
+                            <TableHead>Produto</TableHead>
+                            <TableHead>Referência</TableHead>
+                            <TableHead>
+                              <ColumnFilter
+                                label="OP"
+                                options={optionsFor("op_number")}
+                                selected={colFilters["op_number"] ?? []}
+                                onChange={(v) => setFilter("op_number", v)}
+                              />
+                            </TableHead>
+                            <TableHead>
+                              <ColumnFilter
+                                label="OP Interna"
+                                options={optionsFor("op_interna")}
+                                selected={colFilters["op_interna"] ?? []}
+                                onChange={(v) => setFilter("op_interna", v)}
+                              />
+                            </TableHead>
+                            <TableHead>
+                              <ColumnFilter
+                                label="Cliente"
+                                options={optionsFor("cliente")}
+                                selected={colFilters["cliente"] ?? []}
+                                onChange={(v) => setFilter("cliente", v)}
+                              />
+                            </TableHead>
+                            <TableHead>
+                              <ColumnFilter
+                                label="Empresa"
+                                options={optionsFor("empresa")}
+                                selected={colFilters["empresa"] ?? []}
+                                onChange={(v) => setFilter("empresa", v)}
+                              />
+                            </TableHead>
+                            <TableHead className="text-right">Quantidade</TableHead>
+                            <TableHead className="text-right">Vlr. unit.</TableHead>
+                            <TableHead className="text-right">Vlr. total</TableHead>
+                            <TableHead>Entrada</TableHead>
+                            <TableHead>NF</TableHead>
+                            <TableHead className="w-24" />
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {rows.length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={14}
+                                className="py-10 text-center text-muted-foreground"
+                              >
+                                Nenhum produto neste status.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            rows.map((p) => (
+                              <TableRow key={p.id}>
+                                <TableCell>
+                                  <ProductPhotoCell path={p.photo_url} title={p.name} />
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={p.peca_piloto === "sim" ? "default" : "outline"}
+                                    className="whitespace-nowrap"
+                                  >
+                                    {p.peca_piloto ? PECA_PILOTO_LABEL[p.peca_piloto] : "—"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="font-medium">{p.name}</TableCell>
+                                <TableCell className="font-mono text-xs">{p.reference}</TableCell>
+                                <TableCell className="font-mono text-xs">{p.op_number}</TableCell>
+                                <TableCell className="font-mono text-xs">
+                                  {p.op_interna ?? "—"}
+                                </TableCell>
+                                <TableCell>{p.cliente ?? "—"}</TableCell>
+                                <TableCell>{p.empresa ?? "—"}</TableCell>
+                                <TableCell className="text-right">{p.total_quantity}</TableCell>
+                                <TableCell className="text-right">
+                                  {brl(p.unit_value ?? 0)}
+                                </TableCell>
+                                <TableCell className="text-right font-medium">
+                                  {brl((p.unit_value ?? 0) * p.total_quantity)}
+                                </TableCell>
+                                <TableCell className="whitespace-nowrap">
+                                  {p.entry_date ? p.entry_date.split("-").reverse().join("/") : "—"}
+                                </TableCell>
+                                <TableCell className="font-mono text-xs">
+                                  {p.nf_number ?? "—"}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex justify-end gap-1">
+                                    <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => removeProduct(p.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </Card>
+          );
+        })}
+      </div>
 
-                  <TableHead>Produto</TableHead>
-                  <TableHead>Referência</TableHead>
-                  <TableHead>OP</TableHead>
-                  <TableHead>OP Interna</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead className="text-right">Quantidade</TableHead>
-                  <TableHead className="text-right">Vlr. unit.</TableHead>
-                  <TableHead className="text-right">Vlr. total</TableHead>
-                  <TableHead>Entrada</TableHead>
-                  <TableHead>NF</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-24" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {products.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={15} className="py-10 text-center text-muted-foreground">
-                      Nenhum produto cadastrado ainda.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  products.map((p) => {
-                    return (
-                      <TableRow key={p.id}>
-                        <TableCell>
-                          <ProductPhotoCell path={p.photo_url} title={p.name} />
-                        </TableCell>
-                        <TableCell>
-                          <PilotPhotoCell paths={p.pilot_photos ?? []} title={p.name} />
-                        </TableCell>
-                        <TableCell className="font-medium">{p.name}</TableCell>
-                        <TableCell className="font-mono text-xs">{p.reference}</TableCell>
-                        <TableCell className="font-mono text-xs">{p.op_number}</TableCell>
-                        <TableCell className="font-mono text-xs">{p.op_interna ?? ""}</TableCell>
-                        <TableCell>{p.cliente ?? "—"}</TableCell>
-                        <TableCell>{p.empresa ?? "—"}</TableCell>
-                        <TableCell className="text-right">{p.total_quantity}</TableCell>
-                        <TableCell className="text-right">{brl(p.unit_value ?? 0)}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          {brl((p.unit_value ?? 0) * p.total_quantity)}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {p.entry_date ? p.entry_date.split("-").reverse().join("/") : "—"}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs">{p.nf_number ?? "—"}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              p.status === "finalizado"
-                                ? "secondary"
-                                : p.status === "em_producao"
-                                  ? "default"
-                                  : "outline"
-                            }
-                          >
-                            {STATUS_LABEL[p.status] ?? p.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => removeProduct(p.id)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
@@ -623,24 +707,23 @@ function ProdutosPage() {
               ) : null}
             </div>
 
-            <div className="space-y-2">
-              <Label>Fotos da peça piloto</Label>
-              <Input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => setPilotFiles(Array.from(e.target.files ?? []))}
-              />
-              <PilotGallery
-                paths={pilotPaths}
-                title={form.name || "peça piloto"}
-                onRemove={(path) => setPilotPaths((prev) => prev.filter((x) => x !== path))}
-              />
-              {pilotFiles.length > 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  {pilotFiles.length} nova(s) foto(s) serão enviadas ao salvar.
-                </p>
-              ) : null}
+            <div className="space-y-1.5">
+              <Label>Peça piloto</Label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={form.peca_piloto}
+                onChange={(e) => setForm({ ...form, peca_piloto: e.target.value })}
+              >
+                <option value="">Selecione…</option>
+                {PECA_PILOTO_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Campo obrigatório. Pode ser alterado depois (ex.: peça devolvida).
+              </p>
             </div>
 
             <div className="space-y-2">
