@@ -148,7 +148,7 @@ function FaturamentoPage() {
   };
 
   /** produtos que ainda não pertencem a nenhum mês */
-  const unassignedIds = useMemo(() => {
+  const assignedIds = useMemo(() => {
     const taken = new Set(mesProdutos.map((x) => x.product_id));
     return taken;
   }, [mesProdutos]);
@@ -157,7 +157,7 @@ function FaturamentoPage() {
   const selectableProducts = (mesId: string) =>
     products.filter(
       (p) =>
-        !unassignedIds.has(p.id) ||
+        !assignedIds.has(p.id) ||
         mesProdutos.some((x) => x.mes_id === mesId && x.product_id === p.id),
     );
 
