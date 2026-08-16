@@ -516,8 +516,8 @@ export type Database = {
           nf_out_number: string | null
           op_interna: string | null
           op_number: string
+          peca_piloto: string | null
           photo_url: string | null
-          pilot_photos: string[]
           reference: string
           status: string
           total_quantity: number
@@ -537,8 +537,8 @@ export type Database = {
           nf_out_number?: string | null
           op_interna?: string | null
           op_number: string
+          peca_piloto?: string | null
           photo_url?: string | null
-          pilot_photos?: string[]
           reference: string
           status?: string
           total_quantity?: number
@@ -558,8 +558,8 @@ export type Database = {
           nf_out_number?: string | null
           op_interna?: string | null
           op_number?: string
+          peca_piloto?: string | null
           photo_url?: string | null
-          pilot_photos?: string[]
           reference?: string
           status?: string
           total_quantity?: number
