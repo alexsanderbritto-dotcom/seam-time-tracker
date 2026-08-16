@@ -355,15 +355,6 @@ function ProdutosPage() {
     qc.invalidateQueries({ queryKey: ["products"] });
   }
 
-  const statusTotals = useMemo(() => {
-    const acc = { em_estoque: 0, em_producao: 0, finalizado: 0 } as Record<string, number>;
-    for (const p of filtered) {
-      if (acc[p.status] === undefined) acc[p.status] = 0;
-      acc[p.status] = (acc[p.status] ?? 0) + p.total_quantity;
-    }
-    return acc;
-  }, [filtered]);
-
   const accessors = useMemo(
     () => ({
       cliente: (p: Product) => p.cliente,
@@ -383,6 +374,15 @@ function ProdutosPage() {
     () => sortByOpInterna(applyColumnFilters(products, colFilters, accessors)),
     [products, colFilters, accessors],
   );
+
+  const statusTotals = useMemo(() => {
+    const acc = { em_estoque: 0, em_producao: 0, finalizado: 0 } as Record<string, number>;
+    for (const p of filtered) {
+      if (acc[p.status] === undefined) acc[p.status] = 0;
+      acc[p.status] = (acc[p.status] ?? 0) + p.total_quantity;
+    }
+    return acc;
+  }, [filtered]);
 
   const setFilter = (key: string, values: string[]) =>
     setColFilters((prev) => ({ ...prev, [key]: values }));
