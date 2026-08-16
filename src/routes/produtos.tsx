@@ -357,12 +357,12 @@ function ProdutosPage() {
 
   const statusTotals = useMemo(() => {
     const acc = { em_estoque: 0, em_producao: 0, finalizado: 0 } as Record<string, number>;
-    for (const p of products) {
+    for (const p of filtered) {
       if (acc[p.status] === undefined) acc[p.status] = 0;
       acc[p.status] = (acc[p.status] ?? 0) + p.total_quantity;
     }
     return acc;
-  }, [products]);
+  }, [filtered]);
 
   const accessors = useMemo(
     () => ({
