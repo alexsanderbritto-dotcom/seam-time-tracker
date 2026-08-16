@@ -25,7 +25,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { db } from "@/lib/db";
-import { ProductPhotoCell, PilotGallery, PilotPhotoCell } from "@/components/ProductPhoto";
+import { ProductPhotoCell } from "@/components/ProductPhoto";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  ColumnFilter,
+  applyColumnFilters,
+  valueOf,
+  type ColumnFilterState,
+} from "@/components/ColumnFilter";
+import { cn } from "@/lib/utils";
 import {
   brl,
   catalogOperationsQuery,
@@ -35,10 +47,13 @@ import {
   operationsQuery,
   productsQuery,
   sectorsQuery,
+  sortByOpInterna,
+  PECA_PILOTO_LABEL,
+  PECA_PILOTO_OPTIONS,
   STATUS_LABEL,
   type Product,
 } from "@/lib/production";
-import { Plus, Trash2, Pencil, Copy } from "lucide-react";
+import { Plus, Trash2, Pencil, Copy, ChevronDown } from "lucide-react";
 
 export const Route = createFileRoute("/produtos")({
   head: () => ({
@@ -69,6 +84,7 @@ const empty = {
   unit_value: "",
   entry_date: "",
   nf_number: "",
+  peca_piloto: "",
 };
 
 function ProdutosPage() {
@@ -81,10 +97,10 @@ function ProdutosPage() {
   const [lastBySector, setLastBySector] = useState<Record<string, string>>({});
   const [opSearch, setOpSearch] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [pilotFiles, setPilotFiles] = useState<File[]>([]);
-  const [pilotPaths, setPilotPaths] = useState<string[]>([]);
   const [dupValue, setDupValue] = useState("");
   const [saving, setSaving] = useState(false);
+  const [colFilters, setColFilters] = useState<ColumnFilterState>({});
+  const [openBlocks, setOpenBlocks] = useState<Record<string, boolean>>({});
 
   const { data: products = [] } = useQuery(productsQuery);
   const { data: operations = [] } = useQuery(operationsQuery);
@@ -111,8 +127,6 @@ function ProdutosPage() {
     setLastBySector({});
     setOpSearch("");
     setFile(null);
-    setPilotFiles([]);
-    setPilotPaths([]);
     setDupValue("");
     setOpen(true);
   }
@@ -129,6 +143,7 @@ function ProdutosPage() {
       unit_value: String(p.unit_value ?? ""),
       entry_date: p.entry_date ?? "",
       nf_number: p.nf_number ?? "",
+      peca_piloto: p.peca_piloto ?? "",
     });
     const productOps = operations.filter((o) => o.product_id === p.id && o.catalog_operation_id);
     setSelectedOps(productOps.map((o) => o.catalog_operation_id as string));
@@ -141,8 +156,6 @@ function ProdutosPage() {
     setLastBySector(lasts);
     setOpSearch("");
     setFile(null);
-    setPilotFiles([]);
-    setPilotPaths(p.pilot_photos ?? []);
     setDupValue("");
     setOpen(true);
   }
@@ -197,21 +210,6 @@ function ProdutosPage() {
     );
   }
 
-
-  async function uploadPilotFiles(): Promise<string[]> {
-    const paths: string[] = [];
-    for (const f of pilotFiles) {
-      const ext = f.name.split(".").pop() ?? "jpg";
-      const path = `piloto/${crypto.randomUUID()}.${ext}`;
-      const { error } = await db.storage.from("product-files").upload(path, f);
-      if (error) {
-        toast.error("Erro ao enviar foto da peça piloto: " + error.message);
-        continue;
-      }
-      paths.push(path);
-    }
-    return paths;
-  }
 
   async function ensureName(table: "companies" | "clients", value: string, list: { name: string }[]) {
     const name = value.trim();
@@ -289,6 +287,10 @@ function ProdutosPage() {
       toast.error("Nome, referência e OP são obrigatórios.");
       return;
     }
+    if (!form.peca_piloto) {
+      toast.error("Selecione a situação da peça piloto (SIM, NÃO ou DEVOLVIDO).");
+      return;
+    }
     if (missingLast.length > 0) {
       toast.error(
         `Marque a última operação do setor: ${missingLast.map((s) => s.name).join(", ")}.`,
@@ -300,8 +302,6 @@ function ProdutosPage() {
       const empresa = await ensureName("companies", form.empresa, companies);
       const cliente = await ensureName("clients", form.cliente, clients);
       const photoPath = await uploadFile();
-      const newPilots = await uploadPilotFiles();
-      const allPilots = [...pilotPaths, ...newPilots];
 
       const payload = {
         name: form.name,
@@ -313,7 +313,7 @@ function ProdutosPage() {
         unit_value: Number(form.unit_value.replace(",", ".")) || 0,
         entry_date: form.entry_date || null,
         nf_number: form.nf_number || null,
-        pilot_photos: allPilots,
+        peca_piloto: form.peca_piloto,
         ...(photoPath ? { photo_url: photoPath } : {}),
       };
 
@@ -335,8 +335,6 @@ function ProdutosPage() {
       setSelectedOps([]);
       setLastBySector({});
       setFile(null);
-      setPilotFiles([]);
-      setPilotPaths([]);
       qc.invalidateQueries({ queryKey: ["products"] });
       qc.invalidateQueries({ queryKey: ["operations"] });
     } catch (e) {
@@ -623,24 +621,23 @@ function ProdutosPage() {
               ) : null}
             </div>
 
-            <div className="space-y-2">
-              <Label>Fotos da peça piloto</Label>
-              <Input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => setPilotFiles(Array.from(e.target.files ?? []))}
-              />
-              <PilotGallery
-                paths={pilotPaths}
-                title={form.name || "peça piloto"}
-                onRemove={(path) => setPilotPaths((prev) => prev.filter((x) => x !== path))}
-              />
-              {pilotFiles.length > 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  {pilotFiles.length} nova(s) foto(s) serão enviadas ao salvar.
-                </p>
-              ) : null}
+            <div className="space-y-1.5">
+              <Label>Peça piloto</Label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={form.peca_piloto}
+                onChange={(e) => setForm({ ...form, peca_piloto: e.target.value })}
+              >
+                <option value="">Selecione…</option>
+                {PECA_PILOTO_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Campo obrigatório. Pode ser alterado depois (ex.: peça devolvida).
+              </p>
             </div>
 
             <div className="space-y-2">
