@@ -147,12 +147,30 @@ function FaturamentoPage() {
     return products.filter((p) => ids.has(p.id));
   };
 
-  /** os cards do topo refletem o mês expandido; sem mês aberto, todo o sistema */
+  /** produtos que ainda não pertencem a nenhum mês */
+  const unassignedIds = useMemo(() => {
+    const taken = new Set(mesProdutos.map((x) => x.product_id));
+    return taken;
+  }, [mesProdutos]);
+
+  /** lista de seleção de um mês: produtos livres + os já vinculados a este mês */
+  const selectableProducts = (mesId: string) =>
+    products.filter(
+      (p) =>
+        !unassignedIds.has(p.id) ||
+        mesProdutos.some((x) => x.mes_id === mesId && x.product_id === p.id),
+    );
+
+  /** os cards do topo refletem apenas os produtos exibidos na tela */
   const scoped = useMemo(() => {
-    const base = openMes ? productsOfMes(openMes) : products;
-    return base.filter(passesFilters);
+    if (!openMes) return [] as Product[];
+    return applyColumnFilters(
+      productsOfMes(openMes).filter(passesFilters),
+      colFilters,
+      accessors,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openMes, products, mesProdutos, filters]);
+  }, [openMes, products, mesProdutos, filters, colFilters, accessors]);
 
   const value = (p: Product) => p.total_quantity * Number(p.unit_value ?? 0);
   const selectedSum = products
@@ -260,7 +278,7 @@ function FaturamentoPage() {
               </p>
               <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
                 Valor total —{" "}
-                {escopo ? mesLabel(escopo.mes, escopo.ano) : "todos os produtos"}
+                {escopo ? mesLabel(escopo.mes, escopo.ano) : "nenhum mês aberto"}
                 {hasFilters ? " (filtrado)" : ""}
               </p>
             </CardContent>
@@ -448,7 +466,12 @@ function FaturamentoPage() {
 
                     {editingProdutos === m.id ? (
                       <div className="max-h-72 space-y-2 overflow-y-auto rounded-lg border p-3">
-                        {products.map((p) => {
+                        {selectableProducts(m.id).length === 0 ? (
+                          <p className="px-2 py-3 text-sm text-muted-foreground">
+                            Todos os produtos já estão vinculados a outros meses.
+                          </p>
+                        ) : null}
+                        {selectableProducts(m.id).map((p) => {
                           const checked = mesProdutos.some(
                             (x) => x.mes_id === m.id && x.product_id === p.id,
                           );
