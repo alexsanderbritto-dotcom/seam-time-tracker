@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ChevronDown, Plus } from "lucide-react";
@@ -27,7 +27,13 @@ import {
 import { db } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { useMarcadorSession } from "@/lib/marcador-session";
-import { brl, productsQuery, type Product } from "@/lib/production";
+import { brl, productsQuery, sortByOpInterna, type Product } from "@/lib/production";
+import {
+  ColumnFilter,
+  applyColumnFilters,
+  valueOf,
+  type ColumnFilterState,
+} from "@/components/ColumnFilter";
 import {
   faturamentoMesProdutosQuery,
   faturamentoMesesQuery,
@@ -89,6 +95,39 @@ function FaturamentoPage() {
   const now = new Date();
   const [novo, setNovo] = useState({ mes: now.getMonth() + 1, ano: now.getFullYear() });
   const [editingProdutos, setEditingProdutos] = useState<string | null>(null);
+  const [colFilters, setColFilters] = useState<ColumnFilterState>({});
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
+  const dragging = useRef(false);
+
+  const accessors = useMemo(
+    () => ({
+      cliente: (p: Product) => p.cliente,
+      empresa: (p: Product) => p.empresa,
+      op_number: (p: Product) => p.op_number,
+      op_interna: (p: Product) => p.op_interna,
+    }),
+    [],
+  );
+  const optionsFor = (key: keyof typeof accessors) =>
+    Array.from(new Set(products.map((p) => valueOf(accessors[key](p))))).sort((a, b) =>
+      a.localeCompare(b, "pt-BR", { numeric: true }),
+    );
+  const setFilter = (key: string, values: string[]) =>
+    setColFilters((prev) => ({ ...prev, [key]: values }));
+
+  useEffect(() => {
+    const up = () => {
+      dragging.current = false;
+    };
+    const move = (e: MouseEvent) => setCursor({ x: e.clientX, y: e.clientY });
+    window.addEventListener("mouseup", up);
+    window.addEventListener("mousemove", move);
+    return () => {
+      window.removeEventListener("mouseup", up);
+      window.removeEventListener("mousemove", move);
+    };
+  }, []);
 
   const passesFilters = (p: Product) => {
     const d = p.delivery_date;
@@ -115,9 +154,14 @@ function FaturamentoPage() {
   }, [openMes, products, mesProdutos, filters]);
 
   const value = (p: Product) => p.total_quantity * Number(p.unit_value ?? 0);
+  const selectedSum = products
+    .filter((p) => selected.has(p.id))
+    .reduce((s2, p) => s2 + value(p), 0);
   const totalValue = scoped.reduce((s, p) => s + value(p), 0);
   const toInvoiceValue = scoped.filter((p) => !p.delivery_date).reduce((s, p) => s + value(p), 0);
   const invoicedValue = scoped.filter((p) => !!p.delivery_date).reduce((s, p) => s + value(p), 0);
+  const scopedPieces = scoped.reduce((s, p) => s + p.total_quantity, 0);
+  const avgPieceValue = scopedPieces > 0 ? totalValue / scopedPieces : 0;
 
   const openEdit = (p: Product) => {
     setEditing(p);
@@ -207,7 +251,7 @@ function FaturamentoPage() {
       subtitle="Entregas, notas fiscais de saída e valores faturados por mês"
     >
       <div className="space-y-5">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Card className="border-l-4 border-l-primary">
             <CardContent className="p-5">
               <p className="text-3xl font-semibold tracking-tight text-foreground">
@@ -237,6 +281,16 @@ function FaturamentoPage() {
               </p>
               <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
                 Valor faturado (com data efetiva de entrega)
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-sky-500">
+            <CardContent className="p-5">
+              <p className="text-3xl font-semibold tracking-tight text-foreground">
+                {brl(avgPieceValue)}
+              </p>
+              <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
+                Valor médio por peça ({scopedPieces} peças)
               </p>
             </CardContent>
           </Card>
@@ -338,7 +392,9 @@ function FaturamentoPage() {
         ) : null}
 
         {sortedMeses.map((m) => {
-          const lista = productsOfMes(m.id).filter(passesFilters);
+          const lista = sortByOpInterna(
+            applyColumnFilters(productsOfMes(m.id).filter(passesFilters), colFilters, accessors),
+          );
           const isOpen = openMes === m.id;
           return (
             <Collapsible
@@ -424,10 +480,38 @@ function FaturamentoPage() {
                           <TableRow>
                             <TableHead>Produto</TableHead>
                             <TableHead>REF</TableHead>
-                            <TableHead>OP</TableHead>
-                            <TableHead>OP Interna</TableHead>
-                            <TableHead>Cliente</TableHead>
-                            <TableHead>Empresa</TableHead>
+                            <TableHead>
+                              <ColumnFilter
+                                label="OP"
+                                options={optionsFor("op_number")}
+                                selected={colFilters["op_number"] ?? []}
+                                onChange={(v) => setFilter("op_number", v)}
+                              />
+                            </TableHead>
+                            <TableHead>
+                              <ColumnFilter
+                                label="OP Interna"
+                                options={optionsFor("op_interna")}
+                                selected={colFilters["op_interna"] ?? []}
+                                onChange={(v) => setFilter("op_interna", v)}
+                              />
+                            </TableHead>
+                            <TableHead>
+                              <ColumnFilter
+                                label="Cliente"
+                                options={optionsFor("cliente")}
+                                selected={colFilters["cliente"] ?? []}
+                                onChange={(v) => setFilter("cliente", v)}
+                              />
+                            </TableHead>
+                            <TableHead>
+                              <ColumnFilter
+                                label="Empresa"
+                                options={optionsFor("empresa")}
+                                selected={colFilters["empresa"] ?? []}
+                                onChange={(v) => setFilter("empresa", v)}
+                              />
+                            </TableHead>
                             <TableHead className="text-right">Qtd</TableHead>
                             <TableHead className="text-right">Vlr unit.</TableHead>
                             <TableHead className="text-right">Vlr total</TableHead>
@@ -465,7 +549,26 @@ function FaturamentoPage() {
                                 <TableCell className="text-right">
                                   {brl(Number(p.unit_value ?? 0))}
                                 </TableCell>
-                                <TableCell className="text-right font-medium">
+                                <TableCell
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    dragging.current = true;
+                                    setSelected((prev) => {
+                                      const next = e.ctrlKey || e.metaKey ? new Set(prev) : new Set<string>();
+                                      if (prev.has(p.id) && next.has(p.id)) next.delete(p.id);
+                                      else next.add(p.id);
+                                      return next;
+                                    });
+                                  }}
+                                  onMouseEnter={() => {
+                                    if (!dragging.current) return;
+                                    setSelected((prev) => new Set(prev).add(p.id));
+                                  }}
+                                  className={cn(
+                                    "cursor-cell select-none text-right font-medium",
+                                    selected.has(p.id) && "bg-primary/15 ring-1 ring-inset ring-primary",
+                                  )}
+                                >
                                   {brl(value(p))}
                                 </TableCell>
                                 <TableCell>{fmtDate(p.entry_date)}</TableCell>
@@ -503,6 +606,16 @@ function FaturamentoPage() {
             </Collapsible>
           );
         })}
+
+        {selected.size > 1 && cursor ? (
+          <div
+            className="pointer-events-none fixed z-50 rounded-md border border-border bg-popover px-3 py-1.5 text-sm font-medium shadow-lg"
+            style={{ left: cursor.x + 16, top: cursor.y + 16 }}
+          >
+            Soma: {brl(selectedSum)}{" "}
+            <span className="text-muted-foreground">({selected.size} itens)</span>
+          </div>
+        ) : null}
 
         <MetaSetorModule />
 
