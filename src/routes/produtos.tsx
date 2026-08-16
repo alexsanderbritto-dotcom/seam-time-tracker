@@ -363,8 +363,42 @@ function ProdutosPage() {
     return acc;
   }, [products]);
 
+  const accessors = useMemo(
+    () => ({
+      cliente: (p: Product) => p.cliente,
+      empresa: (p: Product) => p.empresa,
+      op_number: (p: Product) => p.op_number,
+      op_interna: (p: Product) => p.op_interna,
+    }),
+    [],
+  );
+
+  const optionsFor = (key: keyof typeof accessors) =>
+    Array.from(new Set(products.map((p) => valueOf(accessors[key](p))))).sort((a, b) =>
+      a.localeCompare(b, "pt-BR", { numeric: true }),
+    );
+
+  const filtered = useMemo(
+    () => sortByOpInterna(applyColumnFilters(products, colFilters, accessors)),
+    [products, colFilters, accessors],
+  );
+
+  const setFilter = (key: string, values: string[]) =>
+    setColFilters((prev) => ({ ...prev, [key]: values }));
+
+  const blocks = (["em_estoque", "em_producao", "finalizado"] as const).map((st) => ({
+    status: st,
+    rows: filtered.filter((p) => p.status === st),
+  }));
+
   return (
     <AppLayout title="Produtos" subtitle="Ordens de produção e suas operações.">
+      <div className="mb-4 flex justify-end">
+        <Button onClick={openCreate}>
+          <Plus className="mr-2 h-4 w-4" /> Novo produto
+        </Button>
+      </div>
+
       <div className="mb-5 grid gap-4 sm:grid-cols-3">
         {(["em_estoque", "em_producao", "finalizado"] as const).map((s) => (
           <Card key={s}>
@@ -378,100 +412,152 @@ function ProdutosPage() {
         ))}
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
-          <CardTitle className="text-base">Produtos cadastrados</CardTitle>
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="mr-2 h-4 w-4" /> Novo produto
-          </Button>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-16">Ficha</TableHead>
-                  <TableHead className="w-16">Peça piloto</TableHead>
+      <div className="space-y-4">
+        {blocks.map(({ status, rows }) => {
+          const isOpen = openBlocks[status] ?? status === "em_producao";
+          return (
+            <Card key={status}>
+              <Collapsible
+                open={isOpen}
+                onOpenChange={(v) => setOpenBlocks((prev) => ({ ...prev, [status]: v }))}
+              >
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="flex cursor-pointer flex-row items-center justify-between gap-3 pb-3">
+                    <CardTitle className="text-base">
+                      {STATUS_LABEL[status] ?? status}{" "}
+                      <span className="text-muted-foreground">({rows.length})</span>
+                    </CardTitle>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                        isOpen && "rotate-180",
+                      )}
+                    />
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-16">Ficha</TableHead>
+                            <TableHead className="w-24">Peça piloto</TableHead>
+                            <TableHead>Produto</TableHead>
+                            <TableHead>Referência</TableHead>
+                            <TableHead>
+                              <ColumnFilter
+                                label="OP"
+                                options={optionsFor("op_number")}
+                                selected={colFilters["op_number"] ?? []}
+                                onChange={(v) => setFilter("op_number", v)}
+                              />
+                            </TableHead>
+                            <TableHead>
+                              <ColumnFilter
+                                label="OP Interna"
+                                options={optionsFor("op_interna")}
+                                selected={colFilters["op_interna"] ?? []}
+                                onChange={(v) => setFilter("op_interna", v)}
+                              />
+                            </TableHead>
+                            <TableHead>
+                              <ColumnFilter
+                                label="Cliente"
+                                options={optionsFor("cliente")}
+                                selected={colFilters["cliente"] ?? []}
+                                onChange={(v) => setFilter("cliente", v)}
+                              />
+                            </TableHead>
+                            <TableHead>
+                              <ColumnFilter
+                                label="Empresa"
+                                options={optionsFor("empresa")}
+                                selected={colFilters["empresa"] ?? []}
+                                onChange={(v) => setFilter("empresa", v)}
+                              />
+                            </TableHead>
+                            <TableHead className="text-right">Quantidade</TableHead>
+                            <TableHead className="text-right">Vlr. unit.</TableHead>
+                            <TableHead className="text-right">Vlr. total</TableHead>
+                            <TableHead>Entrada</TableHead>
+                            <TableHead>NF</TableHead>
+                            <TableHead className="w-24" />
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {rows.length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={14}
+                                className="py-10 text-center text-muted-foreground"
+                              >
+                                Nenhum produto neste status.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            rows.map((p) => (
+                              <TableRow key={p.id}>
+                                <TableCell>
+                                  <ProductPhotoCell path={p.photo_url} title={p.name} />
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={p.peca_piloto === "sim" ? "default" : "outline"}
+                                    className="whitespace-nowrap"
+                                  >
+                                    {p.peca_piloto ? PECA_PILOTO_LABEL[p.peca_piloto] : "—"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="font-medium">{p.name}</TableCell>
+                                <TableCell className="font-mono text-xs">{p.reference}</TableCell>
+                                <TableCell className="font-mono text-xs">{p.op_number}</TableCell>
+                                <TableCell className="font-mono text-xs">
+                                  {p.op_interna ?? "—"}
+                                </TableCell>
+                                <TableCell>{p.cliente ?? "—"}</TableCell>
+                                <TableCell>{p.empresa ?? "—"}</TableCell>
+                                <TableCell className="text-right">{p.total_quantity}</TableCell>
+                                <TableCell className="text-right">
+                                  {brl(p.unit_value ?? 0)}
+                                </TableCell>
+                                <TableCell className="text-right font-medium">
+                                  {brl((p.unit_value ?? 0) * p.total_quantity)}
+                                </TableCell>
+                                <TableCell className="whitespace-nowrap">
+                                  {p.entry_date ? p.entry_date.split("-").reverse().join("/") : "—"}
+                                </TableCell>
+                                <TableCell className="font-mono text-xs">
+                                  {p.nf_number ?? "—"}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex justify-end gap-1">
+                                    <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => removeProduct(p.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </Card>
+          );
+        })}
+      </div>
 
-                  <TableHead>Produto</TableHead>
-                  <TableHead>Referência</TableHead>
-                  <TableHead>OP</TableHead>
-                  <TableHead>OP Interna</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead className="text-right">Quantidade</TableHead>
-                  <TableHead className="text-right">Vlr. unit.</TableHead>
-                  <TableHead className="text-right">Vlr. total</TableHead>
-                  <TableHead>Entrada</TableHead>
-                  <TableHead>NF</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-24" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {products.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={15} className="py-10 text-center text-muted-foreground">
-                      Nenhum produto cadastrado ainda.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  products.map((p) => {
-                    return (
-                      <TableRow key={p.id}>
-                        <TableCell>
-                          <ProductPhotoCell path={p.photo_url} title={p.name} />
-                        </TableCell>
-                        <TableCell>
-                          <PilotPhotoCell paths={p.pilot_photos ?? []} title={p.name} />
-                        </TableCell>
-                        <TableCell className="font-medium">{p.name}</TableCell>
-                        <TableCell className="font-mono text-xs">{p.reference}</TableCell>
-                        <TableCell className="font-mono text-xs">{p.op_number}</TableCell>
-                        <TableCell className="font-mono text-xs">{p.op_interna ?? ""}</TableCell>
-                        <TableCell>{p.cliente ?? "—"}</TableCell>
-                        <TableCell>{p.empresa ?? "—"}</TableCell>
-                        <TableCell className="text-right">{p.total_quantity}</TableCell>
-                        <TableCell className="text-right">{brl(p.unit_value ?? 0)}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          {brl((p.unit_value ?? 0) * p.total_quantity)}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {p.entry_date ? p.entry_date.split("-").reverse().join("/") : "—"}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs">{p.nf_number ?? "—"}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              p.status === "finalizado"
-                                ? "secondary"
-                                : p.status === "em_producao"
-                                  ? "default"
-                                  : "outline"
-                            }
-                          >
-                            {STATUS_LABEL[p.status] ?? p.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => removeProduct(p.id)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
