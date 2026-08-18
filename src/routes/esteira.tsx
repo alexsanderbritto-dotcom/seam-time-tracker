@@ -32,6 +32,7 @@ import { useMarcadorSession } from "@/lib/marcador-session";
 import {
   buildLotes,
   esteiraQuery,
+  esteiraTodasQuery,
   lotesOfProduct,
   productCompletion,
   productsQuery,
