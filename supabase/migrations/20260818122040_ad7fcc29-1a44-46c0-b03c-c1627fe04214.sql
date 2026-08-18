@@ -1,0 +1,1 @@
+ALTER TABLE public.faturamento_mes_produtos DROP CONSTRAINT IF EXISTS faturamento_mes_produtos_mes_id_product_id_key;
