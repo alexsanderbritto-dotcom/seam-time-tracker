@@ -69,6 +69,25 @@ export const esteiraQuery = {
   },
 };
 
+/**
+ * Todas as frações já criadas (na esteira ou removidas dela). Remover da
+ * esteira é uma remoção suave: a fração continua existindo, com sua OP Interna
+ * e quantidade intactas, em Produtos e Faturamento.
+ */
+export const esteiraTodasQuery = {
+  queryKey: ["esteira_producao", "todas"],
+  queryFn: async (): Promise<EsteiraItem[]> => {
+    const { data, error } = await db
+      .from("esteira_producao")
+      .select("id,produto_id,data_adicionado,status,op_interna,quantidade")
+      .in("status", ["ativo", "removido"])
+      .order("data_adicionado", { ascending: false });
+    if (error) throw error;
+    return data as EsteiraItem[];
+  },
+};
+
+
 /** Uma fração (OP Interna) de um produto dentro da esteira. */
 export type Lote = {
   /** id do registro na esteira */
