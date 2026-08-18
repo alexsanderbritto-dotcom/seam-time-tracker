@@ -75,19 +75,16 @@ async function signingKey(): Promise<CryptoKey> {
   );
 }
 
-const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
-
+// Sessões não expiram por tempo: o usuário só sai ao clicar em "Sair".
 async function issueToken(payload: { id: string; nome: string; cargo: Cargo }): Promise<string> {
-  const body = b64url(
-    new TextEncoder().encode(JSON.stringify({ ...payload, exp: Date.now() + SESSION_TTL_MS })),
-  );
+  const body = b64url(new TextEncoder().encode(JSON.stringify({ ...payload, iat: Date.now() })));
   const sig = await crypto.subtle.sign("HMAC", await signingKey(), new TextEncoder().encode(body));
   return `${body}.${b64url(new Uint8Array(sig))}`;
 }
 
 async function readToken(
   token: string | undefined,
-): Promise<{ id: string; nome: string; cargo: Cargo; exp: number } | null> {
+): Promise<{ id: string; nome: string; cargo: Cargo } | null> {
   if (!token) return null;
   const [body, sig] = token.split(".");
   if (!body || !sig) return null;
@@ -99,18 +96,16 @@ async function readToken(
   );
   if (!valid) return null;
   try {
-    const parsed = JSON.parse(new TextDecoder().decode(fromB64url(body))) as {
+    return JSON.parse(new TextDecoder().decode(fromB64url(body))) as {
       id: string;
       nome: string;
       cargo: Cargo;
-      exp: number;
     };
-    if (!parsed.exp || parsed.exp < Date.now()) return null;
-    return parsed;
   } catch {
     return null;
   }
 }
+
 
 async function requireAdmin(token: string | undefined) {
   const claims = await readToken(token);
