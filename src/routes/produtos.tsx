@@ -40,19 +40,22 @@ import {
 import { cn } from "@/lib/utils";
 import {
   brl,
+  buildProductRows,
   catalogOperationsQuery,
   clientsQuery,
   companiesQuery,
   entriesQuery,
+  esteiraQuery,
   operationsQuery,
   productsQuery,
   sectorsQuery,
-  sortByOpInterna,
   PECA_PILOTO_LABEL,
   PECA_PILOTO_OPTIONS,
   STATUS_LABEL,
   type Product,
+  type ProductRow,
 } from "@/lib/production";
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { Plus, Trash2, Pencil, Copy, ChevronDown } from "lucide-react";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
 
