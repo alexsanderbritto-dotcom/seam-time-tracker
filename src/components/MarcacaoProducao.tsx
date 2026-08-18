@@ -152,7 +152,6 @@ export function MarcacaoProducao({
     return map;
   }, [entries, loteId]);
 
-  const activeProduct = activeLote?.product;
 
   function focusOp(opId: string, direction: "next" | "prev") {
     const ids = filteredOps.map((o: Operation) => o.id);
