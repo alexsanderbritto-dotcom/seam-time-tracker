@@ -33,6 +33,8 @@ export const addToEsteira = createServerFn({ method: "POST" })
       quantidade: number;
       /** quando informado, atualiza a fração existente em vez de criar nova */
       loteId?: string;
+      /** frações removidas da esteira usadas como fonte (serão dissolvidas) */
+      sourceLoteIds?: string[];
     }) => {
       if (!data.productId) throw new Error("Selecione um produto.");
       const op = (data.opInterna ?? "").trim();
@@ -45,6 +47,7 @@ export const addToEsteira = createServerFn({ method: "POST" })
         opInterna: op,
         quantidade: qtd,
         loteId: data.loteId ?? null,
+        sourceLoteIds: data.sourceLoteIds ?? [],
       };
     },
   )
@@ -61,15 +64,21 @@ export const addToEsteira = createServerFn({ method: "POST" })
     if (prodErr) return { ok: false as const, error: prodErr.message };
     if (!product) return { ok: false as const, error: "Produto não encontrado." };
 
+    // todas as frações já criadas (na esteira ou removidas dela) ocupam quantidade
     const { data: existing, error: listErr } = await supabaseAdmin
       .from("esteira_producao")
-      .select("id,op_interna,quantidade")
+      .select("id,op_interna,quantidade,status")
       .eq("produto_id", data.productId)
-      .eq("status", "ativo");
+      .in("status", ["ativo", "removido"]);
     if (listErr) return { ok: false as const, error: listErr.message };
 
-    const lotes = (existing ?? []) as Lote[];
-    const others = lotes.filter((l) => l.id !== data.loteId);
+    const lotes = (existing ?? []) as (Lote & { status: string })[];
+    const sources = lotes.filter(
+      (l) => data.sourceLoteIds.includes(l.id) && l.status === "removido",
+    );
+    const others = lotes.filter(
+      (l) => l.id !== data.loteId && !sources.some((s) => s.id === l.id),
+    );
 
     if (others.some((l) => (l.op_interna ?? "").trim() === data.opInterna)) {
       return { ok: false as const, error: "Esta OP Interna já existe para este produto." };
@@ -107,9 +116,22 @@ export const addToEsteira = createServerFn({ method: "POST" })
       if (error) return { ok: false as const, error: error.message };
     }
 
+    // frações removidas usadas como fonte deixam de existir (correção de engano)
+    if (sources.length > 0) {
+      const { error } = await supabaseAdmin
+        .from("esteira_producao")
+        .delete()
+        .in(
+          "id",
+          sources.map((s) => s.id),
+        );
+      if (error) return { ok: false as const, error: error.message };
+    }
+
     await syncProductOpInterna(data.productId);
     return { ok: true as const };
   });
+
 
 export const removeFromEsteira = createServerFn({ method: "POST" })
   .inputValidator((data: { token: string; id: string }) => {
