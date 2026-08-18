@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { Input } from "@/components/ui/input";
@@ -213,8 +213,11 @@ function DashboardPage() {
     return map;
   }, [operations, catalogOps]);
 
-  const matchesOp = (operationId: string) =>
-    operationFilter === "all" || opCatalog.get(operationId) === operationFilter;
+  const matchesOp = useCallback(
+    (operationId: string) =>
+      operationFilter === "all" || opCatalog.get(operationId) === operationFilter,
+    [operationFilter, opCatalog],
+  );
 
   const visibleOperations = useMemo(
     () =>
@@ -444,7 +447,7 @@ function DashboardPage() {
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [dayEntries, operations, opCatalog, slots, operationFilter]);
+  }, [dayEntries, operations, opCatalog, slots, operationFilter, matchesOp]);
 
 
   return (
