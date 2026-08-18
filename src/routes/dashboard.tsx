@@ -8,6 +8,12 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { MetaProducaoDialog } from "@/components/MetaProducaoDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ChevronDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDaySlots } from "@/lib/schedule";
@@ -275,6 +281,12 @@ function DashboardPage() {
     const opName = new Map<string, string>();
     for (const o of operations) if (!opName.has(opKeyOf(o.id))) opName.set(opKeyOf(o.id), o.name);
 
+    // Resolve lote -> OP Interna (e fallback produto -> OP Interna master) para o tooltip
+    const loteOpInterna = new Map<string, string>();
+    for (const l of esteiraLotes) loteOpInterna.set(l.id, l.opInterna ?? "");
+    const productOpInterna = new Map<string, string>();
+    for (const p of products) productOpInterna.set(p.id, p.op_interna ?? "");
+
     return emps
       .map((emp) => {
         const empEntries = filtered.filter((e) => e.employee_id === emp.id);
@@ -294,6 +306,7 @@ function DashboardPage() {
               adjusted: number | null;
               opPct: number | null;
               byProduct: Map<string, number>;
+              byLote: Map<string, number>;
             }
           >();
           let usedFraction = 0;
@@ -306,12 +319,14 @@ function DashboardPage() {
             const adjusted = meta != null ? meta * remaining : null;
             const fraction = meta != null && meta > 0 ? e.quantity / meta : 0;
             usedFraction += fraction;
+            const loteKey = e.lote_id ?? `p:${e.product_id}`;
             if (prev) {
               prev.produced += e.quantity;
               prev.byProduct.set(
                 e.product_id,
                 (prev.byProduct.get(e.product_id) ?? 0) + e.quantity,
               );
+              prev.byLote.set(loteKey, (prev.byLote.get(loteKey) ?? 0) + e.quantity);
               prev.opPct = prev.meta != null && prev.meta > 0 ? (prev.produced / prev.meta) * 100 : null;
             } else {
               byOp.set(key, {
@@ -320,6 +335,7 @@ function DashboardPage() {
                 adjusted,
                 opPct: meta != null && meta > 0 ? (e.quantity / meta) * 100 : null,
                 byProduct: new Map([[e.product_id, e.quantity]]),
+                byLote: new Map([[loteKey, e.quantity]]),
               });
             }
           }
@@ -341,6 +357,14 @@ function DashboardPage() {
         const rows = opKeys.map((opId) => {
           const perSlot = slotInfo.map((info) => {
             const d = info.byOp.get(opId);
+            const breakdown = d
+              ? Array.from(d.byLote.entries()).map(([k, qty]) => {
+                  const opInterna = k.startsWith("p:")
+                    ? productOpInterna.get(k.slice(2)) ?? ""
+                    : loteOpInterna.get(k) ?? "";
+                  return { opInterna: opInterna || "—", qty };
+                })
+              : [];
             return {
               produced: d?.produced ?? 0,
               estimated: d?.meta ?? null,
@@ -348,6 +372,7 @@ function DashboardPage() {
               opPct: d?.opPct ?? null,
               active: !!d,
               byProduct: d ? Array.from(d.byProduct.entries()) : [],
+              breakdown,
             };
           });
           const totalProduced = perSlot.reduce((a, c) => a + c.produced, 0);
@@ -370,7 +395,7 @@ function DashboardPage() {
         return { emp, rows, hourPcts, hourOccs, dayPct };
       })
       .filter((g) => g.rows.length > 0);
-  }, [employees, employeeFilter, filtered, slots, operations, opCatalog, expectedPerHour, slotHours, daySlotMinutes, ocorrenciaName]);
+  }, [employees, employeeFilter, filtered, slots, operations, opCatalog, expectedPerHour, slotHours, daySlotMinutes, ocorrenciaName, esteiraLotes, products]);
 
   const workHours = useMemo(
     () => normalSlots.length * slotHours,
@@ -689,6 +714,7 @@ function DashboardPage() {
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
+            <TooltipProvider delayDuration={150} disableHoverableContent>
             {productivity.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Nenhuma produção registrada com estes filtros.
@@ -724,21 +750,49 @@ function DashboardPage() {
                                 {!c.active ? (
                                   <span className="text-muted-foreground">–</span>
                                 ) : (
-                                  <div className="leading-tight">
-                                    <span className={`tabular-nums ${perfClass(c.produced, c.estimated)}`}>
-                                      {c.produced}
-                                      <span className="text-muted-foreground">
-                                        {" / "}
-                                        {c.estimated != null ? Math.round(c.estimated) : "—"}
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span
+                                        tabIndex={0}
+                                        className="block cursor-default leading-tight outline-none focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm"
+                                      >
+                                        <span className={`tabular-nums ${perfClass(c.produced, c.estimated)}`}>
+                                          {c.produced}
+                                          <span className="text-muted-foreground">
+                                            {" / "}
+                                            {c.estimated != null ? Math.round(c.estimated) : "—"}
+                                          </span>
+                                        </span>
+                                        <div className="text-[10px] tabular-nums text-muted-foreground">
+                                          {c.opPct != null ? `${c.opPct.toFixed(1)}%` : "—"}
+                                          {c.adjusted != null
+                                            ? ` · aj. ${Math.round(c.adjusted)}`
+                                            : ""}
+                                        </div>
                                       </span>
-                                    </span>
-                                    <div className="text-[10px] tabular-nums text-muted-foreground">
-                                      {c.opPct != null ? `${c.opPct.toFixed(1)}%` : "—"}
-                                      {c.adjusted != null
-                                        ? ` · aj. ${Math.round(c.adjusted)}`
-                                        : ""}
-                                    </div>
-                                  </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="bottom"
+                                      className="max-w-[240px] border border-border bg-popover text-popover-foreground shadow-lg"
+                                    >
+                                      <div className="space-y-1">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                          Detalhamento por OP Interna
+                                        </p>
+                                        {c.breakdown.length === 0 ? (
+                                          <p className="text-xs text-muted-foreground">Sem detalhamento.</p>
+                                        ) : (
+                                          c.breakdown.map((b, bi) => (
+                                            <p key={bi} className="font-mono text-xs tabular-nums">
+                                              <span className="font-semibold">{b.qty}</span>
+                                              <span className="text-muted-foreground">/</span>
+                                              {b.opInterna}
+                                            </p>
+                                          ))
+                                        )}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
                                 )}
                               </TableCell>
                             ))}
@@ -788,6 +842,7 @@ function DashboardPage() {
 
               ))
             )}
+            </TooltipProvider>
           </CardContent>
         </Card>
 
