@@ -370,29 +370,35 @@ function ProdutosPage() {
 
   const accessors = useMemo(
     () => ({
-      cliente: (p: Product) => p.cliente,
-      empresa: (p: Product) => p.empresa,
-      op_number: (p: Product) => p.op_number,
-      op_interna: (p: Product) => p.op_interna,
+      cliente: (r: ProductRow) => r.product.cliente,
+      empresa: (r: ProductRow) => r.product.empresa,
+      op_number: (r: ProductRow) => r.product.op_number,
+      op_interna: (r: ProductRow) => r.opInterna,
     }),
     [],
   );
 
+  /** cada fração é uma linha independente; produtos sem fração seguem como antes */
+  const allRows = useMemo(
+    () => buildProductRows(products, esteira, operations, entries),
+    [products, esteira, operations, entries],
+  );
+
   const optionsFor = (key: keyof typeof accessors) =>
-    Array.from(new Set(products.map((p) => valueOf(accessors[key](p))))).sort((a, b) =>
+    Array.from(new Set(allRows.map((r) => valueOf(accessors[key](r))))).sort((a, b) =>
       a.localeCompare(b, "pt-BR", { numeric: true }),
     );
 
   const filtered = useMemo(
-    () => sortByOpInterna(applyColumnFilters(products, colFilters, accessors)),
-    [products, colFilters, accessors],
+    () => applyColumnFilters(allRows, colFilters, accessors),
+    [allRows, colFilters, accessors],
   );
 
   const statusTotals = useMemo(() => {
     const acc = { em_estoque: 0, em_producao: 0, finalizado: 0 } as Record<string, number>;
-    for (const p of filtered) {
-      if (acc[p.status] === undefined) acc[p.status] = 0;
-      acc[p.status] = (acc[p.status] ?? 0) + p.total_quantity;
+    for (const r of filtered) {
+      if (acc[r.status] === undefined) acc[r.status] = 0;
+      acc[r.status] = (acc[r.status] ?? 0) + r.quantidade;
     }
     return acc;
   }, [filtered]);
@@ -402,7 +408,7 @@ function ProdutosPage() {
 
   const blocks = (["em_estoque", "em_producao", "finalizado"] as const).map((st) => ({
     status: st,
-    rows: filtered.filter((p) => p.status === st),
+    rows: filtered.filter((r) => r.status === st),
   }));
 
   return (
