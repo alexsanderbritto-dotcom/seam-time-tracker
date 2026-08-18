@@ -8,6 +8,12 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { MetaProducaoDialog } from "@/components/MetaProducaoDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ChevronDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDaySlots } from "@/lib/schedule";
