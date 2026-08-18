@@ -17,6 +17,7 @@ import { Route as FaturamentoRouteImport } from './routes/faturamento'
 import { Route as GargaloRouteImport } from './routes/gargalo'
 import { Route as HorariosRouteImport } from './routes/horarios'
 import { Route as MarcacaoProducaoRouteImport } from './routes/marcacao-producao'
+import { Route as MarcacoesOrfasRouteImport } from './routes/marcacoes-orfas'
 import { Route as MarcadoresRouteImport } from './routes/marcadores'
 import { Route as OperacoesRouteImport } from './routes/operacoes'
 import { Route as PainelRouteImport } from './routes/painel'
@@ -62,6 +63,11 @@ const MarcacaoProducaoRoute = MarcacaoProducaoRouteImport.update({
   path: '/marcacao-producao',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MarcacoesOrfasRoute = MarcacoesOrfasRouteImport.update({
+  id: '/marcacoes-orfas',
+  path: '/marcacoes-orfas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MarcadoresRoute = MarcadoresRouteImport.update({
   id: '/marcadores',
   path: '/marcadores',
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/gargalo': typeof GargaloRoute
   '/horarios': typeof HorariosRoute
   '/marcacao-producao': typeof MarcacaoProducaoRoute
+  '/marcacoes-orfas': typeof MarcacoesOrfasRoute
   '/marcadores': typeof MarcadoresRoute
   '/operacoes': typeof OperacoesRoute
   '/painel': typeof PainelRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
   '/gargalo': typeof GargaloRoute
   '/horarios': typeof HorariosRoute
   '/marcacao-producao': typeof MarcacaoProducaoRoute
+  '/marcacoes-orfas': typeof MarcacoesOrfasRoute
   '/marcadores': typeof MarcadoresRoute
   '/operacoes': typeof OperacoesRoute
   '/painel': typeof PainelRoute
@@ -121,6 +129,7 @@ export interface FileRoutesById {
   '/gargalo': typeof GargaloRoute
   '/horarios': typeof HorariosRoute
   '/marcacao-producao': typeof MarcacaoProducaoRoute
+  '/marcacoes-orfas': typeof MarcacoesOrfasRoute
   '/marcadores': typeof MarcadoresRoute
   '/operacoes': typeof OperacoesRoute
   '/painel': typeof PainelRoute
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
     | '/gargalo'
     | '/horarios'
     | '/marcacao-producao'
+    | '/marcacoes-orfas'
     | '/marcadores'
     | '/operacoes'
     | '/painel'
@@ -151,6 +161,7 @@ export interface FileRouteTypes {
     | '/gargalo'
     | '/horarios'
     | '/marcacao-producao'
+    | '/marcacoes-orfas'
     | '/marcadores'
     | '/operacoes'
     | '/painel'
@@ -165,6 +176,7 @@ export interface FileRouteTypes {
     | '/gargalo'
     | '/horarios'
     | '/marcacao-producao'
+    | '/marcacoes-orfas'
     | '/marcadores'
     | '/operacoes'
     | '/painel'
@@ -180,6 +192,7 @@ export interface RootRouteChildren {
   GargaloRoute: typeof GargaloRoute
   HorariosRoute: typeof HorariosRoute
   MarcacaoProducaoRoute: typeof MarcacaoProducaoRoute
+  MarcacoesOrfasRoute: typeof MarcacoesOrfasRoute
   MarcadoresRoute: typeof MarcadoresRoute
   OperacoesRoute: typeof OperacoesRoute
   PainelRoute: typeof PainelRoute
@@ -244,6 +257,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarcacaoProducaoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/marcacoes-orfas': {
+      id: '/marcacoes-orfas'
+      path: '/marcacoes-orfas'
+      fullPath: '/marcacoes-orfas'
+      preLoaderRoute: typeof MarcacoesOrfasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/marcadores': {
       id: '/marcadores'
       path: '/marcadores'
@@ -284,6 +304,7 @@ const rootRouteChildren: RootRouteChildren = {
   GargaloRoute: GargaloRoute,
   HorariosRoute: HorariosRoute,
   MarcacaoProducaoRoute: MarcacaoProducaoRoute,
+  MarcacoesOrfasRoute: MarcacoesOrfasRoute,
   MarcadoresRoute: MarcadoresRoute,
   OperacoesRoute: OperacoesRoute,
   PainelRoute: PainelRoute,
