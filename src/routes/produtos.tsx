@@ -615,6 +615,15 @@ function ProdutosPage() {
             <DialogTitle>{editing ? "Editar produto / OP" : "Novo produto / OP"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3">
+            {editing && esteira.filter((e) => e.produto_id === editing.id).length > 0 ? (
+              <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+                Esta alteração afeta todas as{" "}
+                {esteira.filter((e) => e.produto_id === editing.id).length} fração(ões) deste
+                produto — nome, referência, cliente, empresa, valor unitário, NF e ficha são dados
+                compartilhados. OP Interna e quantidade de cada fração são editadas na Esteira.
+              </p>
+            ) : null}
+
             <div className="space-y-1.5 rounded-md border border-dashed border-input p-3">
               <Label className="flex items-center gap-2">
                 <Copy className="h-4 w-4" /> Duplicar operações de um produto existente
