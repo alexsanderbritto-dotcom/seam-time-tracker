@@ -516,8 +516,10 @@ function ProdutosPage() {
                               </TableCell>
                             </TableRow>
                           ) : (
-                            rows.map((p) => (
-                              <TableRow key={p.id}>
+                            rows.map((r) => {
+                              const p = r.product;
+                              return (
+                              <TableRow key={r.key}>
                                 <TableCell>
                                   <ProductPhotoCell path={p.photo_url} title={p.name} />
                                 </TableCell>
@@ -529,20 +531,27 @@ function ProdutosPage() {
                                     {p.peca_piloto ? PECA_PILOTO_LABEL[p.peca_piloto] : "—"}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="font-medium">{p.name}</TableCell>
+                                <TableCell className="font-medium">
+                                  {p.name}
+                                  {r.fracoes > 1 ? (
+                                    <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                                      fração {r.opInterna ?? "—"} de {r.fracoes}
+                                    </span>
+                                  ) : null}
+                                </TableCell>
                                 <TableCell className="font-mono text-xs">{p.reference}</TableCell>
                                 <TableCell className="font-mono text-xs">{p.op_number}</TableCell>
                                 <TableCell className="font-mono text-xs">
-                                  {p.op_interna ?? "—"}
+                                  {r.opInterna ?? "—"}
                                 </TableCell>
                                 <TableCell>{p.cliente ?? "—"}</TableCell>
                                 <TableCell>{p.empresa ?? "—"}</TableCell>
-                                <TableCell className="text-right">{p.total_quantity}</TableCell>
+                                <TableCell className="text-right">{r.quantidade}</TableCell>
                                 <TableCell className="text-right">
                                   {brl(p.unit_value ?? 0)}
                                 </TableCell>
                                 <TableCell className="text-right font-medium">
-                                  {brl((p.unit_value ?? 0) * p.total_quantity)}
+                                  {brl((p.unit_value ?? 0) * r.quantidade)}
                                 </TableCell>
                                 <TableCell className="whitespace-nowrap">
                                   {p.entry_date ? p.entry_date.split("-").reverse().join("/") : "—"}
@@ -557,7 +566,11 @@ function ProdutosPage() {
                                     </Button>
                                     <ConfirmDelete
                                       title="Excluir produto?"
-                                      description={`O produto ${p.name} (OP ${p.op_number}) e suas operações serão excluídos permanentemente.`}
+                                      description={`O produto ${p.name} (OP ${p.op_number})${
+                                        r.fracoes > 0
+                                          ? `, suas ${r.fracoes} fração(ões) na esteira`
+                                          : ""
+                                      } e suas operações serão excluídos permanentemente.`}
                                       onConfirm={() => void removeProduct(p.id)}
                                     >
                                       <Button variant="ghost" size="icon">
@@ -567,7 +580,9 @@ function ProdutosPage() {
                                   </div>
                                 </TableCell>
                               </TableRow>
-                            ))
+                              );
+                            })
+
                           )}
                         </TableBody>
                       </Table>
