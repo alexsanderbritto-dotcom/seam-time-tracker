@@ -306,6 +306,7 @@ function DashboardPage() {
               adjusted: number | null;
               opPct: number | null;
               byProduct: Map<string, number>;
+              byLote: Map<string, number>;
             }
           >();
           let usedFraction = 0;
@@ -318,12 +319,14 @@ function DashboardPage() {
             const adjusted = meta != null ? meta * remaining : null;
             const fraction = meta != null && meta > 0 ? e.quantity / meta : 0;
             usedFraction += fraction;
+            const loteKey = e.lote_id ?? `p:${e.product_id}`;
             if (prev) {
               prev.produced += e.quantity;
               prev.byProduct.set(
                 e.product_id,
                 (prev.byProduct.get(e.product_id) ?? 0) + e.quantity,
               );
+              prev.byLote.set(loteKey, (prev.byLote.get(loteKey) ?? 0) + e.quantity);
               prev.opPct = prev.meta != null && prev.meta > 0 ? (prev.produced / prev.meta) * 100 : null;
             } else {
               byOp.set(key, {
@@ -332,6 +335,7 @@ function DashboardPage() {
                 adjusted,
                 opPct: meta != null && meta > 0 ? (e.quantity / meta) * 100 : null,
                 byProduct: new Map([[e.product_id, e.quantity]]),
+                byLote: new Map([[loteKey, e.quantity]]),
               });
             }
           }
