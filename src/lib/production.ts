@@ -192,6 +192,8 @@ export type ProductionEntry = {
   entry_date: string;
   is_overtime: boolean;
   ocorrencia_id: string | null;
+  /** fração (OP interna) da esteira à qual a marcação pertence */
+  lote_id: string | null;
   created_at?: string;
 };
 
@@ -466,6 +468,7 @@ export type MetaProducaoDia = {
   sector_id: string;
   data: string;
   product_id: string;
+  lote_id: string | null;
   quantidade: number;
 };
 
@@ -474,7 +477,7 @@ export const metaProducaoQuery = (date: string) => ({
   queryFn: async (): Promise<MetaProducaoDia[]> => {
     const { data, error } = await db
       .from("meta_producao_setor_dia")
-      .select("id,sector_id,data,product_id,quantidade")
+      .select("id,sector_id,data,product_id,lote_id,quantidade")
       .eq("data", date);
     if (error) throw error;
     return data as MetaProducaoDia[];
@@ -487,7 +490,8 @@ export function producedInSector(
   sectorId: string,
   operations: Operation[],
   catalogOps: CatalogOperation[],
-  entries: Pick<ProductionEntry, "operation_id" | "quantity">[],
+  entries: Pick<ProductionEntry, "operation_id" | "quantity" | "lote_id">[],
+  loteId?: string,
 ): number {
   const catSector = new Map(catalogOps.map((c) => [c.id, c.sector_id]));
   const opIds = new Set(
@@ -502,6 +506,6 @@ export function producedInSector(
       .map((o) => o.id),
   );
   return entries
-    .filter((e) => opIds.has(e.operation_id))
+    .filter((e) => opIds.has(e.operation_id) && (!loteId || e.lote_id === loteId))
     .reduce((s, e) => s + e.quantity, 0);
 }
