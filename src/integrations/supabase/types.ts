@@ -157,22 +157,32 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          lote_id: string | null
           mes_id: string
           product_id: string
         }
         Insert: {
           created_at?: string
           id?: string
+          lote_id?: string | null
           mes_id: string
           product_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          lote_id?: string | null
           mes_id?: string
           product_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "faturamento_mes_produtos_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "esteira_producao"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "faturamento_mes_produtos_mes_id_fkey"
             columns: ["mes_id"]
