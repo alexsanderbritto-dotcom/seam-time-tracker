@@ -134,13 +134,19 @@ function EsteiraPage() {
     [products, esteira],
   );
 
-  const restanteAtual = productId ? restanteDe(productId, loteId ?? undefined) : 0;
+  const removidas = productId && !loteId ? removidasDe(productId) : [];
+  const sourcesQtd = removidas
+    .filter((r) => sourceIds.includes(r.id))
+    .reduce((s, r) => s + (r.quantidade || 0), 0);
+  const restanteAtual =
+    (productId ? restanteDe(productId, loteId ?? undefined) : 0) + sourcesQtd;
 
   function openAdd() {
     setLoteId(null);
     setProductId("");
     setOpInterna("");
     setQuantidade("");
+    setSourceIds([]);
     setOpen(true);
   }
 
@@ -149,13 +155,24 @@ function EsteiraPage() {
     setProductId(lote.product.id);
     setOpInterna(lote.opInterna ?? "");
     setQuantidade(String(lote.quantidade || ""));
+    setSourceIds([]);
     setOpen(true);
   }
 
   function pickProduct(id: string) {
     setProductId(id);
     setOpInterna("");
+    setSourceIds([]);
     setQuantidade(String(restanteDe(id)));
+  }
+
+  function toggleSource(id: string, qtd: number) {
+    setSourceIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      const delta = prev.includes(id) ? -qtd : qtd;
+      setQuantidade((q) => String(Math.max(0, (Number(q) || 0) + delta)));
+      return next;
+    });
   }
 
   async function save() {
@@ -181,9 +198,11 @@ function EsteiraPage() {
           opInterna,
           quantidade: qtd,
           ...(loteId ? { loteId } : {}),
+          ...(sourceIds.length > 0 ? { sourceLoteIds: sourceIds } : {}),
         },
       });
       if (!res.ok) throw new Error(res.error);
+
 
       toast.success(loteId ? "OP Interna atualizada." : "OP Interna adicionada à esteira.");
       setOpen(false);
