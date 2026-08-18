@@ -73,11 +73,13 @@ function EsteiraPage() {
   const [productId, setProductId] = useState("");
   const [opInterna, setOpInterna] = useState("");
   const [quantidade, setQuantidade] = useState("");
+  const [sourceIds, setSourceIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [pendingRemove, setPendingRemove] = useState<{ id: string; name: string } | null>(null);
 
   const { data: products = [] } = useQuery(productsQuery);
   const { data: esteira = [] } = useQuery(esteiraQuery);
+  const { data: esteiraAll = [] } = useQuery(esteiraTodasQuery);
   const { data: operations = [] } = useQuery(operationsQuery);
   const { data: entries = [] } = useQuery(entriesQuery());
 
@@ -88,11 +90,16 @@ function EsteiraPage() {
 
   const lotes = useMemo(() => buildLotes(esteira, products), [esteira, products]);
 
+  /** frações removidas da esteira (reaproveitáveis para corrigir engano) */
+  const removidasDe = (pid: string) =>
+    esteiraAll.filter((e) => e.produto_id === pid && e.status === "removido");
+
   const restanteDe = (pid: string, ignore?: string) => {
     const p = productById.get(pid);
     if (!p) return 0;
-    return remainingToDistribute(p, lotesOfProduct(esteira, pid), ignore);
+    return remainingToDistribute(p, lotesOfProduct(esteiraAll, pid), ignore);
   };
+
 
   const options = useMemo(
     () =>
