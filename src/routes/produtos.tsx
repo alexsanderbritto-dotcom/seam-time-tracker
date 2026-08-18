@@ -45,7 +45,7 @@ import {
   clientsQuery,
   companiesQuery,
   entriesQuery,
-  esteiraQuery,
+  esteiraTodasQuery,
   operationsQuery,
   productsQuery,
   sectorsQuery,
@@ -107,7 +107,7 @@ function ProdutosPage() {
   const [openBlocks, setOpenBlocks] = useState<Record<string, boolean>>({});
 
   const { data: products = [] } = useQuery(productsQuery);
-  const { data: esteira = [] } = useQuery(esteiraQuery);
+  const { data: esteira = [] } = useQuery(esteiraTodasQuery);
   const { data: operations = [] } = useQuery(operationsQuery);
   const { data: entries = [] } = useQuery(entriesQuery());
   const { data: companies = [] } = useQuery(companiesQuery);

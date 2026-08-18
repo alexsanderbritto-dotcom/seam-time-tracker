@@ -32,6 +32,7 @@ import { useMarcadorSession } from "@/lib/marcador-session";
 import {
   buildLotes,
   esteiraQuery,
+  esteiraTodasQuery,
   lotesOfProduct,
   productCompletion,
   productsQuery,
@@ -73,11 +74,13 @@ function EsteiraPage() {
   const [productId, setProductId] = useState("");
   const [opInterna, setOpInterna] = useState("");
   const [quantidade, setQuantidade] = useState("");
+  const [sourceIds, setSourceIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [pendingRemove, setPendingRemove] = useState<{ id: string; name: string } | null>(null);
 
   const { data: products = [] } = useQuery(productsQuery);
   const { data: esteira = [] } = useQuery(esteiraQuery);
+  const { data: esteiraAll = [] } = useQuery(esteiraTodasQuery);
   const { data: operations = [] } = useQuery(operationsQuery);
   const { data: entries = [] } = useQuery(entriesQuery());
 
@@ -88,11 +91,16 @@ function EsteiraPage() {
 
   const lotes = useMemo(() => buildLotes(esteira, products), [esteira, products]);
 
+  /** frações removidas da esteira (reaproveitáveis para corrigir engano) */
+  const removidasDe = (pid: string) =>
+    esteiraAll.filter((e) => e.produto_id === pid && e.status === "removido");
+
   const restanteDe = (pid: string, ignore?: string) => {
     const p = productById.get(pid);
     if (!p) return 0;
-    return remainingToDistribute(p, lotesOfProduct(esteira, pid), ignore);
+    return remainingToDistribute(p, lotesOfProduct(esteiraAll, pid), ignore);
   };
+
 
   const options = useMemo(
     () =>
@@ -126,13 +134,19 @@ function EsteiraPage() {
     [products, esteira],
   );
 
-  const restanteAtual = productId ? restanteDe(productId, loteId ?? undefined) : 0;
+  const removidas = productId && !loteId ? removidasDe(productId) : [];
+  const sourcesQtd = removidas
+    .filter((r) => sourceIds.includes(r.id))
+    .reduce((s, r) => s + (r.quantidade || 0), 0);
+  const restanteAtual =
+    (productId ? restanteDe(productId, loteId ?? undefined) : 0) + sourcesQtd;
 
   function openAdd() {
     setLoteId(null);
     setProductId("");
     setOpInterna("");
     setQuantidade("");
+    setSourceIds([]);
     setOpen(true);
   }
 
@@ -141,13 +155,24 @@ function EsteiraPage() {
     setProductId(lote.product.id);
     setOpInterna(lote.opInterna ?? "");
     setQuantidade(String(lote.quantidade || ""));
+    setSourceIds([]);
     setOpen(true);
   }
 
   function pickProduct(id: string) {
     setProductId(id);
     setOpInterna("");
+    setSourceIds([]);
     setQuantidade(String(restanteDe(id)));
+  }
+
+  function toggleSource(id: string, qtd: number) {
+    setSourceIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      const delta = prev.includes(id) ? -qtd : qtd;
+      setQuantidade((q) => String(Math.max(0, (Number(q) || 0) + delta)));
+      return next;
+    });
   }
 
   async function save() {
@@ -173,9 +198,11 @@ function EsteiraPage() {
           opInterna,
           quantidade: qtd,
           ...(loteId ? { loteId } : {}),
+          ...(sourceIds.length > 0 ? { sourceLoteIds: sourceIds } : {}),
         },
       });
       if (!res.ok) throw new Error(res.error);
+
 
       toast.success(loteId ? "OP Interna atualizada." : "OP Interna adicionada à esteira.");
       setOpen(false);
@@ -340,9 +367,11 @@ function EsteiraPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Remover OP Interna da esteira?</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingRemove?.name} deixará de aparecer na esteira e sua quantidade volta a ficar
-              disponível para distribuição. O cadastro do produto continua salvo.
+              {pendingRemove?.name} deixa de aparecer na esteira, no Dashboard e na Marcação de
+              Produção. A OP Interna, a quantidade e o histórico continuam salvos e a fração segue
+              aparecendo em Produtos e Faturamento.
             </AlertDialogDescription>
+
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="h-11 sm:h-9">Cancelar</AlertDialogCancel>
@@ -382,26 +411,56 @@ function EsteiraPage() {
 
             {productId ? (
               <div className="rounded-md bg-secondary p-3 text-sm">
-                Restante disponível para distribuir:{" "}
+                Disponível para esta OP Interna:{" "}
                 <strong className="tabular-nums">{restanteAtual}</strong> peças de{" "}
                 {productById.get(productId)?.total_quantity ?? 0}.
                 {restanteAtual <= 0 ? (
                   <span className="mt-1 block text-destructive">
-                    Este produto já está totalmente distribuído. Remova ou reduza uma OP Interna
-                    existente para liberar quantidade.
+                    Este produto já está totalmente distribuído. Reduza uma OP Interna existente ou
+                    reaproveite uma fração removida para liberar quantidade.
                   </span>
                 ) : null}
-                {lotesOfProduct(esteira, productId).length > 0 ? (
+                {lotesOfProduct(esteiraAll, productId).length > 0 ? (
                   <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
-                    {lotesOfProduct(esteira, productId).map((l) => (
+                    {lotesOfProduct(esteiraAll, productId).map((l) => (
                       <li key={l.id} className="tabular-nums">
                         OP {l.op_interna || "—"}: {l.quantidade} pç
+                        {l.status === "removido" ? " (fora da esteira)" : ""}
                       </li>
                     ))}
                   </ul>
                 ) : null}
               </div>
             ) : null}
+
+            {removidas.length > 0 ? (
+              <div className="space-y-2 rounded-md border p-3">
+                <p className="text-sm font-medium">Reaproveitar frações removidas</p>
+                <p className="text-xs text-muted-foreground">
+                  Selecione as frações removidas por engano para somar suas quantidades a esta nova
+                  OP Interna. As selecionadas deixam de existir e qualquer sobra volta ao saldo não
+                  alocado.
+                </p>
+                {removidas.map((r) => (
+                  <label
+                    key={r.id}
+                    className="flex min-h-11 cursor-pointer items-center gap-3 text-sm md:min-h-0"
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={sourceIds.includes(r.id)}
+                      onChange={() => toggleSource(r.id, r.quantidade || 0)}
+                    />
+                    <span className="tabular-nums">
+                      OP Interna {r.op_interna || "—"} — {r.quantidade} peças
+                    </span>
+                  </label>
+                ))}
+              </div>
+            ) : null}
+
+
 
             <div className="space-y-1.5">
               <Label>OP Interna</Label>

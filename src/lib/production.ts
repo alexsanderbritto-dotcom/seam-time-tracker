@@ -69,6 +69,25 @@ export const esteiraQuery = {
   },
 };
 
+/**
+ * Todas as frações já criadas (na esteira ou removidas dela). Remover da
+ * esteira é uma remoção suave: a fração continua existindo, com sua OP Interna
+ * e quantidade intactas, em Produtos e Faturamento.
+ */
+export const esteiraTodasQuery = {
+  queryKey: ["esteira_producao", "todas"],
+  queryFn: async (): Promise<EsteiraItem[]> => {
+    const { data, error } = await db
+      .from("esteira_producao")
+      .select("id,produto_id,data_adicionado,status,op_interna,quantidade")
+      .in("status", ["ativo", "removido"])
+      .order("data_adicionado", { ascending: false });
+    if (error) throw error;
+    return data as EsteiraItem[];
+  },
+};
+
+
 /** Uma fração (OP Interna) de um produto dentro da esteira. */
 export type Lote = {
   /** id do registro na esteira */
@@ -151,11 +170,14 @@ export type ProductRow = {
   opInterna: string | null;
   /** quantidade desta linha (da fração, ou total do produto quando não fracionado) */
   quantidade: number;
-  /** total de frações ativas deste produto */
+  /** total de frações deste produto (na esteira ou removidas dela) */
   fracoes: number;
+  /** false quando a fração foi removida da esteira (dados preservados) */
+  naEsteira: boolean;
   status: string;
   pct: number;
 };
+
 
 /**
  * Constrói as linhas de todos os módulos: produtos sem fração aparecem como
@@ -178,6 +200,7 @@ export function buildProductRows(
         opInterna: null,
         quantidade: product.total_quantity ?? 0,
         fracoes: 0,
+        naEsteira: false,
         status: product.status,
         pct: 0,
       });
@@ -199,6 +222,7 @@ export function buildProductRows(
         opInterna: l.op_interna,
         quantidade: l.quantidade || 0,
         fracoes: lotes.length,
+        naEsteira: l.status === "ativo",
         status,
         pct,
       });
@@ -213,11 +237,14 @@ export function buildProductRows(
         opInterna: null,
         quantidade: restante,
         fracoes: lotes.length,
+        naEsteira: false,
         status: "em_estoque",
         pct: 0,
       });
     }
   }
+
+
 
   return rows.sort(
     (a, b) =>
