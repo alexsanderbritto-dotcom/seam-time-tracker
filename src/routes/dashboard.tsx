@@ -749,21 +749,49 @@ function DashboardPage() {
                                 {!c.active ? (
                                   <span className="text-muted-foreground">–</span>
                                 ) : (
-                                  <div className="leading-tight">
-                                    <span className={`tabular-nums ${perfClass(c.produced, c.estimated)}`}>
-                                      {c.produced}
-                                      <span className="text-muted-foreground">
-                                        {" / "}
-                                        {c.estimated != null ? Math.round(c.estimated) : "—"}
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span
+                                        tabIndex={0}
+                                        className="block cursor-default leading-tight outline-none focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm"
+                                      >
+                                        <span className={`tabular-nums ${perfClass(c.produced, c.estimated)}`}>
+                                          {c.produced}
+                                          <span className="text-muted-foreground">
+                                            {" / "}
+                                            {c.estimated != null ? Math.round(c.estimated) : "—"}
+                                          </span>
+                                        </span>
+                                        <div className="text-[10px] tabular-nums text-muted-foreground">
+                                          {c.opPct != null ? `${c.opPct.toFixed(1)}%` : "—"}
+                                          {c.adjusted != null
+                                            ? ` · aj. ${Math.round(c.adjusted)}`
+                                            : ""}
+                                        </div>
                                       </span>
-                                    </span>
-                                    <div className="text-[10px] tabular-nums text-muted-foreground">
-                                      {c.opPct != null ? `${c.opPct.toFixed(1)}%` : "—"}
-                                      {c.adjusted != null
-                                        ? ` · aj. ${Math.round(c.adjusted)}`
-                                        : ""}
-                                    </div>
-                                  </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="bottom"
+                                      className="max-w-[240px] border border-border bg-popover text-popover-foreground shadow-lg"
+                                    >
+                                      <div className="space-y-1">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                          Detalhamento por OP Interna
+                                        </p>
+                                        {c.breakdown.length === 0 ? (
+                                          <p className="text-xs text-muted-foreground">Sem detalhamento.</p>
+                                        ) : (
+                                          c.breakdown.map((b, bi) => (
+                                            <p key={bi} className="font-mono text-xs tabular-nums">
+                                              <span className="font-semibold">{b.qty}</span>
+                                              <span className="text-muted-foreground">/</span>
+                                              {b.opInterna}
+                                            </p>
+                                          ))
+                                        )}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
                                 )}
                               </TableCell>
                             ))}
