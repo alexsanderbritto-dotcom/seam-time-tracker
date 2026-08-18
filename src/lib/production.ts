@@ -136,6 +136,84 @@ export function remainingToDistribute(
   return Math.max(0, (product.total_quantity ?? 0) - used);
 }
 
+/* ---------- linhas exibidas nos módulos (produto mestre x frações) ---------- */
+
+/**
+ * Linha de exibição: uma fração (quando o produto já foi enviado à esteira)
+ * ou o próprio produto mestre (quando ainda não tem nenhuma fração).
+ */
+export type ProductRow = {
+  /** id único da linha */
+  key: string;
+  /** id da fração na esteira (null quando o produto ainda não tem frações) */
+  loteId: string | null;
+  product: Product;
+  opInterna: string | null;
+  /** quantidade desta linha (da fração, ou total do produto quando não fracionado) */
+  quantidade: number;
+  /** total de frações ativas deste produto */
+  fracoes: number;
+  status: string;
+  pct: number;
+};
+
+/**
+ * Constrói as linhas de todos os módulos: produtos sem fração aparecem como
+ * antes; produtos com frações aparecem uma linha por fração (sem agregação).
+ */
+export function buildProductRows(
+  products: Product[],
+  esteira: EsteiraItem[],
+  operations: Operation[] = [],
+  entries: Pick<ProductionEntry, "operation_id" | "quantity" | "lote_id">[] = [],
+): ProductRow[] {
+  const rows: ProductRow[] = [];
+  for (const product of products) {
+    const lotes = lotesOfProduct(esteira, product.id);
+    if (lotes.length === 0) {
+      rows.push({
+        key: product.id,
+        loteId: null,
+        product,
+        opInterna: null,
+        quantidade: product.total_quantity ?? 0,
+        fracoes: 0,
+        status: product.status,
+        pct: 0,
+      });
+      continue;
+    }
+    for (const l of lotes) {
+      const loteEntries = entries.filter((e) => e.lote_id === l.id);
+      const { pct, done } = productCompletion(
+        { id: product.id, total_quantity: l.quantidade || 0 },
+        operations,
+        loteEntries as Pick<ProductionEntry, "product_id" | "operation_id" | "quantity">[],
+      );
+      const produced = loteEntries.reduce((s, e) => s + e.quantity, 0);
+      const status = produced <= 0 ? "em_estoque" : done ? "finalizado" : "em_producao";
+      rows.push({
+        key: l.id,
+        loteId: l.id,
+        product,
+        opInterna: l.op_interna,
+        quantidade: l.quantidade || 0,
+        fracoes: lotes.length,
+        status,
+        pct,
+      });
+    }
+  }
+  return rows.sort(
+    (a, b) =>
+      opInternaKey(a.opInterna) - opInternaKey(b.opInterna) ||
+      String(a.opInterna ?? "").localeCompare(String(b.opInterna ?? "")) ||
+      a.product.name.localeCompare(b.product.name, "pt-BR"),
+  );
+}
+
+
+
 
 export type Company = { id: string; name: string };
 

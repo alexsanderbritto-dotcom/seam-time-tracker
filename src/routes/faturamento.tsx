@@ -27,7 +27,16 @@ import {
 import { db } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { useMarcadorSession } from "@/lib/marcador-session";
-import { brl, productsQuery, sortByOpInterna, type Product } from "@/lib/production";
+import {
+  brl,
+  buildProductRows,
+  esteiraQuery,
+  entriesQuery,
+  operationsQuery,
+  productsQuery,
+  type Product,
+  type ProductRow,
+} from "@/lib/production";
 import {
   ColumnFilter,
   applyColumnFilters,
@@ -101,17 +110,27 @@ function FaturamentoPage() {
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const dragging = useRef(false);
 
+  const { data: esteira = [] } = useQuery(esteiraQuery);
+  const { data: operations = [] } = useQuery(operationsQuery);
+  const { data: entries = [] } = useQuery(entriesQuery());
+
+  /** cada fração é uma linha independente; produtos sem fração seguem como antes */
+  const allRows = useMemo(
+    () => buildProductRows(products, esteira, operations, entries),
+    [products, esteira, operations, entries],
+  );
+
   const accessors = useMemo(
     () => ({
-      cliente: (p: Product) => p.cliente,
-      empresa: (p: Product) => p.empresa,
-      op_number: (p: Product) => p.op_number,
-      op_interna: (p: Product) => p.op_interna,
+      cliente: (r: ProductRow) => r.product.cliente,
+      empresa: (r: ProductRow) => r.product.empresa,
+      op_number: (r: ProductRow) => r.product.op_number,
+      op_interna: (r: ProductRow) => r.opInterna,
     }),
     [],
   );
   const optionsFor = (key: keyof typeof accessors) =>
-    Array.from(new Set(products.map((p) => valueOf(accessors[key](p))))).sort((a, b) =>
+    Array.from(new Set(allRows.map((r) => valueOf(accessors[key](r))))).sort((a, b) =>
       a.localeCompare(b, "pt-BR", { numeric: true }),
     );
   const setFilter = (key: string, values: string[]) =>
@@ -130,9 +149,9 @@ function FaturamentoPage() {
     };
   }, []);
 
-  const passesFilters = (p: Product) => {
-    const d = p.delivery_date;
-    const f = p.forecast_date;
+  const passesFilters = (r: ProductRow) => {
+    const d = r.product.delivery_date;
+    const f = r.product.forecast_date;
     if (filters.entregaDe && (!d || d < filters.entregaDe)) return false;
     if (filters.entregaAte && (!d || d > filters.entregaAte)) return false;
     if (filters.previsaoDe && (!f || f < filters.previsaoDe)) return false;
@@ -140,11 +159,11 @@ function FaturamentoPage() {
     return true;
   };
 
-  const productsOfMes = (mesId: string) => {
+  const rowsOfMes = (mesId: string) => {
     const ids = new Set(
       mesProdutos.filter((x) => x.mes_id === mesId).map((x) => x.product_id),
     );
-    return products.filter((p) => ids.has(p.id));
+    return allRows.filter((r) => ids.has(r.product.id));
   };
 
   /** produtos que ainda não pertencem a nenhum mês */
@@ -161,26 +180,27 @@ function FaturamentoPage() {
         mesProdutos.some((x) => x.mes_id === mesId && x.product_id === p.id),
     );
 
-  /** os cards do topo refletem apenas os produtos exibidos na tela */
+  /** os cards do topo refletem apenas as linhas exibidas na tela */
   const scoped = useMemo(() => {
-    if (!openMes) return [] as Product[];
-    return applyColumnFilters(
-      productsOfMes(openMes).filter(passesFilters),
-      colFilters,
-      accessors,
-    );
+    if (!openMes) return [] as ProductRow[];
+    return applyColumnFilters(rowsOfMes(openMes).filter(passesFilters), colFilters, accessors);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openMes, products, mesProdutos, filters, colFilters, accessors]);
+  }, [openMes, allRows, mesProdutos, filters, colFilters, accessors]);
 
-  const value = (p: Product) => p.total_quantity * Number(p.unit_value ?? 0);
-  const selectedSum = products
-    .filter((p) => selected.has(p.id))
-    .reduce((s2, p) => s2 + value(p), 0);
-  const totalValue = scoped.reduce((s, p) => s + value(p), 0);
-  const toInvoiceValue = scoped.filter((p) => !p.delivery_date).reduce((s, p) => s + value(p), 0);
-  const invoicedValue = scoped.filter((p) => !!p.delivery_date).reduce((s, p) => s + value(p), 0);
-  const scopedPieces = scoped.reduce((s, p) => s + p.total_quantity, 0);
+  const value = (r: ProductRow) => r.quantidade * Number(r.product.unit_value ?? 0);
+  const selectedSum = allRows
+    .filter((r) => selected.has(r.key))
+    .reduce((s2, r) => s2 + value(r), 0);
+  const totalValue = scoped.reduce((s, r) => s + value(r), 0);
+  const toInvoiceValue = scoped
+    .filter((r) => !r.product.delivery_date)
+    .reduce((s, r) => s + value(r), 0);
+  const invoicedValue = scoped
+    .filter((r) => !!r.product.delivery_date)
+    .reduce((s, r) => s + value(r), 0);
+  const scopedPieces = scoped.reduce((s, r) => s + r.quantidade, 0);
   const avgPieceValue = scopedPieces > 0 ? totalValue / scopedPieces : 0;
+
 
   const openEdit = (p: Product) => {
     setEditing(p);
@@ -411,9 +431,12 @@ function FaturamentoPage() {
         ) : null}
 
         {sortedMeses.map((m) => {
-          const lista = sortByOpInterna(
-            applyColumnFilters(productsOfMes(m.id).filter(passesFilters), colFilters, accessors),
+          const lista = applyColumnFilters(
+            rowsOfMes(m.id).filter(passesFilters),
+            colFilters,
+            accessors,
           );
+
           const isOpen = openMes === m.id;
           return (
             <Collapsible
@@ -560,17 +583,26 @@ function FaturamentoPage() {
                               </TableCell>
                             </TableRow>
                           ) : (
-                            lista.map((p) => (
-                              <TableRow key={p.id}>
-                                <TableCell className="font-medium">{p.name}</TableCell>
+                            lista.map((r) => {
+                              const p = r.product;
+                              return (
+                              <TableRow key={r.key}>
+                                <TableCell className="font-medium">
+                                  {p.name}
+                                  {r.fracoes > 1 ? (
+                                    <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                                      fração {r.opInterna ?? "—"} de {r.fracoes}
+                                    </span>
+                                  ) : null}
+                                </TableCell>
                                 <TableCell>{p.reference}</TableCell>
                                 <TableCell>{p.op_number}</TableCell>
                                 <TableCell className="font-mono text-xs">
-                                  {p.op_interna ?? ""}
+                                  {r.opInterna ?? ""}
                                 </TableCell>
                                 <TableCell>{p.cliente ?? "—"}</TableCell>
                                 <TableCell>{p.empresa ?? "—"}</TableCell>
-                                <TableCell className="text-right">{p.total_quantity}</TableCell>
+                                <TableCell className="text-right">{r.quantidade}</TableCell>
                                 <TableCell className="text-right">
                                   {brl(Number(p.unit_value ?? 0))}
                                 </TableCell>
@@ -580,21 +612,21 @@ function FaturamentoPage() {
                                     dragging.current = true;
                                     setSelected((prev) => {
                                       const next = e.ctrlKey || e.metaKey ? new Set(prev) : new Set<string>();
-                                      if (prev.has(p.id) && next.has(p.id)) next.delete(p.id);
-                                      else next.add(p.id);
+                                      if (prev.has(r.key) && next.has(r.key)) next.delete(r.key);
+                                      else next.add(r.key);
                                       return next;
                                     });
                                   }}
                                   onMouseEnter={() => {
                                     if (!dragging.current) return;
-                                    setSelected((prev) => new Set(prev).add(p.id));
+                                    setSelected((prev) => new Set(prev).add(r.key));
                                   }}
                                   className={cn(
                                     "cursor-cell select-none text-right font-medium",
-                                    selected.has(p.id) && "bg-primary/15 ring-1 ring-inset ring-primary",
+                                    selected.has(r.key) && "bg-primary/15 ring-1 ring-inset ring-primary",
                                   )}
                                 >
-                                  {brl(value(p))}
+                                  {brl(value(r))}
                                 </TableCell>
                                 <TableCell>{fmtDate(p.entry_date)}</TableCell>
                                 <TableCell>{p.nf_number ?? "—"}</TableCell>
@@ -605,9 +637,11 @@ function FaturamentoPage() {
                                   <Badge variant={p.delivery_date ? "default" : "secondary"}>
                                     {p.delivery_date
                                       ? "Entregue"
-                                      : p.status === "em_producao"
+                                      : r.status === "em_producao"
                                         ? "Em produção"
-                                        : "Em estoque"}
+                                        : r.status === "finalizado"
+                                          ? "Finalizado"
+                                          : "Em estoque"}
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
@@ -620,9 +654,11 @@ function FaturamentoPage() {
                                   </Button>
                                 </TableCell>
                               </TableRow>
-                            ))
+                              );
+                            })
                           )}
                         </TableBody>
+
                       </Table>
                     </div>
                   </CardContent>
@@ -651,7 +687,15 @@ function FaturamentoPage() {
                 <p className="text-sm font-medium">
                   Editando faturamento — {editing.name} (OP {editing.op_number})
                 </p>
+                {esteira.filter((e) => e.produto_id === editing.id).length > 1 ? (
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    Esta alteração afeta todas as{" "}
+                    {esteira.filter((e) => e.produto_id === editing.id).length} frações deste
+                    produto.
+                  </p>
+                ) : null}
               </div>
+
               <div className="space-y-1.5">
                 <Label>Previsão de entrega</Label>
                 <Input

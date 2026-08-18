@@ -2,7 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 
 type Lote = { id: string; op_interna: string | null; quantidade: number };
 
-/** Mantém products.op_interna como o rótulo agregado ("401-402-403"). */
+/**
+ * products.op_interna deixa de ser um rótulo agregado: cada fração exibe a
+ * sua própria OP Interna nos módulos. Mantemos a coluna apenas como
+ * conveniência quando existe exatamente uma fração ativa.
+ */
 async function syncProductOpInterna(productId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
@@ -12,18 +16,13 @@ async function syncProductOpInterna(productId: string) {
     .eq("status", "ativo");
   const list = ((data ?? []) as { op_interna: string | null }[])
     .map((r) => (r.op_interna ?? "").trim())
-    .filter(Boolean)
-    .sort((a, b) => {
-      const na = Number(a.replace(/\D/g, ""));
-      const nb = Number(b.replace(/\D/g, ""));
-      return (Number.isFinite(na) ? na : 1e15) - (Number.isFinite(nb) ? nb : 1e15) ||
-        a.localeCompare(b);
-    });
+    .filter(Boolean);
   await supabaseAdmin
     .from("products")
-    .update({ op_interna: list.length > 0 ? list.join("-") : null })
+    .update({ op_interna: list.length === 1 ? (list[0] as string) : null })
     .eq("id", productId);
 }
+
 
 export const addToEsteira = createServerFn({ method: "POST" })
   .inputValidator(

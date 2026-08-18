@@ -40,19 +40,22 @@ import {
 import { cn } from "@/lib/utils";
 import {
   brl,
+  buildProductRows,
   catalogOperationsQuery,
   clientsQuery,
   companiesQuery,
   entriesQuery,
+  esteiraQuery,
   operationsQuery,
   productsQuery,
   sectorsQuery,
-  sortByOpInterna,
   PECA_PILOTO_LABEL,
   PECA_PILOTO_OPTIONS,
   STATUS_LABEL,
   type Product,
+  type ProductRow,
 } from "@/lib/production";
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { Plus, Trash2, Pencil, Copy, ChevronDown } from "lucide-react";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
 
@@ -104,6 +107,7 @@ function ProdutosPage() {
   const [openBlocks, setOpenBlocks] = useState<Record<string, boolean>>({});
 
   const { data: products = [] } = useQuery(productsQuery);
+  const { data: esteira = [] } = useQuery(esteiraQuery);
   const { data: operations = [] } = useQuery(operationsQuery);
   const { data: entries = [] } = useQuery(entriesQuery());
   const { data: companies = [] } = useQuery(companiesQuery);
@@ -111,7 +115,6 @@ function ProdutosPage() {
   const { data: sectors = [] } = useQuery(sectorsQuery);
   const { data: catalogOps = [] } = useQuery(catalogOperationsQuery);
 
-  void entries;
 
   const totalValue =
     (Number(form.total_quantity) || 0) * (Number(form.unit_value.replace(",", ".")) || 0);
@@ -187,23 +190,36 @@ function ProdutosPage() {
 
   const missingLast = usedSectors.filter((s) => !lastBySector[s.id]);
 
-  const dupLabel = (p: Product) => `${p.reference} · ${p.name}`;
+  /** opções de origem para duplicar operações — referência pode repetir entre produtos */
+  const dupOptions = useMemo(
+    () =>
+      products
+        .filter((p) => p.id !== editing?.id)
+        .map((p) => ({
+          value: p.id,
+          label: `${p.name} · REF ${p.reference} · OP ${p.op_number}`,
+          searchText: `${p.name} ${p.reference} ${p.op_number} ${p.cliente ?? ""}`,
+          node: (
+            <span className="flex flex-col leading-tight">
+              <span className="truncate font-medium">{p.name}</span>
+              <span className="font-mono text-xs text-muted-foreground">
+                REF {p.reference} · OP {p.op_number}
+                {p.cliente ? ` · ${p.cliente}` : ""}
+              </span>
+            </span>
+          ),
+        })),
+    [products, editing],
+  );
 
-  function applyDuplicate(value: string) {
-    setDupValue(value);
-    const src = products.find((p) => dupLabel(p) === value);
+  function applyDuplicate(srcId: string) {
+    setDupValue(srcId);
+    const src = products.find((p) => p.id === srcId);
     if (!src || src.id === editing?.id) return;
     const srcOps = operations.filter((o) => o.product_id === src.id && o.catalog_operation_id);
     const ops = srcOps.map((o) => o.catalog_operation_id as string);
-    let added = 0;
-    setSelectedOps((prev) => {
-      const merged = new Set(prev);
-      ops.forEach((id) => {
-        if (!merged.has(id)) added++;
-        merged.add(id);
-      });
-      return Array.from(merged);
-    });
+    const added = ops.filter((id) => !selectedOps.includes(id)).length;
+    setSelectedOps((prev) => Array.from(new Set([...prev, ...ops])));
     // copia também as "últimas operações" por setor do produto de origem
     setLastBySector((prev) => {
       const next = { ...prev };
@@ -214,11 +230,11 @@ function ProdutosPage() {
       }
       return next;
     });
-    added = ops.filter((id) => !selectedOps.includes(id)).length;
     toast.success(
-      `${added} operação(ões) copiada(s) de ${src.reference}, incluindo as últimas operações por setor.`,
+      `${added} operação(ões) copiada(s) de ${src.name} (REF ${src.reference} · OP ${src.op_number}), incluindo as últimas operações por setor.`,
     );
   }
+
 
 
 
@@ -367,29 +383,35 @@ function ProdutosPage() {
 
   const accessors = useMemo(
     () => ({
-      cliente: (p: Product) => p.cliente,
-      empresa: (p: Product) => p.empresa,
-      op_number: (p: Product) => p.op_number,
-      op_interna: (p: Product) => p.op_interna,
+      cliente: (r: ProductRow) => r.product.cliente,
+      empresa: (r: ProductRow) => r.product.empresa,
+      op_number: (r: ProductRow) => r.product.op_number,
+      op_interna: (r: ProductRow) => r.opInterna,
     }),
     [],
   );
 
+  /** cada fração é uma linha independente; produtos sem fração seguem como antes */
+  const allRows = useMemo(
+    () => buildProductRows(products, esteira, operations, entries),
+    [products, esteira, operations, entries],
+  );
+
   const optionsFor = (key: keyof typeof accessors) =>
-    Array.from(new Set(products.map((p) => valueOf(accessors[key](p))))).sort((a, b) =>
+    Array.from(new Set(allRows.map((r) => valueOf(accessors[key](r))))).sort((a, b) =>
       a.localeCompare(b, "pt-BR", { numeric: true }),
     );
 
   const filtered = useMemo(
-    () => sortByOpInterna(applyColumnFilters(products, colFilters, accessors)),
-    [products, colFilters, accessors],
+    () => applyColumnFilters(allRows, colFilters, accessors),
+    [allRows, colFilters, accessors],
   );
 
   const statusTotals = useMemo(() => {
     const acc = { em_estoque: 0, em_producao: 0, finalizado: 0 } as Record<string, number>;
-    for (const p of filtered) {
-      if (acc[p.status] === undefined) acc[p.status] = 0;
-      acc[p.status] = (acc[p.status] ?? 0) + p.total_quantity;
+    for (const r of filtered) {
+      if (acc[r.status] === undefined) acc[r.status] = 0;
+      acc[r.status] = (acc[r.status] ?? 0) + r.quantidade;
     }
     return acc;
   }, [filtered]);
@@ -399,7 +421,7 @@ function ProdutosPage() {
 
   const blocks = (["em_estoque", "em_producao", "finalizado"] as const).map((st) => ({
     status: st,
-    rows: filtered.filter((p) => p.status === st),
+    rows: filtered.filter((r) => r.status === st),
   }));
 
   return (
@@ -507,8 +529,10 @@ function ProdutosPage() {
                               </TableCell>
                             </TableRow>
                           ) : (
-                            rows.map((p) => (
-                              <TableRow key={p.id}>
+                            rows.map((r) => {
+                              const p = r.product;
+                              return (
+                              <TableRow key={r.key}>
                                 <TableCell>
                                   <ProductPhotoCell path={p.photo_url} title={p.name} />
                                 </TableCell>
@@ -520,20 +544,27 @@ function ProdutosPage() {
                                     {p.peca_piloto ? PECA_PILOTO_LABEL[p.peca_piloto] : "—"}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="font-medium">{p.name}</TableCell>
+                                <TableCell className="font-medium">
+                                  {p.name}
+                                  {r.fracoes > 1 ? (
+                                    <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                                      fração {r.opInterna ?? "—"} de {r.fracoes}
+                                    </span>
+                                  ) : null}
+                                </TableCell>
                                 <TableCell className="font-mono text-xs">{p.reference}</TableCell>
                                 <TableCell className="font-mono text-xs">{p.op_number}</TableCell>
                                 <TableCell className="font-mono text-xs">
-                                  {p.op_interna ?? "—"}
+                                  {r.opInterna ?? "—"}
                                 </TableCell>
                                 <TableCell>{p.cliente ?? "—"}</TableCell>
                                 <TableCell>{p.empresa ?? "—"}</TableCell>
-                                <TableCell className="text-right">{p.total_quantity}</TableCell>
+                                <TableCell className="text-right">{r.quantidade}</TableCell>
                                 <TableCell className="text-right">
                                   {brl(p.unit_value ?? 0)}
                                 </TableCell>
                                 <TableCell className="text-right font-medium">
-                                  {brl((p.unit_value ?? 0) * p.total_quantity)}
+                                  {brl((p.unit_value ?? 0) * r.quantidade)}
                                 </TableCell>
                                 <TableCell className="whitespace-nowrap">
                                   {p.entry_date ? p.entry_date.split("-").reverse().join("/") : "—"}
@@ -548,7 +579,11 @@ function ProdutosPage() {
                                     </Button>
                                     <ConfirmDelete
                                       title="Excluir produto?"
-                                      description={`O produto ${p.name} (OP ${p.op_number}) e suas operações serão excluídos permanentemente.`}
+                                      description={`O produto ${p.name} (OP ${p.op_number})${
+                                        r.fracoes > 0
+                                          ? `, suas ${r.fracoes} fração(ões) na esteira`
+                                          : ""
+                                      } e suas operações serão excluídos permanentemente.`}
                                       onConfirm={() => void removeProduct(p.id)}
                                     >
                                       <Button variant="ghost" size="icon">
@@ -558,7 +593,9 @@ function ProdutosPage() {
                                   </div>
                                 </TableCell>
                               </TableRow>
-                            ))
+                              );
+                            })
+
                           )}
                         </TableBody>
                       </Table>
@@ -578,27 +615,32 @@ function ProdutosPage() {
             <DialogTitle>{editing ? "Editar produto / OP" : "Novo produto / OP"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3">
+            {editing && esteira.filter((e) => e.produto_id === editing.id).length > 0 ? (
+              <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+                Esta alteração afeta todas as{" "}
+                {esteira.filter((e) => e.produto_id === editing.id).length} fração(ões) deste
+                produto — nome, referência, cliente, empresa, valor unitário, NF e ficha são dados
+                compartilhados. OP Interna e quantidade de cada fração são editadas na Esteira.
+              </p>
+            ) : null}
+
             <div className="space-y-1.5 rounded-md border border-dashed border-input p-3">
               <Label className="flex items-center gap-2">
                 <Copy className="h-4 w-4" /> Duplicar operações de um produto existente
               </Label>
-              <Input
-                list="duplicar-list"
-                placeholder="Buscar por referência ou nome…"
+              <SearchableSelect
+                options={dupOptions}
                 value={dupValue}
-                onChange={(e) => applyDuplicate(e.target.value)}
+                onChange={applyDuplicate}
+                placeholder="Buscar por nome, referência, OP ou cliente…"
+                searchPlaceholder="Digite nome, REF, OP ou cliente…"
               />
-              <datalist id="duplicar-list">
-                {products
-                  .filter((p) => p.id !== editing?.id)
-                  .map((p) => (
-                    <option key={p.id} value={dupLabel(p)} />
-                  ))}
-              </datalist>
               <p className="text-xs text-muted-foreground">
-                Copia apenas as operações, somando às já selecionadas. Você pode ajustar antes de
-                salvar.
+                Referências podem se repetir entre produtos: escolha na lista exatamente qual
+                produto (REF · OP · cliente) será a origem. Copia apenas as operações, somando às
+                já selecionadas.
               </p>
+
             </div>
 
             <div className="space-y-1.5">
