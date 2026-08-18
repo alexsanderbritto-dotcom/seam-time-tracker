@@ -14,6 +14,7 @@ import {
   Menu,
   AlertTriangle,
   MonitorPlay,
+  Unlink,
 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ const nav = [
   { to: "/gargalo", label: "Gargalo na Produção", icon: AlertTriangle, adminOnly: true },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: true },
   { to: "/painel", label: "Painel (TV)", icon: MonitorPlay, adminOnly: true },
+  { to: "/marcacoes-orfas", label: "Marcações sem OP Interna", icon: Unlink, adminOnly: true },
 
 ] as const;
 
