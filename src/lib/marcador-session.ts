@@ -13,7 +13,7 @@ export type MarcadorSession = {
 
 export function readSession(): MarcadorSession | null {
   if (typeof window === "undefined") return null;
-  const raw = sessionStorage.getItem(MARCADOR_STORAGE_KEY);
+  const raw = localStorage.getItem(MARCADOR_STORAGE_KEY);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as MarcadorSession;
@@ -25,12 +25,12 @@ export function readSession(): MarcadorSession | null {
 }
 
 export function writeSession(session: MarcadorSession) {
-  sessionStorage.setItem(MARCADOR_STORAGE_KEY, JSON.stringify(session));
+  localStorage.setItem(MARCADOR_STORAGE_KEY, JSON.stringify(session));
   window.dispatchEvent(new Event("marcador-session"));
 }
 
 export function clearSession() {
-  sessionStorage.removeItem(MARCADOR_STORAGE_KEY);
+  localStorage.removeItem(MARCADOR_STORAGE_KEY);
   window.dispatchEvent(new Event("marcador-session"));
 }
 

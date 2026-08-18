@@ -21,7 +21,7 @@ async function signingKey(): Promise<CryptoKey> {
 
 export async function readToken(
   token: string | undefined,
-): Promise<{ id: string; nome: string; cargo: Cargo; exp: number } | null> {
+): Promise<{ id: string; nome: string; cargo: Cargo } | null> {
   if (!token) return null;
   const [body, sig] = token.split(".");
   if (!body || !sig) return null;
@@ -33,18 +33,17 @@ export async function readToken(
   );
   if (!valid) return null;
   try {
-    const parsed = JSON.parse(new TextDecoder().decode(fromB64url(body))) as {
+    // Sem verificação de expiração: a sessão só termina no logout explícito.
+    return JSON.parse(new TextDecoder().decode(fromB64url(body))) as {
       id: string;
       nome: string;
       cargo: Cargo;
-      exp: number;
     };
-    if (!parsed.exp || parsed.exp < Date.now()) return null;
-    return parsed;
   } catch {
     return null;
   }
 }
+
 
 export async function requireAdminClaims(token: string | undefined) {
   const claims = await readToken(token);
