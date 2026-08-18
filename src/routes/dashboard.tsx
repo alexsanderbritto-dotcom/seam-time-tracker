@@ -26,6 +26,7 @@ import {
   catalogOperationsQuery,
   employeesQuery,
   entriesQuery,
+  buildLotes,
   esteiraQuery,
   fmt,
   metaProducaoQuery,
@@ -94,20 +95,8 @@ function DashboardPage() {
     [ocorrencias],
   );
 
-  const esteiraProducts = useMemo(() => {
-    const ids = new Set(esteira.map((e) => e.produto_id));
-    const num = (v: string | null) => {
-      const n = Number(String(v ?? "").replace(/\D/g, ""));
-      return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
-    };
-    return products
-      .filter((p) => ids.has(p.id))
-      .sort(
-        (a, b) =>
-          num(a.op_interna) - num(b.op_interna) ||
-          (a.op_interna ?? "").localeCompare(b.op_interna ?? ""),
-      );
-  }, [esteira, products]);
+  /** frações (OP interna) ativas na esteira, ordenadas por OP interna */
+  const esteiraLotes = useMemo(() => buildLotes(esteira, products), [esteira, products]);
 
   const employeeOptions = useMemo<SearchableOption[]>(
     () => [
@@ -415,18 +404,23 @@ function DashboardPage() {
 
 
   const visibleProducts = useMemo(() => {
-    return esteiraProducts
-      .map((p) => {
-        const { pct, done, perOperation } = productCompletion(p, visibleOperations, allEntries);
+    return esteiraLotes
+      .map((lote) => {
+        const loteEntries = allEntries.filter((e) => e.lote_id === lote.id);
+        const { pct, done, perOperation } = productCompletion(
+          { id: lote.product.id, total_quantity: lote.quantidade },
+          visibleOperations,
+          loteEntries,
+        );
         const moving = perOperation.some((op) => op.pct > 0 && op.pct < 100);
-        return { p, pct, done, perOperation, moving };
+        return { lote, p: lote.product, pct, done, perOperation, moving };
       })
       .filter(
         (r) =>
           movementFilter === "all" ||
           (movementFilter === "movimento" ? r.moving : !r.moving),
       );
-  }, [esteiraProducts, visibleOperations, allEntries, movementFilter]);
+  }, [esteiraLotes, visibleOperations, allEntries, movementFilter]);
 
   // Produção por operação x horário (todos os colaboradores e produtos)
   const opHourRows = useMemo(() => {
@@ -460,7 +454,7 @@ function DashboardPage() {
         onOpenChange={setMetaOpen}
         date={date}
         sectors={sectors}
-        products={esteiraProducts}
+        lotes={esteiraLotes}
         operations={operations}
         catalogOps={catalogOps}
         entries={allEntries}
@@ -801,24 +795,24 @@ function DashboardPage() {
           <CardContent className="grid gap-4 md:grid-cols-2">
             {visibleProducts.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Nenhum produto na esteira de produção.
+                Nenhuma OP interna na esteira de produção.
               </p>
             ) : (
-              visibleProducts.map(({ p, pct, done, perOperation, moving }) => {
-                const isOpen = !!expanded[p.id];
+              visibleProducts.map(({ lote, p, pct, done, perOperation, moving }) => {
+                const isOpen = !!expanded[lote.id];
                 return (
 
-                  <div key={p.id} className="rounded-md border border-border p-4">
+                  <div key={lote.id} className="rounded-md border border-border p-4">
                     <button
                       type="button"
                       className="w-full select-none text-left"
-                      onClick={() => setExpanded((s) => ({ ...s, [p.id]: !s[p.id] }))}
+                      onClick={() => setExpanded((s) => ({ ...s, [lote.id]: !s[lote.id] }))}
                       aria-expanded={isOpen}
                     >
                       <div className="flex items-baseline justify-between gap-2">
                         <p className="font-medium">
-                          {p.op_interna ? (
-                            <span className="font-bold">{p.op_interna} — </span>
+                          {lote.opInterna ? (
+                            <span className="font-bold">{lote.opInterna} — </span>
                           ) : null}
                           {p.name}
                           <span
@@ -848,7 +842,7 @@ function DashboardPage() {
                       <Progress value={Math.min(pct, 100)} className="my-3" />
                       <p className="text-sm text-muted-foreground">
                         <span className="font-medium text-foreground">{pct.toFixed(0)}%</span>{" "}
-                        concluído · meta de {p.total_quantity} peças por operação
+                        concluído · meta de {lote.quantidade} peças por operação
                         {done ? " · finalizado" : ""}
                       </p>
                     </button>
