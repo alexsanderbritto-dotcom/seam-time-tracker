@@ -30,14 +30,17 @@ import { ProductPhotoCell } from "@/components/ProductPhoto";
 import { addToEsteira, removeFromEsteira } from "@/lib/esteira.functions";
 import { useMarcadorSession } from "@/lib/marcador-session";
 import {
+  buildLotes,
   esteiraQuery,
+  lotesOfProduct,
+  productCompletion,
   productsQuery,
-  sortByOpInterna,
+  entriesQuery,
+  operationsQuery,
+  remainingToDistribute,
   PECA_PILOTO_LABEL,
-  STATUS_LABEL,
-  type Product,
 } from "@/lib/production";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/esteira")({
   head: () => ({
@@ -46,12 +49,12 @@ export const Route = createFileRoute("/esteira")({
       {
         name: "description",
         content:
-          "Acompanhe visualmente os produtos em andamento na esteira de produção e defina a OP interna de cada peça.",
+          "Acompanhe visualmente as OPs internas em andamento na esteira de produção, com quantidade fracionada por OP.",
       },
       { property: "og:title", content: "Esteira de Produção | Controle de Confecção" },
       {
         property: "og:description",
-        content: "Produtos em andamento na esteira, com fotos da peça piloto e ficha técnica.",
+        content: "OPs internas em andamento na esteira, com fotos da peça piloto e ficha técnica.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -66,64 +69,85 @@ function EsteiraPage() {
   const qc = useQueryClient();
   const { session, isAdmin } = useMarcadorSession();
   const [open, setOpen] = useState(false);
+  const [loteId, setLoteId] = useState<string | null>(null);
   const [productId, setProductId] = useState("");
   const [opInterna, setOpInterna] = useState("");
+  const [quantidade, setQuantidade] = useState("");
   const [saving, setSaving] = useState(false);
   const [pendingRemove, setPendingRemove] = useState<{ id: string; name: string } | null>(null);
 
   const { data: products = [] } = useQuery(productsQuery);
   const { data: esteira = [] } = useQuery(esteiraQuery);
+  const { data: operations = [] } = useQuery(operationsQuery);
+  const { data: entries = [] } = useQuery(entriesQuery());
 
   const productById = useMemo(
     () => new Map(products.map((p) => [p.id, p] as const)),
     [products],
   );
 
-  const items = useMemo(() => {
-    const list = esteira
-      .map((e) => ({ entry: e, product: productById.get(e.produto_id) }))
-      .filter((x): x is { entry: (typeof esteira)[number]; product: Product } => !!x.product);
-    // ordenação padrão: OP interna crescente
-    return sortByOpInterna(list.map((x) => ({ ...x, op_interna: x.product.op_interna })));
-  }, [esteira, productById]);
+  const lotes = useMemo(() => buildLotes(esteira, products), [esteira, products]);
+
+  const restanteDe = (pid: string, ignore?: string) => {
+    const p = productById.get(pid);
+    if (!p) return 0;
+    return remainingToDistribute(p, lotesOfProduct(esteira, pid), ignore);
+  };
 
   const options = useMemo(
     () =>
-      products.map((p) => ({
-        value: p.id,
-        label: `${p.name} · OP ${p.op_number}`,
-        searchText: `${p.name} ${p.reference} ${p.op_number} ${p.op_interna ?? ""}`,
-        triggerNode: (
-          <span className="flex flex-col text-left leading-tight">
-            <span className="truncate font-medium">{p.name}</span>
-            <span className="font-mono text-xs text-muted-foreground">
-              OP {p.op_number}
-              {p.reference ? ` · REF ${p.reference}` : null}
+      products.map((p) => {
+        const restante = restanteDe(p.id);
+        return {
+          value: p.id,
+          label: `${p.name} · OP ${p.op_number}`,
+          searchText: `${p.name} ${p.reference} ${p.op_number} ${p.op_interna ?? ""}`,
+          triggerNode: (
+            <span className="flex flex-col text-left leading-tight">
+              <span className="truncate font-medium">{p.name}</span>
+              <span className="font-mono text-xs text-muted-foreground">
+                OP {p.op_number}
+                {p.reference ? ` · REF ${p.reference}` : null}
+              </span>
             </span>
-          </span>
-        ),
-        node: (
-          <span className="flex flex-col leading-tight">
-            <span className="truncate">{p.name}</span>
-            <span className="font-mono text-xs text-muted-foreground">
-              OP {p.op_number}
-              {p.reference ? ` · REF ${p.reference}` : null}
+          ),
+          node: (
+            <span className="flex flex-col leading-tight">
+              <span className="truncate">{p.name}</span>
+              <span className="font-mono text-xs text-muted-foreground">
+                OP {p.op_number}
+                {p.reference ? ` · REF ${p.reference}` : null} · restam {restante} pç
+              </span>
             </span>
-          </span>
-        ),
-      })),
-    [products],
+          ),
+        };
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [products, esteira],
   );
 
+  const restanteAtual = productId ? restanteDe(productId, loteId ?? undefined) : 0;
+
   function openAdd() {
+    setLoteId(null);
     setProductId("");
     setOpInterna("");
+    setQuantidade("");
+    setOpen(true);
+  }
+
+  function openEdit(lote: { id: string; product: { id: string }; opInterna: string | null; quantidade: number }) {
+    setLoteId(lote.id);
+    setProductId(lote.product.id);
+    setOpInterna(lote.opInterna ?? "");
+    setQuantidade(String(lote.quantidade || ""));
     setOpen(true);
   }
 
   function pickProduct(id: string) {
     setProductId(id);
-    setOpInterna(productById.get(id)?.op_interna ?? "");
+    setOpInterna("");
+    setQuantidade(String(restanteDe(id)));
   }
 
   async function save() {
@@ -131,19 +155,34 @@ function EsteiraPage() {
       toast.error("Selecione um produto.");
       return;
     }
+    const qtd = Number(quantidade);
+    if (!Number.isFinite(qtd) || qtd <= 0) {
+      toast.error("Informe a quantidade desta OP Interna.");
+      return;
+    }
+    if (qtd > restanteAtual) {
+      toast.error(`Restam apenas ${restanteAtual} peças para distribuir neste produto.`);
+      return;
+    }
     setSaving(true);
     try {
       const res = await addToEsteira({
-        data: { token: session?.token ?? "", productId, opInterna },
+        data: {
+          token: session?.token ?? "",
+          productId,
+          opInterna,
+          quantidade: qtd,
+          ...(loteId ? { loteId } : {}),
+        },
       });
       if (!res.ok) throw new Error(res.error);
 
-      toast.success("Produto adicionado à esteira.");
+      toast.success(loteId ? "OP Interna atualizada." : "OP Interna adicionada à esteira.");
       setOpen(false);
       qc.invalidateQueries({ queryKey: ["esteira_producao"] });
       qc.invalidateQueries({ queryKey: ["products"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao adicionar produto.");
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar OP Interna.");
     } finally {
       setSaving(false);
     }
@@ -153,125 +192,141 @@ function EsteiraPage() {
     try {
       const res = await removeFromEsteira({ data: { token: session?.token ?? "", id } });
       if (!res.ok) throw new Error(res.error);
-      toast.success("Produto removido da esteira.");
+      toast.success("OP Interna removida da esteira.");
       qc.invalidateQueries({ queryKey: ["esteira_producao"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao remover produto.");
+      toast.error(e instanceof Error ? e.message : "Erro ao remover OP Interna.");
     }
   }
-
 
   return (
     <AppLayout
       title="Esteira de Produção"
-      subtitle="Acompanhamento visual dos produtos em andamento."
+      subtitle="Cada OP Interna é uma fração do produto, com quantidade e progresso próprios."
       requireAdmin={false}
     >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 md:mb-5">
         <p className="text-sm text-muted-foreground">
-          {items.length} produto(s) na esteira.
+          {lotes.length} OP(s) interna(s) na esteira.
           {!isAdmin ? " Visualização somente leitura." : null}
         </p>
         {isAdmin ? (
           <Button className="h-11 w-full text-base sm:h-9 sm:w-auto sm:text-sm" onClick={openAdd}>
-            <Plus className="mr-2 h-4 w-4" /> Adicionar produto
+            <Plus className="mr-2 h-4 w-4" /> Adicionar OP Interna
           </Button>
         ) : null}
       </div>
 
-
-      {items.length === 0 ? (
+      {lotes.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Nenhum produto na esteira ainda.
+            Nenhuma OP Interna na esteira ainda.
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3">
-          {items.map(({ entry, product: p }) => (
-            <Card key={entry.id} className="overflow-hidden">
-              <CardContent className="space-y-4 p-4 pt-5 md:p-6">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h2 className="break-words text-base font-semibold uppercase">
-                      {p.op_interna ? (
-                        <span className="font-bold">{p.op_interna} — </span>
-                      ) : null}
-                      {p.name}
-                    </h2>
-
-                    <p className="font-mono text-xs text-muted-foreground">
-                      REF {p.reference} · OP {p.op_number}
-                    </p>
-                  </div>
-                  <Badge
-                    className="shrink-0"
-                    variant={
-                      p.status === "finalizado"
-                        ? "secondary"
-                        : p.status === "em_producao"
-                          ? "default"
-                          : "outline"
-                    }
-                  >
-                    {STATUS_LABEL[p.status] ?? p.status}
-                  </Badge>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="space-y-1">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Ficha
-                    </p>
-                    <ProductPhotoCell path={p.photo_url} title={p.name} />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Peça piloto
-                    </p>
-                    <Badge variant={p.peca_piloto === "sim" ? "default" : "outline"}>
-                      {p.peca_piloto ? PECA_PILOTO_LABEL[p.peca_piloto] : "—"}
+          {lotes.map((lote) => {
+            const p = lote.product;
+            const loteEntries = entries.filter((e) => e.lote_id === lote.id);
+            const { pct, done } = productCompletion(
+              { id: p.id, total_quantity: lote.quantidade },
+              operations,
+              loteEntries,
+            );
+            return (
+              <Card key={lote.id} className="overflow-hidden">
+                <CardContent className="space-y-4 p-4 pt-5 md:p-6">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="break-words text-base font-semibold uppercase">
+                        <span className="font-bold">{lote.opInterna || "sem OP interna"} — </span>
+                        {p.name}
+                      </h2>
+                      <p className="font-mono text-xs text-muted-foreground">
+                        REF {p.reference} · OP {p.op_number}
+                      </p>
+                    </div>
+                    <Badge className="shrink-0" variant={done ? "secondary" : "default"}>
+                      {done ? "Finalizada" : "Em produção"}
                     </Badge>
                   </div>
-                </div>
 
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                  <div>
-                    <dt className="text-xs text-muted-foreground">OP Interna</dt>
-                    <dd className="font-mono">{p.op_interna ?? "—"}</dd>
+                  <div className="flex items-center gap-4">
+                    <div className="space-y-1">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        Ficha
+                      </p>
+                      <ProductPhotoCell path={p.photo_url} title={p.name} />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        Peça piloto
+                      </p>
+                      <Badge variant={p.peca_piloto === "sim" ? "default" : "outline"}>
+                        {p.peca_piloto ? PECA_PILOTO_LABEL[p.peca_piloto] : "—"}
+                      </Badge>
+                    </div>
                   </div>
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Quantidade</dt>
-                    <dd className="tabular-nums">{p.total_quantity}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Cliente</dt>
-                    <dd className="truncate">{p.cliente ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Entrada</dt>
-                    <dd>{fmtDate(p.entry_date)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Previsão</dt>
-                    <dd>{fmtDate(p.forecast_date)}</dd>
-                  </div>
-                </dl>
 
-                {isAdmin ? (
-                  <div className="flex justify-end">
-                    <Button
-                      variant="outline"
-                      className="h-11 w-full text-base sm:h-9 sm:w-auto sm:text-sm"
-                      onClick={() => setPendingRemove({ id: entry.id, name: p.name })}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4 text-destructive" /> Remover
-                    </Button>
-                  </div>
-                ) : null}
-              </CardContent>
-            </Card>
-          ))}
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div>
+                      <dt className="text-xs text-muted-foreground">OP Interna</dt>
+                      <dd className="font-mono">{lote.opInterna ?? "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground">Qtd. desta OP</dt>
+                      <dd className="tabular-nums font-medium">{lote.quantidade}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground">Qtd. total do produto</dt>
+                      <dd className="tabular-nums">{p.total_quantity}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground">Conclusão</dt>
+                      <dd className="tabular-nums">{pct.toFixed(0)}%</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground">Cliente</dt>
+                      <dd className="truncate">{p.cliente ?? "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground">Entrada</dt>
+                      <dd>{fmtDate(p.entry_date)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground">Previsão</dt>
+                      <dd>{fmtDate(p.forecast_date)}</dd>
+                    </div>
+                  </dl>
+
+                  {isAdmin ? (
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        className="h-11 text-base sm:h-9 sm:text-sm"
+                        onClick={() => openEdit(lote)}
+                      >
+                        <Pencil className="mr-2 h-4 w-4" /> Editar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="h-11 text-base sm:h-9 sm:text-sm"
+                        onClick={() =>
+                          setPendingRemove({
+                            id: lote.id,
+                            name: `${lote.opInterna ?? "sem OP"} — ${p.name}`,
+                          })
+                        }
+                      >
+                        <Trash2 className="mr-2 h-4 w-4 text-destructive" /> Remover
+                      </Button>
+                    </div>
+                  ) : null}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -283,10 +338,10 @@ function EsteiraPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover produto da esteira?</AlertDialogTitle>
+            <AlertDialogTitle>Remover OP Interna da esteira?</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingRemove?.name} deixará de aparecer na esteira. O cadastro do produto e a OP
-              interna continuam salvos.
+              {pendingRemove?.name} deixará de aparecer na esteira e sua quantidade volta a ficar
+              disponível para distribuição. O cadastro do produto continua salvo.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -307,7 +362,9 @@ function EsteiraPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Adicionar produto à esteira</DialogTitle>
+            <DialogTitle>
+              {loteId ? "Editar OP Interna" : "Adicionar OP Interna à esteira"}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid gap-3">
             <div className="space-y-1.5">
@@ -319,26 +376,67 @@ function EsteiraPage() {
                 placeholder="Buscar por referência ou nome…"
                 searchPlaceholder="Digite a referência ou o nome…"
                 emptyMessage="Nenhum produto encontrado."
+                disabled={!!loteId}
               />
             </div>
+
+            {productId ? (
+              <div className="rounded-md bg-secondary p-3 text-sm">
+                Restante disponível para distribuir:{" "}
+                <strong className="tabular-nums">{restanteAtual}</strong> peças de{" "}
+                {productById.get(productId)?.total_quantity ?? 0}.
+                {restanteAtual <= 0 ? (
+                  <span className="mt-1 block text-destructive">
+                    Este produto já está totalmente distribuído. Remova ou reduza uma OP Interna
+                    existente para liberar quantidade.
+                  </span>
+                ) : null}
+                {lotesOfProduct(esteira, productId).length > 0 ? (
+                  <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+                    {lotesOfProduct(esteira, productId).map((l) => (
+                      <li key={l.id} className="tabular-nums">
+                        OP {l.op_interna || "—"}: {l.quantidade} pç
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className="space-y-1.5">
               <Label>OP Interna</Label>
               <Input
-                placeholder="Ex: 1024"
+                placeholder="Ex: 401"
                 inputMode="numeric"
                 className="h-11 text-base md:h-10 md:text-sm"
                 value={opInterna}
                 onChange={(e) => setOpInterna(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Se o produto já tiver OP interna, o valor aparece preenchido e pode ser
-                atualizado.
+                O mesmo produto pode ter várias OPs internas, cada uma com sua quantidade.
               </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Quantidade desta OP Interna</Label>
+              <Input
+                type="number"
+                min={1}
+                max={restanteAtual}
+                inputMode="numeric"
+                className="h-11 text-base md:h-10 md:text-sm"
+                value={quantidade}
+                onChange={(e) => setQuantidade(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button className="h-11 w-full text-base sm:h-10 sm:w-auto sm:text-sm" onClick={save} disabled={saving}>
-              {saving ? "Salvando…" : "Adicionar"}
+            <Button
+              className="h-11 w-full text-base sm:h-10 sm:w-auto sm:text-sm"
+              onClick={save}
+              disabled={saving || restanteAtual <= 0}
+            >
+              {saving ? "Salvando…" : loteId ? "Salvar" : "Adicionar"}
             </Button>
           </DialogFooter>
         </DialogContent>

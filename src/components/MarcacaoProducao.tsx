@@ -24,6 +24,7 @@ import { db } from "@/lib/db";
 import {
   employeesQuery,
   entriesQuery,
+  buildLotes,
   esteiraQuery,
   fmt,
   ocorrenciasQuery,
@@ -56,7 +57,7 @@ export function MarcacaoProducao({
   const qc = useQueryClient();
   const [date, setDate] = useState(todayISO());
   const [employeeId, setEmployeeId] = useState("");
-  const [productId, setProductId] = useState("");
+  const [loteId, setLoteId] = useState("");
   const [slotIdx, setSlotIdx] = useState("");
   const [overtimeId, setOvertimeId] = useState("");
   const [ocorrenciaId, setOcorrenciaId] = useState("");
@@ -85,6 +86,10 @@ export function MarcacaoProducao({
     isLoading: loadingConfig,
     isError: configError,
   } = useDaySlots(date);
+  const lotes = useMemo(() => buildLotes(esteira, products), [esteira, products]);
+  const activeLote = useMemo(() => lotes.find((l) => l.id === loteId), [lotes, loteId]);
+  const productId = activeLote?.product.id ?? "";
+
   const productOps = useMemo(
     () => operations.filter((o) => o.product_id === productId),
     [operations, productId],
@@ -98,33 +103,34 @@ export function MarcacaoProducao({
     [employees],
   );
 
-  const productOptions = useMemo(() => {
-    const ids = new Set(esteira.map((i) => i.produto_id));
-    return products
-      .filter((p) => ids.has(p.id))
-      .map((p) => {
-        const op = p.op_interna?.trim();
+  const productOptions = useMemo(
+    () =>
+      lotes.map((l) => {
+        const op = (l.opInterna ?? "").trim();
         return {
-          value: p.id,
-          label: p.name,
-          searchText: op ?? "",
+          value: l.id,
+          label: l.product.name,
+          searchText: `${op} ${l.product.name} ${l.product.op_number}`,
           node: (
             <span className="flex min-w-0 items-baseline gap-2">
               <span className="text-base font-bold tabular-nums md:text-sm">
                 {op ? `OP ${op}` : "OP —"}
               </span>
-              <span className="truncate text-sm text-muted-foreground md:text-xs">{p.name}</span>
+              <span className="truncate text-sm text-muted-foreground md:text-xs">
+                {l.product.name} · {l.quantidade} pç
+              </span>
             </span>
           ),
           triggerNode: (
             <span className="flex min-w-0 items-baseline gap-2">
               <span className="font-bold tabular-nums">{op ? `OP ${op}` : "OP —"}</span>
-              <span className="truncate text-sm text-muted-foreground">{p.name}</span>
+              <span className="truncate text-sm text-muted-foreground">{l.product.name}</span>
             </span>
           ),
         };
-      });
-  }, [products, esteira]);
+      }),
+    [lotes],
+  );
 
   const filteredOps = useMemo(() => {
     const term = opSearch.trim().toLowerCase();
@@ -139,11 +145,13 @@ export function MarcacaoProducao({
 
   const producedByOperation = useMemo(() => {
     const map: Record<string, number> = {};
-    for (const e of entries) map[e.operation_id] = (map[e.operation_id] ?? 0) + e.quantity;
+    for (const e of entries) {
+      if (loteId && e.lote_id !== loteId) continue;
+      map[e.operation_id] = (map[e.operation_id] ?? 0) + e.quantity;
+    }
     return map;
-  }, [entries]);
+  }, [entries, loteId]);
 
-  const activeProduct = products.find((p) => p.id === productId);
 
   function focusOp(opId: string, direction: "next" | "prev") {
     const ids = filteredOps.map((o: Operation) => o.id);
@@ -194,8 +202,8 @@ export function MarcacaoProducao({
       : normal
         ? { ...normal, overtime: Boolean(normal.overtime) }
         : null;
-    if (!employeeId || !productId || !slot) {
-      toast.error("Preencha colaborador, produto e horário (normal ou hora extra).");
+    if (!employeeId || !loteId || !productId || !slot) {
+      toast.error("Preencha colaborador, OP interna e horário (normal ou hora extra).");
       return;
     }
     const rows = Object.entries(selected)
@@ -203,6 +211,7 @@ export function MarcacaoProducao({
       .map(([operation_id, v]) => ({
         employee_id: employeeId,
         product_id: productId,
+        lote_id: loteId,
         operation_id,
         slot_start: slot.start,
         slot_end: slot.end,
@@ -433,25 +442,25 @@ export function MarcacaoProducao({
             </div>
 
             <div className="space-y-1.5">
-              <Label>Produto (Esteira de Produção)</Label>
+              <Label>OP Interna (Esteira de Produção)</Label>
               <SearchableSelect
                 options={productOptions}
-                value={productId}
+                value={loteId}
                 onChange={(v) => {
-                  setProductId(v);
+                  setLoteId(v);
                   setSelected({});
                   setOpSearch("");
                 }}
                 placeholder="Buscar por nome ou OP Interna..."
                 searchPlaceholder="Buscar por nome ou OP Interna..."
-                emptyMessage="Nenhum produto na esteira de produção."
+                emptyMessage="Nenhuma OP interna na esteira de produção."
               />
             </div>
 
             <div className="space-y-2">
               <Label>Operações executadas</Label>
               {!productId ? (
-                <p className="text-sm text-muted-foreground">Selecione um produto primeiro.</p>
+                <p className="text-sm text-muted-foreground">Selecione uma OP interna primeiro.</p>
               ) : productOps.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   Este produto ainda não tem operações cadastradas.
@@ -486,7 +495,7 @@ export function MarcacaoProducao({
                     <div className="divide-y divide-border rounded-md border border-border">
                       {filteredOps.map((op: Operation) => {
                         const done = producedByOperation[op.id] ?? 0;
-                        const over = activeProduct ? done > activeProduct.total_quantity : false;
+                        const over = activeLote ? done > activeLote.quantidade : false;
                         return (
                           <div
                             key={op.id}

@@ -19,8 +19,8 @@ import {
   producedInSector,
   type CatalogOperation,
   type MetaProducaoDia,
+  type Lote,
   type Operation,
-  type Product,
   type ProductionEntry,
   type Sector,
 } from "@/lib/production";
@@ -30,6 +30,7 @@ type Row = {
   key: string;
   id?: string;
   product_id: string;
+  lote_id: string;
   data: string;
   quantidade: number;
 };
@@ -39,7 +40,7 @@ export function MetaProducaoDialog({
   onOpenChange,
   date,
   sectors,
-  products,
+  lotes,
   operations,
   catalogOps,
   entries,
@@ -49,8 +50,8 @@ export function MetaProducaoDialog({
   onOpenChange: (v: boolean) => void;
   date: string;
   sectors: Sector[];
-  /** produtos disponíveis (apenas os da esteira) */
-  products: Product[];
+  /** frações (OP interna) disponíveis na esteira */
+  lotes: Lote[];
   operations: Operation[];
   catalogOps: CatalogOperation[];
   /** todas as marcações (para calcular o restante do setor) */
@@ -79,6 +80,7 @@ export function MetaProducaoDialog({
           key: m.id,
           id: m.id,
           product_id: m.product_id,
+          lote_id: m.lote_id ?? "",
           data: m.data,
           quantidade: m.quantidade,
         })),
@@ -86,44 +88,56 @@ export function MetaProducaoDialog({
     setRemoved([]);
   }, [open, sectorId, metas]);
 
-  const productName = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
+  const loteById = useMemo(() => new Map(lotes.map((l) => [l.id, l])), [lotes]);
 
   const productOptions = useMemo<SearchableOption[]>(
     () =>
-      products.map((p) => ({
-        value: p.id,
-        label: `OP Interna ${p.op_interna ?? "não definida"} · ${p.name}`,
-        searchText: `${p.op_interna ?? ""} ${p.op_number} ${p.name}`,
+      lotes.map((l) => ({
+        value: l.id,
+        label: `OP Interna ${l.opInterna ?? "não definida"} · ${l.product.name}`,
+        searchText: `${l.opInterna ?? ""} ${l.product.op_number} ${l.product.name}`,
         node: (
           <span>
-            <strong>OP Interna {p.op_interna ?? "não definida"}</strong>{" "}
-            <span className="text-muted-foreground">· {p.name}</span>
+            <strong>OP Interna {l.opInterna ?? "não definida"}</strong>{" "}
+            <span className="text-muted-foreground">
+              · {l.product.name} · {l.quantidade} pç
+            </span>
           </span>
         ),
       })),
-    [products],
+    [lotes],
   );
 
-  const remainingFor = (productId: string) => {
-    const p = productName.get(productId);
-    if (!p) return 0;
-    const done = producedInSector(productId, sectorId, operations, catalogOps, entries);
-    return Math.max(0, (p.total_quantity ?? 0) - done);
+  const remainingFor = (loteId: string) => {
+    const l = loteById.get(loteId);
+    if (!l) return 0;
+    const done = producedInSector(
+      l.product.id,
+      sectorId,
+      operations,
+      catalogOps,
+      entries,
+      l.id,
+    );
+    return Math.max(0, l.quantidade - done);
   };
 
-  const addProduct = (productId: string) => {
-    if (!productId) return;
-    if (rows.some((r) => r.product_id === productId)) {
-      toast.error("Produto já adicionado nesta meta.");
+  const addProduct = (loteId: string) => {
+    if (!loteId) return;
+    const l = loteById.get(loteId);
+    if (!l) return;
+    if (rows.some((r) => r.lote_id === loteId)) {
+      toast.error("Esta OP Interna já foi adicionada nesta meta.");
       return;
     }
     setRows((r) => [
       ...r,
       {
-        key: `new-${productId}-${Date.now()}`,
-        product_id: productId,
+        key: `new-${loteId}-${Date.now()}`,
+        product_id: l.product.id,
+        lote_id: loteId,
         data: date,
-        quantidade: remainingFor(productId),
+        quantidade: remainingFor(loteId),
       },
     ]);
   };
@@ -157,9 +171,10 @@ export function MetaProducaoDialog({
             sector_id: sectorId,
             data: r.data,
             product_id: r.product_id,
+            lote_id: r.lote_id || null,
             quantidade: Number(r.quantidade) || 0,
           })),
-          { onConflict: "sector_id,data,product_id" },
+          { onConflict: "sector_id,data,product_id,lote_id" },
         );
         if (error) throw new Error(error.message);
       }
@@ -222,7 +237,7 @@ export function MetaProducaoDialog({
           ) : (
             <div className="space-y-2">
               {rows.map((r) => {
-                const p = productName.get(r.product_id);
+                const l = loteById.get(r.lote_id);
                 return (
                   <div
                     key={r.key}
@@ -230,11 +245,13 @@ export function MetaProducaoDialog({
                   >
                     <div className="min-w-40 flex-1">
                       <p className="text-sm font-medium">
-                        OP Interna {p?.op_interna ?? "não definida"}
+                        OP Interna {l?.opInterna ?? "não definida"}
                       </p>
-                      <p className="text-xs text-muted-foreground">{p?.name ?? "Produto"}</p>
                       <p className="text-xs text-muted-foreground">
-                        Restante no setor: {remainingFor(r.product_id)}
+                        {l?.product.name ?? "Produto"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Restante no setor: {remainingFor(r.lote_id)}
                       </p>
                     </div>
                     <div className="space-y-1">

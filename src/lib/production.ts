@@ -52,6 +52,8 @@ export type EsteiraItem = {
   produto_id: string;
   data_adicionado: string;
   status: string;
+  op_interna: string | null;
+  quantidade: number;
 };
 
 export const esteiraQuery = {
@@ -59,13 +61,81 @@ export const esteiraQuery = {
   queryFn: async (): Promise<EsteiraItem[]> => {
     const { data, error } = await db
       .from("esteira_producao")
-      .select("id,produto_id,data_adicionado,status")
+      .select("id,produto_id,data_adicionado,status,op_interna,quantidade")
       .eq("status", "ativo")
       .order("data_adicionado", { ascending: false });
     if (error) throw error;
     return data as EsteiraItem[];
   },
 };
+
+/** Uma fração (OP Interna) de um produto dentro da esteira. */
+export type Lote = {
+  /** id do registro na esteira */
+  id: string;
+  product: Product;
+  opInterna: string | null;
+  quantidade: number;
+  dataAdicionado: string;
+};
+
+const opInternaKey = (v: string | null | undefined) => {
+  const n = Number(String(v ?? "").replace(/\D/g, ""));
+  return Number.isFinite(n) && String(v ?? "").trim() !== "" ? n : Number.POSITIVE_INFINITY;
+};
+
+/** Constrói as frações (produto + OP interna + quantidade), ordenadas por OP interna. */
+export function buildLotes(esteira: EsteiraItem[], products: Product[]): Lote[] {
+  const byId = new Map(products.map((p) => [p.id, p] as const));
+  return esteira
+    .map((e) => {
+      const product = byId.get(e.produto_id);
+      if (!product) return null;
+      return {
+        id: e.id,
+        product,
+        opInterna: e.op_interna,
+        quantidade: e.quantidade || 0,
+        dataAdicionado: e.data_adicionado,
+      } satisfies Lote;
+    })
+    .filter((x): x is Lote => !!x)
+    .sort(
+      (a, b) =>
+        opInternaKey(a.opInterna) - opInternaKey(b.opInterna) ||
+        String(a.opInterna ?? "").localeCompare(String(b.opInterna ?? "")),
+    );
+}
+
+/** Frações ativas de um produto, ordenadas por OP interna. */
+export function lotesOfProduct(esteira: EsteiraItem[], productId: string): EsteiraItem[] {
+  return esteira
+    .filter((e) => e.produto_id === productId)
+    .sort(
+      (a, b) =>
+        opInternaKey(a.op_interna) - opInternaKey(b.op_interna) ||
+        String(a.op_interna ?? "").localeCompare(String(b.op_interna ?? "")),
+    );
+}
+
+/** Rótulo agregado das OPs internas de um produto: "401-402-403". */
+export function opInternaLabel(items: { op_interna: string | null }[]): string {
+  const list = items.map((i) => (i.op_interna ?? "").trim()).filter(Boolean);
+  return list.join("-");
+}
+
+/** Quantidade do produto ainda não distribuída entre as OPs internas ativas. */
+export function remainingToDistribute(
+  product: Pick<Product, "total_quantity">,
+  lotesDoProduto: EsteiraItem[],
+  ignoreLoteId?: string,
+): number {
+  const used = lotesDoProduto
+    .filter((l) => l.id !== ignoreLoteId)
+    .reduce((s, l) => s + (l.quantidade || 0), 0);
+  return Math.max(0, (product.total_quantity ?? 0) - used);
+}
+
 
 export type Company = { id: string; name: string };
 
@@ -122,6 +192,8 @@ export type ProductionEntry = {
   entry_date: string;
   is_overtime: boolean;
   ocorrencia_id: string | null;
+  /** fração (OP interna) da esteira à qual a marcação pertence */
+  lote_id: string | null;
   created_at?: string;
 };
 
@@ -396,6 +468,7 @@ export type MetaProducaoDia = {
   sector_id: string;
   data: string;
   product_id: string;
+  lote_id: string | null;
   quantidade: number;
 };
 
@@ -404,7 +477,7 @@ export const metaProducaoQuery = (date: string) => ({
   queryFn: async (): Promise<MetaProducaoDia[]> => {
     const { data, error } = await db
       .from("meta_producao_setor_dia")
-      .select("id,sector_id,data,product_id,quantidade")
+      .select("id,sector_id,data,product_id,lote_id,quantidade")
       .eq("data", date);
     if (error) throw error;
     return data as MetaProducaoDia[];
@@ -417,7 +490,8 @@ export function producedInSector(
   sectorId: string,
   operations: Operation[],
   catalogOps: CatalogOperation[],
-  entries: Pick<ProductionEntry, "operation_id" | "quantity">[],
+  entries: Pick<ProductionEntry, "operation_id" | "quantity" | "lote_id">[],
+  loteId?: string,
 ): number {
   const catSector = new Map(catalogOps.map((c) => [c.id, c.sector_id]));
   const opIds = new Set(
@@ -432,6 +506,6 @@ export function producedInSector(
       .map((o) => o.id),
   );
   return entries
-    .filter((e) => opIds.has(e.operation_id))
+    .filter((e) => opIds.has(e.operation_id) && (!loteId || e.lote_id === loteId))
     .reduce((s, e) => s + e.quantity, 0);
 }

@@ -117,7 +117,9 @@ export type Database = {
           created_at: string
           data_adicionado: string
           id: string
+          op_interna: string | null
           produto_id: string
+          quantidade: number
           status: string
           updated_at: string
         }
@@ -125,7 +127,9 @@ export type Database = {
           created_at?: string
           data_adicionado?: string
           id?: string
+          op_interna?: string | null
           produto_id: string
+          quantidade?: number
           status?: string
           updated_at?: string
         }
@@ -133,7 +137,9 @@ export type Database = {
           created_at?: string
           data_adicionado?: string
           id?: string
+          op_interna?: string | null
           produto_id?: string
+          quantidade?: number
           status?: string
           updated_at?: string
         }
@@ -141,7 +147,7 @@ export type Database = {
           {
             foreignKeyName: "esteira_producao_produto_id_fkey"
             columns: ["produto_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -260,6 +266,7 @@ export type Database = {
           created_at: string
           data: string
           id: string
+          lote_id: string | null
           product_id: string
           quantidade: number
           sector_id: string
@@ -269,6 +276,7 @@ export type Database = {
           created_at?: string
           data: string
           id?: string
+          lote_id?: string | null
           product_id: string
           quantidade?: number
           sector_id: string
@@ -278,12 +286,20 @@ export type Database = {
           created_at?: string
           data?: string
           id?: string
+          lote_id?: string | null
           product_id?: string
           quantidade?: number
           sector_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "meta_producao_setor_dia_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "esteira_producao"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "meta_producao_setor_dia_product_id_fkey"
             columns: ["product_id"]
@@ -438,6 +454,7 @@ export type Database = {
           entry_date: string
           id: string
           is_overtime: boolean
+          lote_id: string | null
           ocorrencia_id: string | null
           operation_id: string
           product_id: string
@@ -451,6 +468,7 @@ export type Database = {
           entry_date?: string
           id?: string
           is_overtime?: boolean
+          lote_id?: string | null
           ocorrencia_id?: string | null
           operation_id: string
           product_id: string
@@ -464,6 +482,7 @@ export type Database = {
           entry_date?: string
           id?: string
           is_overtime?: boolean
+          lote_id?: string | null
           ocorrencia_id?: string | null
           operation_id?: string
           product_id?: string
@@ -477,6 +496,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_entries_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "esteira_producao"
             referencedColumns: ["id"]
           },
           {
