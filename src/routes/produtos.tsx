@@ -546,9 +546,15 @@ function ProdutosPage() {
                                 </TableCell>
                                 <TableCell className="font-medium">
                                   {p.name}
-                                  {r.fracoes > 1 ? (
+                                  {r.fracaoIndex > 0 && r.fracoes > 1 ? (
                                     <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                                      fração {r.opInterna ?? "—"} de {r.fracoes}
+                                      fração {r.fracaoIndex} de {r.fracoes}
+                                      {r.opInterna ? ` · OP ${r.opInterna}` : ""}
+                                    </span>
+                                  ) : null}
+                                  {r.fracaoIndex === 0 && r.fracoes > 0 ? (
+                                    <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                                      saldo não fracionado
                                     </span>
                                   ) : null}
                                 </TableCell>
