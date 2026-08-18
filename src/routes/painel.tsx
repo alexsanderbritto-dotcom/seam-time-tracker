@@ -38,6 +38,7 @@ import {
   ocorrenciasQuery,
   operationsQuery,
   overtimeSlotsQuery,
+  esteiraQuery,
   producedInSector,
   productsQuery,
   sectorsQuery,
@@ -98,6 +99,7 @@ function PainelPage() {
   const { data: overtimeSlots = [] } = useQuery(overtimeSlotsQuery);
   const { data: allEntries = [] } = useQuery({ ...entriesQuery(), refetchInterval: 30000 });
   const { data: ocorrencias = [] } = useQuery({ ...ocorrenciasQuery, refetchInterval: REFETCH });
+  const { data: esteira = [] } = useQuery({ ...esteiraQuery, refetchInterval: REFETCH });
 
   const [display, setDisplay] = useState(false);
   const [previewId, setPreviewId] = useState<string | null>(null);
