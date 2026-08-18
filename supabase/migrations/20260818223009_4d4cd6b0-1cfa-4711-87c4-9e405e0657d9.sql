@@ -1,0 +1,2 @@
+ALTER TABLE public.production_entries DROP CONSTRAINT production_entries_lote_id_fkey;
+ALTER TABLE public.production_entries ADD CONSTRAINT production_entries_lote_id_fkey FOREIGN KEY (lote_id) REFERENCES public.esteira_producao(id) ON DELETE RESTRICT;
