@@ -46,6 +46,7 @@ import {
 import {
   faturamentoMesProdutosQuery,
   faturamentoMesesQuery,
+  linkKey,
   MES_NOMES,
   mesLabel,
 } from "@/lib/faturamento";
@@ -160,25 +161,29 @@ function FaturamentoPage() {
   };
 
   const rowsOfMes = (mesId: string) => {
-    const ids = new Set(
-      mesProdutos.filter((x) => x.mes_id === mesId).map((x) => x.product_id),
+    const keys = new Set(
+      mesProdutos.filter((x) => x.mes_id === mesId).map((x) => linkKey(x.product_id, x.lote_id)),
     );
-    return allRows.filter((r) => ids.has(r.product.id));
+    return allRows.filter((r) => keys.has(linkKey(r.product.id, r.loteId)));
   };
 
-  /** produtos que ainda não pertencem a nenhum mês */
-  const assignedIds = useMemo(() => {
-    const taken = new Set(mesProdutos.map((x) => x.product_id));
-    return taken;
-  }, [mesProdutos]);
+  /** frações/linhas que já pertencem a algum mês */
+  const assignedKeys = useMemo(
+    () => new Set(mesProdutos.map((x) => linkKey(x.product_id, x.lote_id))),
+    [mesProdutos],
+  );
 
-  /** lista de seleção de um mês: produtos livres + os já vinculados a este mês */
-  const selectableProducts = (mesId: string) =>
-    products.filter(
-      (p) =>
-        !assignedIds.has(p.id) ||
-        mesProdutos.some((x) => x.mes_id === mesId && x.product_id === p.id),
+  /** lista de seleção de um mês: linhas livres + as já vinculadas a este mês */
+  const selectableRows = (mesId: string) => {
+    const mine = new Set(
+      mesProdutos.filter((x) => x.mes_id === mesId).map((x) => linkKey(x.product_id, x.lote_id)),
     );
+    return allRows.filter(
+      (r) =>
+        !assignedKeys.has(linkKey(r.product.id, r.loteId)) ||
+        mine.has(linkKey(r.product.id, r.loteId)),
+    );
+  };
 
   /** os cards do topo refletem apenas as linhas exibidas na tela */
   const scoped = useMemo(() => {
@@ -258,14 +263,21 @@ function FaturamentoPage() {
     void qc.invalidateQueries({ queryKey: faturamentoMesProdutosQuery.queryKey });
   };
 
-  const toggleProduto = async (mesId: string, productId: string, checked: boolean) => {
+  const toggleProduto = async (
+    mesId: string,
+    productId: string,
+    loteId: string | null,
+    checked: boolean,
+  ) => {
     if (checked) {
       const { error } = await db
         .from("faturamento_mes_produtos")
-        .insert({ mes_id: mesId, product_id: productId });
+        .insert({ mes_id: mesId, product_id: productId, lote_id: loteId });
       if (error) toast.error(error.message);
     } else {
-      const link = mesProdutos.find((x) => x.mes_id === mesId && x.product_id === productId);
+      const link = mesProdutos.find(
+        (x) => x.mes_id === mesId && x.product_id === productId && (x.lote_id ?? null) === loteId,
+      );
       if (link) {
         const { error } = await db.from("faturamento_mes_produtos").delete().eq("id", link.id);
         if (error) toast.error(error.message);
@@ -489,31 +501,42 @@ function FaturamentoPage() {
 
                     {editingProdutos === m.id ? (
                       <div className="max-h-72 space-y-2 overflow-y-auto rounded-lg border p-3">
-                        {selectableProducts(m.id).length === 0 ? (
+                        {selectableRows(m.id).length === 0 ? (
                           <p className="px-2 py-3 text-sm text-muted-foreground">
                             Todos os produtos já estão vinculados a outros meses.
                           </p>
                         ) : null}
-                        {selectableProducts(m.id).map((p) => {
+                        {selectableRows(m.id).map((r) => {
+                          const p = r.product;
                           const checked = mesProdutos.some(
-                            (x) => x.mes_id === m.id && x.product_id === p.id,
+                            (x) =>
+                              x.mes_id === m.id &&
+                              x.product_id === p.id &&
+                              (x.lote_id ?? null) === r.loteId,
                           );
                           return (
                             <label
-                              key={p.id}
+                              key={r.key}
                               className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-muted"
                             >
                               <Checkbox
                                 checked={checked}
                                 onCheckedChange={(v) =>
-                                  void toggleProduto(m.id, p.id, v === true)
+                                  void toggleProduto(m.id, p.id, r.loteId, v === true)
                                 }
                               />
                               <span className="text-sm">
                                 <span className="font-medium">{p.name}</span>{" "}
                                 <span className="text-muted-foreground">
                                   · OP {p.op_number}
-                                  {p.op_interna ? ` · interna ${p.op_interna}` : ""}
+                                  {r.opInterna ? ` · interna ${r.opInterna}` : ""}
+                                  {r.fracaoIndex > 0 && r.fracoes > 1
+                                    ? ` · fração ${r.fracaoIndex} de ${r.fracoes}`
+                                    : ""}
+                                  {r.fracaoIndex === 0 && r.fracoes > 0
+                                    ? " · saldo não fracionado"
+                                    : ""}
+                                  {` · ${r.quantidade} pç`}
                                 </span>
                               </span>
                             </label>
