@@ -687,7 +687,15 @@ function FaturamentoPage() {
                 <p className="text-sm font-medium">
                   Editando faturamento — {editing.name} (OP {editing.op_number})
                 </p>
+                {esteira.filter((e) => e.produto_id === editing.id).length > 1 ? (
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    Esta alteração afeta todas as{" "}
+                    {esteira.filter((e) => e.produto_id === editing.id).length} frações deste
+                    produto.
+                  </p>
+                ) : null}
               </div>
+
               <div className="space-y-1.5">
                 <Label>Previsão de entrega</Label>
                 <Input
