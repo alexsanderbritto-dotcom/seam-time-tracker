@@ -357,6 +357,14 @@ function DashboardPage() {
         const rows = opKeys.map((opId) => {
           const perSlot = slotInfo.map((info) => {
             const d = info.byOp.get(opId);
+            const breakdown = d
+              ? Array.from(d.byLote.entries()).map(([k, qty]) => {
+                  const opInterna = k.startsWith("p:")
+                    ? productOpInterna.get(k.slice(2)) ?? ""
+                    : loteOpInterna.get(k) ?? "";
+                  return { opInterna: opInterna || "—", qty };
+                })
+              : [];
             return {
               produced: d?.produced ?? 0,
               estimated: d?.meta ?? null,
@@ -364,6 +372,7 @@ function DashboardPage() {
               opPct: d?.opPct ?? null,
               active: !!d,
               byProduct: d ? Array.from(d.byProduct.entries()) : [],
+              breakdown,
             };
           });
           const totalProduced = perSlot.reduce((a, c) => a + c.produced, 0);
