@@ -583,17 +583,26 @@ function FaturamentoPage() {
                               </TableCell>
                             </TableRow>
                           ) : (
-                            lista.map((p) => (
-                              <TableRow key={p.id}>
-                                <TableCell className="font-medium">{p.name}</TableCell>
+                            lista.map((r) => {
+                              const p = r.product;
+                              return (
+                              <TableRow key={r.key}>
+                                <TableCell className="font-medium">
+                                  {p.name}
+                                  {r.fracoes > 1 ? (
+                                    <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                                      fração {r.opInterna ?? "—"} de {r.fracoes}
+                                    </span>
+                                  ) : null}
+                                </TableCell>
                                 <TableCell>{p.reference}</TableCell>
                                 <TableCell>{p.op_number}</TableCell>
                                 <TableCell className="font-mono text-xs">
-                                  {p.op_interna ?? ""}
+                                  {r.opInterna ?? ""}
                                 </TableCell>
                                 <TableCell>{p.cliente ?? "—"}</TableCell>
                                 <TableCell>{p.empresa ?? "—"}</TableCell>
-                                <TableCell className="text-right">{p.total_quantity}</TableCell>
+                                <TableCell className="text-right">{r.quantidade}</TableCell>
                                 <TableCell className="text-right">
                                   {brl(Number(p.unit_value ?? 0))}
                                 </TableCell>
@@ -603,21 +612,21 @@ function FaturamentoPage() {
                                     dragging.current = true;
                                     setSelected((prev) => {
                                       const next = e.ctrlKey || e.metaKey ? new Set(prev) : new Set<string>();
-                                      if (prev.has(p.id) && next.has(p.id)) next.delete(p.id);
-                                      else next.add(p.id);
+                                      if (prev.has(r.key) && next.has(r.key)) next.delete(r.key);
+                                      else next.add(r.key);
                                       return next;
                                     });
                                   }}
                                   onMouseEnter={() => {
                                     if (!dragging.current) return;
-                                    setSelected((prev) => new Set(prev).add(p.id));
+                                    setSelected((prev) => new Set(prev).add(r.key));
                                   }}
                                   className={cn(
                                     "cursor-cell select-none text-right font-medium",
-                                    selected.has(p.id) && "bg-primary/15 ring-1 ring-inset ring-primary",
+                                    selected.has(r.key) && "bg-primary/15 ring-1 ring-inset ring-primary",
                                   )}
                                 >
-                                  {brl(value(p))}
+                                  {brl(value(r))}
                                 </TableCell>
                                 <TableCell>{fmtDate(p.entry_date)}</TableCell>
                                 <TableCell>{p.nf_number ?? "—"}</TableCell>
@@ -628,9 +637,11 @@ function FaturamentoPage() {
                                   <Badge variant={p.delivery_date ? "default" : "secondary"}>
                                     {p.delivery_date
                                       ? "Entregue"
-                                      : p.status === "em_producao"
+                                      : r.status === "em_producao"
                                         ? "Em produção"
-                                        : "Em estoque"}
+                                        : r.status === "finalizado"
+                                          ? "Finalizado"
+                                          : "Em estoque"}
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
@@ -643,9 +654,11 @@ function FaturamentoPage() {
                                   </Button>
                                 </TableCell>
                               </TableRow>
-                            ))
+                              );
+                            })
                           )}
                         </TableBody>
+
                       </Table>
                     </div>
                   </CardContent>
