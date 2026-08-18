@@ -281,6 +281,12 @@ function DashboardPage() {
     const opName = new Map<string, string>();
     for (const o of operations) if (!opName.has(opKeyOf(o.id))) opName.set(opKeyOf(o.id), o.name);
 
+    // Resolve lote -> OP Interna (e fallback produto -> OP Interna master) para o tooltip
+    const loteOpInterna = new Map<string, string>();
+    for (const l of esteiraLotes) loteOpInterna.set(l.id, l.opInterna ?? "");
+    const productOpInterna = new Map<string, string>();
+    for (const p of products) productOpInterna.set(p.id, p.op_interna ?? "");
+
     return emps
       .map((emp) => {
         const empEntries = filtered.filter((e) => e.employee_id === emp.id);
