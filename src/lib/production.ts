@@ -203,7 +203,22 @@ export function buildProductRows(
         pct,
       });
     }
+    // saldo ainda não enviado à esteira continua visível como linha própria
+    const restante = remainingToDistribute(product, lotes);
+    if (restante > 0) {
+      rows.push({
+        key: `${product.id}:restante`,
+        loteId: null,
+        product,
+        opInterna: null,
+        quantidade: restante,
+        fracoes: lotes.length,
+        status: "em_estoque",
+        pct: 0,
+      });
+    }
   }
+
   return rows.sort(
     (a, b) =>
       opInternaKey(a.opInterna) - opInternaKey(b.opInterna) ||
