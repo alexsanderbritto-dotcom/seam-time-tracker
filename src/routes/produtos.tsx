@@ -107,6 +107,7 @@ function ProdutosPage() {
   const [openBlocks, setOpenBlocks] = useState<Record<string, boolean>>({});
 
   const { data: products = [] } = useQuery(productsQuery);
+  const { data: esteira = [] } = useQuery(esteiraQuery);
   const { data: operations = [] } = useQuery(operationsQuery);
   const { data: entries = [] } = useQuery(entriesQuery());
   const { data: companies = [] } = useQuery(companiesQuery);
@@ -114,7 +115,6 @@ function ProdutosPage() {
   const { data: sectors = [] } = useQuery(sectorsQuery);
   const { data: catalogOps = [] } = useQuery(catalogOperationsQuery);
 
-  void entries;
 
   const totalValue =
     (Number(form.total_quantity) || 0) * (Number(form.unit_value.replace(",", ".")) || 0);
