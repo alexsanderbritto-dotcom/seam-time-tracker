@@ -841,6 +841,7 @@ function DashboardPage() {
 
               ))
             )}
+            </TooltipProvider>
           </CardContent>
         </Card>
 
