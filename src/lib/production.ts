@@ -201,6 +201,7 @@ export function buildProductRows(
         product,
         opInterna: null,
         quantidade: product.total_quantity ?? 0,
+        fracaoIndex: 0,
         fracoes: 0,
         naEsteira: false,
         status: product.status,
@@ -208,7 +209,7 @@ export function buildProductRows(
       });
       continue;
     }
-    for (const l of lotes) {
+    lotes.forEach((l, i) => {
       const loteEntries = entries.filter((e) => e.lote_id === l.id);
       const { pct, done } = productCompletion(
         { id: product.id, total_quantity: l.quantidade || 0 },
@@ -223,12 +224,13 @@ export function buildProductRows(
         product,
         opInterna: l.op_interna,
         quantidade: l.quantidade || 0,
+        fracaoIndex: i + 1,
         fracoes: lotes.length,
         naEsteira: l.status === "ativo",
         status,
         pct,
       });
-    }
+    });
     // saldo ainda não enviado à esteira continua visível como linha própria
     const restante = remainingToDistribute(product, lotes);
     if (restante > 0) {
@@ -238,6 +240,7 @@ export function buildProductRows(
         product,
         opInterna: null,
         quantidade: restante,
+        fracaoIndex: 0,
         fracoes: lotes.length,
         naEsteira: false,
         status: "em_estoque",
