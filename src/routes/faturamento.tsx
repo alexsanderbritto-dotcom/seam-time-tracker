@@ -30,7 +30,7 @@ import { useMarcadorSession } from "@/lib/marcador-session";
 import {
   brl,
   buildProductRows,
-  esteiraQuery,
+  esteiraTodasQuery,
   entriesQuery,
   operationsQuery,
   productsQuery,
@@ -110,7 +110,7 @@ function FaturamentoPage() {
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const dragging = useRef(false);
 
-  const { data: esteira = [] } = useQuery(esteiraQuery);
+  const { data: esteira = [] } = useQuery(esteiraTodasQuery);
   const { data: operations = [] } = useQuery(operationsQuery);
   const { data: entries = [] } = useQuery(entriesQuery());
 
