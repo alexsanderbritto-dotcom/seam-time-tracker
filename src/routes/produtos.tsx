@@ -193,9 +193,8 @@ function ProdutosPage() {
     setDupValue(value);
     const src = products.find((p) => dupLabel(p) === value);
     if (!src || src.id === editing?.id) return;
-    const ops = operations
-      .filter((o) => o.product_id === src.id && o.catalog_operation_id)
-      .map((o) => o.catalog_operation_id as string);
+    const srcOps = operations.filter((o) => o.product_id === src.id && o.catalog_operation_id);
+    const ops = srcOps.map((o) => o.catalog_operation_id as string);
     let added = 0;
     setSelectedOps((prev) => {
       const merged = new Set(prev);
@@ -205,11 +204,22 @@ function ProdutosPage() {
       });
       return Array.from(merged);
     });
+    // copia também as "últimas operações" por setor do produto de origem
+    setLastBySector((prev) => {
+      const next = { ...prev };
+      for (const o of srcOps) {
+        if (!o.is_last_operation) continue;
+        const c = catalogOps.find((x) => x.id === o.catalog_operation_id);
+        if (c) next[c.sector_id] = c.id;
+      }
+      return next;
+    });
     added = ops.filter((id) => !selectedOps.includes(id)).length;
     toast.success(
-      `${added} operação(ões) copiada(s) de ${src.reference}. Marque a última operação de cada setor.`,
+      `${added} operação(ões) copiada(s) de ${src.reference}, incluindo as últimas operações por setor.`,
     );
   }
+
 
 
   async function ensureName(table: "companies" | "clients", value: string, list: { name: string }[]) {
