@@ -411,26 +411,56 @@ function EsteiraPage() {
 
             {productId ? (
               <div className="rounded-md bg-secondary p-3 text-sm">
-                Restante disponível para distribuir:{" "}
+                Disponível para esta OP Interna:{" "}
                 <strong className="tabular-nums">{restanteAtual}</strong> peças de{" "}
                 {productById.get(productId)?.total_quantity ?? 0}.
                 {restanteAtual <= 0 ? (
                   <span className="mt-1 block text-destructive">
-                    Este produto já está totalmente distribuído. Remova ou reduza uma OP Interna
-                    existente para liberar quantidade.
+                    Este produto já está totalmente distribuído. Reduza uma OP Interna existente ou
+                    reaproveite uma fração removida para liberar quantidade.
                   </span>
                 ) : null}
-                {lotesOfProduct(esteira, productId).length > 0 ? (
+                {lotesOfProduct(esteiraAll, productId).length > 0 ? (
                   <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
-                    {lotesOfProduct(esteira, productId).map((l) => (
+                    {lotesOfProduct(esteiraAll, productId).map((l) => (
                       <li key={l.id} className="tabular-nums">
                         OP {l.op_interna || "—"}: {l.quantidade} pç
+                        {l.status === "removido" ? " (fora da esteira)" : ""}
                       </li>
                     ))}
                   </ul>
                 ) : null}
               </div>
             ) : null}
+
+            {removidas.length > 0 ? (
+              <div className="space-y-2 rounded-md border p-3">
+                <p className="text-sm font-medium">Reaproveitar frações removidas</p>
+                <p className="text-xs text-muted-foreground">
+                  Selecione as frações removidas por engano para somar suas quantidades a esta nova
+                  OP Interna. As selecionadas deixam de existir e qualquer sobra volta ao saldo não
+                  alocado.
+                </p>
+                {removidas.map((r) => (
+                  <label
+                    key={r.id}
+                    className="flex min-h-11 cursor-pointer items-center gap-3 text-sm md:min-h-0"
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={sourceIds.includes(r.id)}
+                      onChange={() => toggleSource(r.id, r.quantidade || 0)}
+                    />
+                    <span className="tabular-nums">
+                      OP Interna {r.op_interna || "—"} — {r.quantidade} peças
+                    </span>
+                  </label>
+                ))}
+              </div>
+            ) : null}
+
+
 
             <div className="space-y-1.5">
               <Label>OP Interna</Label>
