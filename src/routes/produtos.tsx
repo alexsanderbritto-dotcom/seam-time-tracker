@@ -619,23 +619,19 @@ function ProdutosPage() {
               <Label className="flex items-center gap-2">
                 <Copy className="h-4 w-4" /> Duplicar operações de um produto existente
               </Label>
-              <Input
-                list="duplicar-list"
-                placeholder="Buscar por referência ou nome…"
+              <SearchableSelect
+                options={dupOptions}
                 value={dupValue}
-                onChange={(e) => applyDuplicate(e.target.value)}
+                onChange={applyDuplicate}
+                placeholder="Buscar por nome, referência, OP ou cliente…"
+                searchPlaceholder="Digite nome, REF, OP ou cliente…"
               />
-              <datalist id="duplicar-list">
-                {products
-                  .filter((p) => p.id !== editing?.id)
-                  .map((p) => (
-                    <option key={p.id} value={dupLabel(p)} />
-                  ))}
-              </datalist>
               <p className="text-xs text-muted-foreground">
-                Copia apenas as operações, somando às já selecionadas. Você pode ajustar antes de
-                salvar.
+                Referências podem se repetir entre produtos: escolha na lista exatamente qual
+                produto (REF · OP · cliente) será a origem. Copia apenas as operações, somando às
+                já selecionadas.
               </p>
+
             </div>
 
             <div className="space-y-1.5">
