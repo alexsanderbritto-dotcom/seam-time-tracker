@@ -124,15 +124,14 @@ export function opInternaLabel(items: { op_interna: string | null }[]): string {
   return list.join("-");
 }
 
-/** Quantidade ainda não distribuída em OPs internas. */
+/** Quantidade do produto ainda não distribuída entre as OPs internas ativas. */
 export function remainingToDistribute(
   product: Pick<Product, "total_quantity">,
-  lotes: { quantidade: number }[],
+  lotesDoProduto: EsteiraItem[],
   ignoreLoteId?: string,
-  all?: EsteiraItem[],
 ): number {
-  const used = (all ?? (lotes as EsteiraItem[]))
-    .filter((l) => !ignoreLoteId || (l as EsteiraItem).id !== ignoreLoteId)
+  const used = lotesDoProduto
+    .filter((l) => l.id !== ignoreLoteId)
     .reduce((s, l) => s + (l.quantidade || 0), 0);
   return Math.max(0, (product.total_quantity ?? 0) - used);
 }
