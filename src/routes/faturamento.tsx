@@ -431,9 +431,12 @@ function FaturamentoPage() {
         ) : null}
 
         {sortedMeses.map((m) => {
-          const lista = sortByOpInterna(
-            applyColumnFilters(productsOfMes(m.id).filter(passesFilters), colFilters, accessors),
+          const lista = applyColumnFilters(
+            rowsOfMes(m.id).filter(passesFilters),
+            colFilters,
+            accessors,
           );
+
           const isOpen = openMes === m.id;
           return (
             <Collapsible
