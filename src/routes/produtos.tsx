@@ -190,23 +190,36 @@ function ProdutosPage() {
 
   const missingLast = usedSectors.filter((s) => !lastBySector[s.id]);
 
-  const dupLabel = (p: Product) => `${p.reference} · ${p.name}`;
+  /** opções de origem para duplicar operações — referência pode repetir entre produtos */
+  const dupOptions = useMemo(
+    () =>
+      products
+        .filter((p) => p.id !== editing?.id)
+        .map((p) => ({
+          value: p.id,
+          label: `${p.name} · REF ${p.reference} · OP ${p.op_number}`,
+          searchText: `${p.name} ${p.reference} ${p.op_number} ${p.cliente ?? ""}`,
+          node: (
+            <span className="flex flex-col leading-tight">
+              <span className="truncate font-medium">{p.name}</span>
+              <span className="font-mono text-xs text-muted-foreground">
+                REF {p.reference} · OP {p.op_number}
+                {p.cliente ? ` · ${p.cliente}` : ""}
+              </span>
+            </span>
+          ),
+        })),
+    [products, editing],
+  );
 
-  function applyDuplicate(value: string) {
-    setDupValue(value);
-    const src = products.find((p) => dupLabel(p) === value);
+  function applyDuplicate(srcId: string) {
+    setDupValue(srcId);
+    const src = products.find((p) => p.id === srcId);
     if (!src || src.id === editing?.id) return;
     const srcOps = operations.filter((o) => o.product_id === src.id && o.catalog_operation_id);
     const ops = srcOps.map((o) => o.catalog_operation_id as string);
-    let added = 0;
-    setSelectedOps((prev) => {
-      const merged = new Set(prev);
-      ops.forEach((id) => {
-        if (!merged.has(id)) added++;
-        merged.add(id);
-      });
-      return Array.from(merged);
-    });
+    const added = ops.filter((id) => !selectedOps.includes(id)).length;
+    setSelectedOps((prev) => Array.from(new Set([...prev, ...ops])));
     // copia também as "últimas operações" por setor do produto de origem
     setLastBySector((prev) => {
       const next = { ...prev };
@@ -217,11 +230,11 @@ function ProdutosPage() {
       }
       return next;
     });
-    added = ops.filter((id) => !selectedOps.includes(id)).length;
     toast.success(
-      `${added} operação(ões) copiada(s) de ${src.reference}, incluindo as últimas operações por setor.`,
+      `${added} operação(ões) copiada(s) de ${src.name} (REF ${src.reference} · OP ${src.op_number}), incluindo as últimas operações por setor.`,
     );
   }
+
 
 
 
