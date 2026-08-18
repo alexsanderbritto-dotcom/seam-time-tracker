@@ -200,6 +200,7 @@ export function buildProductRows(
         opInterna: null,
         quantidade: product.total_quantity ?? 0,
         fracoes: 0,
+        naEsteira: false,
         status: product.status,
         pct: 0,
       });
@@ -221,6 +222,7 @@ export function buildProductRows(
         opInterna: l.op_interna,
         quantidade: l.quantidade || 0,
         fracoes: lotes.length,
+        naEsteira: l.status === "ativo",
         status,
         pct,
       });
@@ -235,11 +237,14 @@ export function buildProductRows(
         opInterna: null,
         quantidade: restante,
         fracoes: lotes.length,
+        naEsteira: false,
         status: "em_estoque",
         pct: 0,
       });
     }
   }
+
+
 
   return rows.sort(
     (a, b) =>
