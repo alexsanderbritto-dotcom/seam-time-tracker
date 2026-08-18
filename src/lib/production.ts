@@ -170,11 +170,14 @@ export type ProductRow = {
   opInterna: string | null;
   /** quantidade desta linha (da fração, ou total do produto quando não fracionado) */
   quantidade: number;
-  /** total de frações ativas deste produto */
+  /** total de frações deste produto (na esteira ou removidas dela) */
   fracoes: number;
+  /** false quando a fração foi removida da esteira (dados preservados) */
+  naEsteira: boolean;
   status: string;
   pct: number;
 };
+
 
 /**
  * Constrói as linhas de todos os módulos: produtos sem fração aparecem como
