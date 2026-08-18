@@ -27,7 +27,16 @@ import {
 import { db } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { useMarcadorSession } from "@/lib/marcador-session";
-import { brl, productsQuery, sortByOpInterna, type Product } from "@/lib/production";
+import {
+  brl,
+  buildProductRows,
+  esteiraQuery,
+  entriesQuery,
+  operationsQuery,
+  productsQuery,
+  type Product,
+  type ProductRow,
+} from "@/lib/production";
 import {
   ColumnFilter,
   applyColumnFilters,
