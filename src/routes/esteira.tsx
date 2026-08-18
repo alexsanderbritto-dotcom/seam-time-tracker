@@ -367,9 +367,11 @@ function EsteiraPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Remover OP Interna da esteira?</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingRemove?.name} deixará de aparecer na esteira e sua quantidade volta a ficar
-              disponível para distribuição. O cadastro do produto continua salvo.
+              {pendingRemove?.name} deixa de aparecer na esteira, no Dashboard e na Marcação de
+              Produção. A OP Interna, a quantidade e o histórico continuam salvos e a fração segue
+              aparecendo em Produtos e Faturamento.
             </AlertDialogDescription>
+
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="h-11 sm:h-9">Cancelar</AlertDialogCancel>
