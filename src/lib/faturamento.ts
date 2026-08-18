@@ -14,7 +14,13 @@ export type FaturamentoMesProduto = {
   id: string;
   mes_id: string;
   product_id: string;
+  /** fração (OP Interna) vinculada; null = saldo não fracionado do produto */
+  lote_id: string | null;
 };
+
+/** chave de vínculo de uma linha (produto ou fração) com um mês */
+export const linkKey = (productId: string, loteId: string | null | undefined) =>
+  `${productId}:${loteId ?? ""}`;
 
 export type MetaSetorMes = {
   id: string;
@@ -46,7 +52,7 @@ export const faturamentoMesProdutosQuery = {
   queryFn: async (): Promise<FaturamentoMesProduto[]> => {
     const { data, error } = await db
       .from("faturamento_mes_produtos")
-      .select("id,mes_id,product_id");
+      .select("id,mes_id,product_id,lote_id");
     if (error) throw error;
     return (data as FaturamentoMesProduto[]) ?? [];
   },
