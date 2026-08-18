@@ -714,8 +714,6 @@ function DashboardPage() {
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
-            <TooltipProvider delayDuration={150} disableHoverableContent>
-            {productityInner}
             {productivity.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Nenhuma produção registrada com estes filtros.
