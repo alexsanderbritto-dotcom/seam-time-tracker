@@ -99,6 +99,7 @@ export const addToEsteira = createServerFn({ method: "POST" })
       };
     }
 
+    let targetLoteId = data.loteId;
     if (data.loteId) {
       const { error } = await supabaseAdmin
         .from("esteira_producao")
@@ -106,25 +107,42 @@ export const addToEsteira = createServerFn({ method: "POST" })
         .eq("id", data.loteId);
       if (error) return { ok: false as const, error: error.message };
     } else {
-      const { error } = await supabaseAdmin.from("esteira_producao").insert({
-        produto_id: data.productId,
-        op_interna: data.opInterna,
-        quantidade: data.quantidade,
-        status: "ativo",
-        data_adicionado: new Date().toISOString(),
-      });
+      const { data: created, error } = await supabaseAdmin
+        .from("esteira_producao")
+        .insert({
+          produto_id: data.productId,
+          op_interna: data.opInterna,
+          quantidade: data.quantidade,
+          status: "ativo",
+          data_adicionado: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
       if (error) return { ok: false as const, error: error.message };
+      targetLoteId = (created as { id: string }).id;
     }
 
-    // frações removidas usadas como fonte deixam de existir (correção de engano)
-    if (sources.length > 0) {
+    // frações removidas usadas como fonte deixam de existir (correção de engano).
+    // Antes de excluir, as marcações de produção delas são realocadas para a
+    // nova fração — caso contrário a produção já lançada some do progresso.
+    if (sources.length > 0 && targetLoteId) {
+      const sourceIds = sources.map((s) => s.id);
+      const { error: moveErr } = await supabaseAdmin
+        .from("production_entries")
+        .update({ lote_id: targetLoteId })
+        .in("lote_id", sourceIds);
+      if (moveErr) return { ok: false as const, error: moveErr.message };
+
+      const { error: metaErr } = await supabaseAdmin
+        .from("meta_producao_setor_dia")
+        .update({ lote_id: targetLoteId })
+        .in("lote_id", sourceIds);
+      if (metaErr) return { ok: false as const, error: metaErr.message };
+
       const { error } = await supabaseAdmin
         .from("esteira_producao")
         .delete()
-        .in(
-          "id",
-          sources.map((s) => s.id),
-        );
+        .in("id", sourceIds);
       if (error) return { ok: false as const, error: error.message };
     }
 
@@ -154,4 +172,50 @@ export const removeFromEsteira = createServerFn({ method: "POST" })
     if (error) return { ok: false as const, error: error.message };
     if (lote?.produto_id) await syncProductOpInterna(lote.produto_id);
     return { ok: true as const };
+  });
+
+
+/** Religa marcações de produção órfãs (sem fração) a uma fração existente. */
+export const reassignOrphanEntries = createServerFn({ method: "POST" })
+  .inputValidator((data: { token: string; entryIds: string[]; loteId: string }) => {
+    if (!data.loteId) throw new Error("Selecione a OP Interna de destino.");
+    if (!data.entryIds?.length) throw new Error("Selecione ao menos uma marcação.");
+    return data;
+  })
+  .handler(async ({ data }) => {
+    const { requireAdminClaims } = await import("@/lib/marcador-auth.server");
+    await requireAdminClaims(data.token);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: lote, error: loteErr } = await supabaseAdmin
+      .from("esteira_producao")
+      .select("id,produto_id")
+      .eq("id", data.loteId)
+      .maybeSingle();
+    if (loteErr) return { ok: false as const, error: loteErr.message };
+    if (!lote) return { ok: false as const, error: "Fração não encontrada." };
+
+    const { data: entries, error: entErr } = await supabaseAdmin
+      .from("production_entries")
+      .select("id,product_id,lote_id")
+      .in("id", data.entryIds);
+    if (entErr) return { ok: false as const, error: entErr.message };
+
+    const list = (entries ?? []) as { id: string; product_id: string; lote_id: string | null }[];
+    if (list.some((e) => e.lote_id)) {
+      return { ok: false as const, error: "Alguma marcação já está vinculada a uma fração." };
+    }
+    if (list.some((e) => e.product_id !== (lote as { produto_id: string }).produto_id)) {
+      return { ok: false as const, error: "A fração escolhida é de outro produto." };
+    }
+
+    const { error } = await supabaseAdmin
+      .from("production_entries")
+      .update({ lote_id: data.loteId })
+      .in(
+        "id",
+        list.map((e) => e.id),
+      );
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const, count: list.length };
   });
