@@ -443,12 +443,12 @@ export function MarcacaoProducao({
             </div>
 
             <div className="space-y-1.5">
-              <Label>Produto (Esteira de Produção)</Label>
+              <Label>OP Interna (Esteira de Produção)</Label>
               <SearchableSelect
                 options={productOptions}
                 value={loteId}
                 onChange={(v) => {
-                  setProductId(v);
+                  setLoteId(v);
                   setSelected({});
                   setOpSearch("");
                 }}
@@ -461,7 +461,7 @@ export function MarcacaoProducao({
             <div className="space-y-2">
               <Label>Operações executadas</Label>
               {!productId ? (
-                <p className="text-sm text-muted-foreground">Selecione um produto primeiro.</p>
+                <p className="text-sm text-muted-foreground">Selecione uma OP interna primeiro.</p>
               ) : productOps.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   Este produto ainda não tem operações cadastradas.
@@ -496,7 +496,7 @@ export function MarcacaoProducao({
                     <div className="divide-y divide-border rounded-md border border-border">
                       {filteredOps.map((op: Operation) => {
                         const done = producedByOperation[op.id] ?? 0;
-                        const over = activeProduct ? done > activeProduct.total_quantity : false;
+                        const over = activeLote ? done > activeLote.quantidade : false;
                         return (
                           <div
                             key={op.id}
