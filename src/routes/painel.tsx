@@ -348,11 +348,15 @@ function PainelPage() {
               operations,
               catalogOps,
               allEntries,
+              m.lote_id ?? undefined,
             );
+            const loteOp = m.lote_id
+              ? (esteira.find((e) => e.id === m.lote_id)?.op_interna ?? null)
+              : null;
             const meta = m.quantidade ?? 0;
             return {
               id: m.id,
-              opInterna: p?.op_interna || (p?.name ?? "—"),
+              opInterna: loteOp || p?.op_interna || (p?.name ?? "—"),
               meta,
               produced,
               pct: meta > 0 ? (produced / meta) * 100 : 0,
