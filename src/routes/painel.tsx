@@ -385,6 +385,7 @@ function PainelPage() {
     operations,
     catalogOps,
     allEntries,
+    esteira,
     sectors,
     workHours,
     slotHours,
