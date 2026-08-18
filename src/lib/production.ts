@@ -52,6 +52,8 @@ export type EsteiraItem = {
   produto_id: string;
   data_adicionado: string;
   status: string;
+  op_interna: string | null;
+  quantidade: number;
 };
 
 export const esteiraQuery = {
@@ -59,13 +61,82 @@ export const esteiraQuery = {
   queryFn: async (): Promise<EsteiraItem[]> => {
     const { data, error } = await db
       .from("esteira_producao")
-      .select("id,produto_id,data_adicionado,status")
+      .select("id,produto_id,data_adicionado,status,op_interna,quantidade")
       .eq("status", "ativo")
       .order("data_adicionado", { ascending: false });
     if (error) throw error;
     return data as EsteiraItem[];
   },
 };
+
+/** Uma fração (OP Interna) de um produto dentro da esteira. */
+export type Lote = {
+  /** id do registro na esteira */
+  id: string;
+  product: Product;
+  opInterna: string | null;
+  quantidade: number;
+  dataAdicionado: string;
+};
+
+const opInternaKey = (v: string | null | undefined) => {
+  const n = Number(String(v ?? "").replace(/\D/g, ""));
+  return Number.isFinite(n) && String(v ?? "").trim() !== "" ? n : Number.POSITIVE_INFINITY;
+};
+
+/** Constrói as frações (produto + OP interna + quantidade), ordenadas por OP interna. */
+export function buildLotes(esteira: EsteiraItem[], products: Product[]): Lote[] {
+  const byId = new Map(products.map((p) => [p.id, p] as const));
+  return esteira
+    .map((e) => {
+      const product = byId.get(e.produto_id);
+      if (!product) return null;
+      return {
+        id: e.id,
+        product,
+        opInterna: e.op_interna,
+        quantidade: e.quantidade || 0,
+        dataAdicionado: e.data_adicionado,
+      } satisfies Lote;
+    })
+    .filter((x): x is Lote => !!x)
+    .sort(
+      (a, b) =>
+        opInternaKey(a.opInterna) - opInternaKey(b.opInterna) ||
+        String(a.opInterna ?? "").localeCompare(String(b.opInterna ?? "")),
+    );
+}
+
+/** Frações ativas de um produto, ordenadas por OP interna. */
+export function lotesOfProduct(esteira: EsteiraItem[], productId: string): EsteiraItem[] {
+  return esteira
+    .filter((e) => e.produto_id === productId)
+    .sort(
+      (a, b) =>
+        opInternaKey(a.op_interna) - opInternaKey(b.op_interna) ||
+        String(a.op_interna ?? "").localeCompare(String(b.op_interna ?? "")),
+    );
+}
+
+/** Rótulo agregado das OPs internas de um produto: "401-402-403". */
+export function opInternaLabel(items: { op_interna: string | null }[]): string {
+  const list = items.map((i) => (i.op_interna ?? "").trim()).filter(Boolean);
+  return list.join("-");
+}
+
+/** Quantidade ainda não distribuída em OPs internas. */
+export function remainingToDistribute(
+  product: Pick<Product, "total_quantity">,
+  lotes: { quantidade: number }[],
+  ignoreLoteId?: string,
+  all?: EsteiraItem[],
+): number {
+  const used = (all ?? (lotes as EsteiraItem[]))
+    .filter((l) => !ignoreLoteId || (l as EsteiraItem).id !== ignoreLoteId)
+    .reduce((s, l) => s + (l.quantidade || 0), 0);
+  return Math.max(0, (product.total_quantity ?? 0) - used);
+}
+
 
 export type Company = { id: string; name: string };
 
