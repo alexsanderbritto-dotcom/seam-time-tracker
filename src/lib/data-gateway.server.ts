@@ -73,6 +73,12 @@ export async function runSelect(data: SelectPayload) {
     if (typeof data.limit === "number") {
       q = (q as never as { limit: (n: number) => never }).limit(data.limit);
     }
+    if (data.range) {
+      q = (q as never as { range: (from: number, to: number) => never }).range(
+        data.range.from,
+        data.range.to,
+      );
+    }
     const runner = q as never as {
       single: () => Promise<{ data: unknown; error: { message: string } | null }>;
       maybeSingle: () => Promise<{ data: unknown; error: { message: string } | null }>;

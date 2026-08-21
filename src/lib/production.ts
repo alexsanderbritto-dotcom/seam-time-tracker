@@ -542,11 +542,23 @@ export const scheduleQuery = {
 export const entriesQuery = (date?: string) => ({
   queryKey: ["production_entries", date ?? "all"],
   queryFn: async (): Promise<ProductionEntry[]> => {
-    let q = db.from("production_entries").select("*");
-    if (date) q = q.eq("entry_date", date);
-    const { data, error } = await q.order("slot_start");
-    if (error) throw error;
-    return data as ProductionEntry[];
+    const pageSize = 1000;
+    const entries: ProductionEntry[] = [];
+
+    for (let from = 0; ; from += pageSize) {
+      let q = db.from("production_entries").select("*");
+      if (date) q = q.eq("entry_date", date);
+      const { data, error } = await q
+        .order("created_at", { ascending: true })
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+
+      const page = (data ?? []) as ProductionEntry[];
+      entries.push(...page);
+      if (page.length < pageSize) break;
+    }
+
+    return entries;
   },
 });
 

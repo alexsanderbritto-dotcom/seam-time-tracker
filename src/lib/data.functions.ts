@@ -9,6 +9,7 @@ export type SelectPayload = {
   filters: Filter[];
   order?: { col: string; asc: boolean } | undefined;
   limit?: number | undefined;
+  range?: { from: number; to: number } | undefined;
   mode: "many" | "single" | "maybeSingle";
 };
 

@@ -36,6 +36,7 @@ class SelectBuilder<T> implements PromiseLike<Result<T>> {
   private filters: Filter[] = [];
   private _order: { col: string; asc: boolean } | undefined;
   private _limit: number | undefined;
+  private _range: { from: number; to: number } | undefined;
 
   constructor(
     private table: string,
@@ -70,6 +71,10 @@ class SelectBuilder<T> implements PromiseLike<Result<T>> {
     this._limit = n;
     return this;
   }
+  range(from: number, to: number) {
+    this._range = { from, to };
+    return this;
+  }
 
   private run(mode: "many" | "single" | "maybeSingle") {
     return dbSelect({
@@ -80,6 +85,7 @@ class SelectBuilder<T> implements PromiseLike<Result<T>> {
         filters: this.filters,
         order: this._order,
         limit: this._limit,
+        range: this._range,
         mode,
       },
     }).then((r) => guardSession(r as Result<T>)) as Promise<Result<T>>;
