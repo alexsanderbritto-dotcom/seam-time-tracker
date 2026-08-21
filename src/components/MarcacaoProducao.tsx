@@ -228,17 +228,60 @@ export function MarcacaoProducao({
     }
 
     setSaving(true);
-    const { error } = await db.from("production_entries").insert(rows);
+
+    // Uma marcação é única por colaborador + OP interna + operação + dia + horário.
+    // Sem isso, salvar de novo (duplo clique, recarregar, corrigir a quantidade)
+    // criava uma segunda linha e a operação passava a somar quantidade em dobro.
+    const { data: existentesRaw } = await db
+      .from("production_entries")
+      .select("id, operation_id")
+      .eq("employee_id", employeeId)
+      .eq("lote_id", loteId)
+      .eq("entry_date", date)
+      .eq("slot_start", slot.start)
+      .in(
+        "operation_id",
+        rows.map((r) => r.operation_id),
+      );
+    const existentes = (existentesRaw ?? []) as { id: string; operation_id: string }[];
+    const byOp = new Map(existentes.map((e) => [e.operation_id, e.id]));
+
+    const novos = rows.filter((r) => !byOp.has(r.operation_id));
+    const atualizados = rows.filter((r) => byOp.has(r.operation_id));
+
+    let error: { message: string } | null = null;
+    if (novos.length > 0) {
+      ({ error } = await db.from("production_entries").insert(novos));
+    }
+    for (const r of atualizados) {
+      if (error) break;
+      const res = await db
+        .from("production_entries")
+        .update({
+          quantity: r.quantity,
+          slot_end: r.slot_end,
+          is_overtime: r.is_overtime,
+          ocorrencia_id: r.ocorrencia_id,
+        })
+        .eq("id", byOp.get(r.operation_id) as string);
+      error = res.error;
+    }
     setSaving(false);
     if (error) {
       toast.error("Erro ao salvar: " + error.message);
       return;
     }
-    toast.success(`${rows.length} marcação(ões) registrada(s).`);
+    if (atualizados.length > 0) {
+      toast.warning(
+        `${atualizados.length} operação(ões) já tinham marcação neste horário e foram atualizadas (sem duplicar).`,
+      );
+    }
+    if (novos.length > 0) toast.success(`${novos.length} marcação(ões) registrada(s).`);
     setSelected({});
     setOpSearch("");
     setOcorrenciaId("");
     qc.invalidateQueries({ queryKey: ["production_entries"] });
+
   }
 
   async function remove(id: string) {
