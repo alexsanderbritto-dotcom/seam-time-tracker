@@ -420,6 +420,10 @@ function MetaMesBlock({ meta, sectorName }: { meta: MetaSetorMes; sectorName: st
               allowedProductIds={allowedProductIds}
               lotes={lotes}
               closedDays={meta.dias_encerrados}
+              sectorId={meta.sector_id}
+              mes={meta.mes}
+              ano={meta.ano}
+              metaRestante={real.metaTotal - real.atingidoTotal}
             />
           </div>
         </CollapsibleContent>
