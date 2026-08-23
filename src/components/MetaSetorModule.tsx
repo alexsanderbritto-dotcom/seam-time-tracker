@@ -855,12 +855,59 @@ function SimulationBlock({
               </div>
             ) : null}
 
+            <div className="space-y-2 rounded-md border border-dashed border-amber-500/60 p-3">
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="space-y-1.5">
+                  <Label>Nome do cenário</Label>
+                  <Input
+                    className="w-56"
+                    value={cenarioNome}
+                    onChange={(e) => setCenarioNome(e.target.value)}
+                    placeholder="Ex: Cenário otimista"
+                  />
+                </div>
+                <Button onClick={() => void salvarCenario()} disabled={savingCenario}>
+                  Salvar meta
+                </Button>
+              </div>
+              {cenarios.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {cenarios.map((c) => (
+                    <Badge key={c.id} variant="outline" className="gap-1 border-amber-500/60">
+                      <button
+                        type="button"
+                        className="font-medium"
+                        onClick={() => carregarCenario(c)}
+                      >
+                        {c.nome} · {c.itens.length} itens
+                      </button>
+                      <ConfirmDelete
+                        description={`Excluir o cenário "${c.nome}"? Isso não afeta produção nem a meta real.`}
+                        onConfirm={() => void excluirCenario(c.id)}
+                      >
+                        <button type="button" aria-label={`Excluir cenário ${c.nome}`}>
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </ConfirmDelete>
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Nenhum cenário salvo para este mês/setor.
+                </p>
+              )}
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2">
               <Card className="border-dashed">
                 <CardContent className="p-4">
-                  <p className="text-xl font-semibold">{brl(result.metaTotal)}</p>
+                  <p className="text-xl font-semibold">{brl(metaRestante)}</p>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">
                     Meta restante (hoje + dias a vencer)
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Meta total do mês − atingido dos dias vencidos
                   </p>
                 </CardContent>
               </Card>
