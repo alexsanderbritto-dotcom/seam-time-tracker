@@ -50,11 +50,13 @@ import {
 export function DashboardView({
   sectorId = null,
   readOnly = false,
+  requireAdmin = true,
   title = "Dashboard",
   subtitle = "Acompanhamento da produção.",
 }: {
   sectorId?: string | null;
   readOnly?: boolean;
+  requireAdmin?: boolean;
   title?: string;
   subtitle?: string;
 }) {
@@ -503,7 +505,7 @@ export function DashboardView({
 
 
   return (
-    <AppLayout title={title} subtitle={subtitle} requireAdmin={false}>
+    <AppLayout title={title} subtitle={subtitle} requireAdmin={requireAdmin}>
       {!readOnly ? (
       <MetaProducaoDialog
         open={metaOpen}
@@ -600,6 +602,7 @@ export function DashboardView({
                 <Plus className="mr-1.5 h-4 w-4" />
                 Adicionar meta
               </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent className="p-0">
