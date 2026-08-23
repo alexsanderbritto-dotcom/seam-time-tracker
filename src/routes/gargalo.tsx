@@ -223,7 +223,7 @@ function GargaloPage() {
           ) : (
             operationGaps.map((g) => (
               <div
-                key={`${g.productId}-${g.sectorName}`}
+                key={`${g.loteId}-${g.sectorName}`}
                 className="rounded-lg border border-border p-3"
               >
                 <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
