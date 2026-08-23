@@ -295,6 +295,7 @@ export function buildMonthRows(params: {
   products: Product[];
   allowedProductIds: Set<string>;
   simulated?: SimEntry[];
+  lotes?: LoteRef[];
   allDue?: boolean;
   today?: string;
   /** dias encerrados manualmente */
@@ -308,6 +309,7 @@ export function buildMonthRows(params: {
     products,
     allowedProductIds,
     simulated = [],
+    lotes = [],
     allDue = false,
     today = todayIso(),
     closedDays = [],
@@ -322,6 +324,7 @@ export function buildMonthRows(params: {
     products,
     allowedProductIds,
     simulated,
+    lotes,
   });
 
   const isDue = (date: string) => allDue || date <= today;
@@ -385,6 +388,7 @@ export function buildSimulationRows(params: {
   products: Product[];
   allowedProductIds: Set<string>;
   simulated?: SimEntry[];
+  lotes?: LoteRef[];
   today?: string;
   closedDays?: string[];
 }): { rows: DayRow[]; metaTotal: number; atingidoTotal: number } {
@@ -396,6 +400,7 @@ export function buildSimulationRows(params: {
     products,
     allowedProductIds,
     simulated = [],
+    lotes = [],
     today = todayIso(),
     closedDays = [],
   } = params;
@@ -408,6 +413,7 @@ export function buildSimulationRows(params: {
     products,
     allowedProductIds,
     simulated,
+    lotes,
   });
 
   // saldo real dos dias já encerrados → meta base herdada dos dias abertos
