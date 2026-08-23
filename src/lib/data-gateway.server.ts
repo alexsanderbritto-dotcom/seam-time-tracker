@@ -16,6 +16,7 @@ const READABLE = new Set([
   "faturamento_meses",
   "faturamento_mes_produtos",
   "meta_setor_mes",
+  "meta_simulacoes",
   "meta_producao_setor_dia",
   "ocorrencias",
   "schedule_day_config",

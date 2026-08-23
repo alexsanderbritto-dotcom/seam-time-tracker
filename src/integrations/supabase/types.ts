@@ -370,6 +370,47 @@ export type Database = {
           },
         ]
       }
+      meta_simulacoes: {
+        Row: {
+          ano: number
+          created_at: string
+          id: string
+          itens: Json
+          mes: number
+          nome: string
+          sector_id: string
+          updated_at: string
+        }
+        Insert: {
+          ano: number
+          created_at?: string
+          id?: string
+          itens?: Json
+          mes: number
+          nome: string
+          sector_id: string
+          updated_at?: string
+        }
+        Update: {
+          ano?: number
+          created_at?: string
+          id?: string
+          itens?: Json
+          mes?: number
+          nome?: string
+          sector_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_simulacoes_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ocorrencias: {
         Row: {
           created_at: string

@@ -13,6 +13,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { db } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { useMarcadorSession } from "@/lib/marcador-session";
@@ -36,10 +37,12 @@ import {
   MES_NOMES,
   mesLabel,
   metaSetorMesQuery,
+  metaSimulacoesQuery,
   todayIso,
   workingDays,
   type LoteRef,
   type MetaSetorMes,
+  type MetaSimulacao,
   type SimEntry,
 } from "@/lib/faturamento";
 import { feriadosQuery } from "@/lib/schedule";
@@ -420,6 +423,10 @@ function MetaMesBlock({ meta, sectorName }: { meta: MetaSetorMes; sectorName: st
               allowedProductIds={allowedProductIds}
               lotes={lotes}
               closedDays={meta.dias_encerrados}
+              sectorId={meta.sector_id}
+              mes={meta.mes}
+              ano={meta.ano}
+              metaRestante={real.metaTotal - real.atingidoTotal}
             />
           </div>
         </CollapsibleContent>
@@ -574,6 +581,10 @@ function SimulationBlock({
   allowedProductIds,
   lotes,
   closedDays,
+  sectorId,
+  mes,
+  ano,
+  metaRestante,
 }: {
   days: string[];
   metaDia: number;
@@ -583,9 +594,76 @@ function SimulationBlock({
   allowedProductIds: Set<string>;
   lotes: LoteRef[];
   closedDays: string[];
+  sectorId: string;
+  mes: number;
+  ano: number;
+  /** Meta total do mês − atingido acumulado dos dias já vencidos */
+  metaRestante: number;
 }) {
+  const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [sim, setSim] = useState<SimEntry[]>([]);
+  const [cenarioNome, setCenarioNome] = useState("");
+  const [savingCenario, setSavingCenario] = useState(false);
+  const { data: cenariosAll = [] } = useQuery(metaSimulacoesQuery);
+  const cenarios = useMemo(
+    () => cenariosAll.filter((c) => c.sector_id === sectorId && c.mes === mes && c.ano === ano),
+    [cenariosAll, sectorId, mes, ano],
+  );
+
+  const salvarCenario = async () => {
+    if (sim.length === 0) {
+      toast.error("Adicione ao menos um produto à simulação antes de salvar.");
+      return;
+    }
+    setSavingCenario(true);
+    const nome =
+      cenarioNome.trim() ||
+      `Cenário ${new Date().toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}`;
+    const { error } = await db.from("meta_simulacoes").insert({
+      sector_id: sectorId,
+      mes,
+      ano,
+      nome,
+      itens: sim.map((s) => ({
+        date: s.date,
+        productId: s.productId,
+        loteId: s.loteId ?? null,
+        quantity: s.quantity,
+      })),
+    });
+    setSavingCenario(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setCenarioNome("");
+    toast.success("Cenário de simulação salvo");
+    void qc.invalidateQueries({ queryKey: metaSimulacoesQuery.queryKey });
+  };
+
+  const carregarCenario = (c: MetaSimulacao) => {
+    setSim(
+      c.itens.map((i) => ({
+        date: i.date,
+        productId: i.productId,
+        loteId: i.loteId ?? null,
+        quantity: Number(i.quantity) || 0,
+      })),
+    );
+    toast.success(`Cenário "${c.nome}" carregado na simulação`);
+  };
+
+  const excluirCenario = async (id: string) => {
+    const { error } = await db.from("meta_simulacoes").delete().eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Cenário excluído");
+    void qc.invalidateQueries({ queryKey: metaSimulacoesQuery.queryKey });
+  };
+
   const today = todayIso();
   const openDays = useMemo(
     () => days.filter((d) => d >= today && !closedDays.includes(d)),
@@ -780,12 +858,59 @@ function SimulationBlock({
               </div>
             ) : null}
 
+            <div className="space-y-2 rounded-md border border-dashed border-amber-500/60 p-3">
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="space-y-1.5">
+                  <Label>Nome do cenário</Label>
+                  <Input
+                    className="w-56"
+                    value={cenarioNome}
+                    onChange={(e) => setCenarioNome(e.target.value)}
+                    placeholder="Ex: Cenário otimista"
+                  />
+                </div>
+                <Button onClick={() => void salvarCenario()} disabled={savingCenario}>
+                  Salvar meta
+                </Button>
+              </div>
+              {cenarios.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {cenarios.map((c) => (
+                    <Badge key={c.id} variant="outline" className="gap-1 border-amber-500/60">
+                      <button
+                        type="button"
+                        className="font-medium"
+                        onClick={() => carregarCenario(c)}
+                      >
+                        {c.nome} · {c.itens.length} itens
+                      </button>
+                      <ConfirmDelete
+                        description={`Excluir o cenário "${c.nome}"? Isso não afeta produção nem a meta real.`}
+                        onConfirm={() => void excluirCenario(c.id)}
+                      >
+                        <button type="button" aria-label={`Excluir cenário ${c.nome}`}>
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </ConfirmDelete>
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Nenhum cenário salvo para este mês/setor.
+                </p>
+              )}
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2">
               <Card className="border-dashed">
                 <CardContent className="p-4">
-                  <p className="text-xl font-semibold">{brl(result.metaTotal)}</p>
+                  <p className="text-xl font-semibold">{brl(metaRestante)}</p>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">
                     Meta restante (hoje + dias a vencer)
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Meta total do mês − atingido dos dias vencidos
                   </p>
                 </CardContent>
               </Card>
