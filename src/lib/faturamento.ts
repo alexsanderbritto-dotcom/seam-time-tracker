@@ -120,6 +120,8 @@ export const fmtDayLabel = (iso: string) => {
 
 export type DayProductLine = {
   productId: string;
+  /** fração (OP Interna) que gerou a produção; null quando não fracionado */
+  loteId: string | null;
   opInterna: string | null;
   name: string;
   quantity: number;
