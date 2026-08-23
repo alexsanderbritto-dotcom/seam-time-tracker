@@ -22,6 +22,7 @@ import { Route as MarcadoresRouteImport } from './routes/marcadores'
 import { Route as OperacoesRouteImport } from './routes/operacoes'
 import { Route as PainelRouteImport } from './routes/painel'
 import { Route as ProdutosRouteImport } from './routes/produtos'
+import { Route as DashboardSetorSectorIdRouteImport } from './routes/dashboard-setor.$sectorId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -88,6 +89,11 @@ const ProdutosRoute = ProdutosRouteImport.update({
   path: '/produtos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardSetorSectorIdRoute = DashboardSetorSectorIdRouteImport.update({
+  id: '/dashboard-setor/$sectorId',
+  path: '/dashboard-setor/$sectorId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/operacoes': typeof OperacoesRoute
   '/painel': typeof PainelRoute
   '/produtos': typeof ProdutosRoute
+  '/dashboard-setor/$sectorId': typeof DashboardSetorSectorIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/operacoes': typeof OperacoesRoute
   '/painel': typeof PainelRoute
   '/produtos': typeof ProdutosRoute
+  '/dashboard-setor/$sectorId': typeof DashboardSetorSectorIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,6 +142,7 @@ export interface FileRoutesById {
   '/operacoes': typeof OperacoesRoute
   '/painel': typeof PainelRoute
   '/produtos': typeof ProdutosRoute
+  '/dashboard-setor/$sectorId': typeof DashboardSetorSectorIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/operacoes'
     | '/painel'
     | '/produtos'
+    | '/dashboard-setor/$sectorId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/operacoes'
     | '/painel'
     | '/produtos'
+    | '/dashboard-setor/$sectorId'
   id:
     | '__root__'
     | '/'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/operacoes'
     | '/painel'
     | '/produtos'
+    | '/dashboard-setor/$sectorId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -197,6 +209,7 @@ export interface RootRouteChildren {
   OperacoesRoute: typeof OperacoesRoute
   PainelRoute: typeof PainelRoute
   ProdutosRoute: typeof ProdutosRoute
+  DashboardSetorSectorIdRoute: typeof DashboardSetorSectorIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -292,6 +305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProdutosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard-setor/$sectorId': {
+      id: '/dashboard-setor/$sectorId'
+      path: '/dashboard-setor/$sectorId'
+      fullPath: '/dashboard-setor/$sectorId'
+      preLoaderRoute: typeof DashboardSetorSectorIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -309,6 +329,7 @@ const rootRouteChildren: RootRouteChildren = {
   OperacoesRoute: OperacoesRoute,
   PainelRoute: PainelRoute,
   ProdutosRoute: ProdutosRoute,
+  DashboardSetorSectorIdRoute: DashboardSetorSectorIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
