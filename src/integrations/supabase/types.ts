@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      avisos: {
+        Row: {
+          created_at: string
+          criado_por: string | null
+          criado_por_nome: string
+          id: string
+          resolvido: boolean
+          resolvido_em: string | null
+          resolvido_por: string | null
+          resolvido_por_nome: string | null
+          texto: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          criado_por?: string | null
+          criado_por_nome: string
+          id?: string
+          resolvido?: boolean
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          resolvido_por_nome?: string | null
+          texto: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          criado_por?: string | null
+          criado_por_nome?: string
+          id?: string
+          resolvido?: boolean
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          resolvido_por_nome?: string | null
+          texto?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avisos_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "marcadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avisos_resolvido_por_fkey"
+            columns: ["resolvido_por"]
+            isOneToOne: false
+            referencedRelation: "marcadores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       catalog_operations: {
         Row: {
           created_at: string
@@ -251,6 +305,7 @@ export type Database = {
           id: string
           nome: string
           senha_hash: string
+          setor_id: string | null
           updated_at: string
         }
         Insert: {
@@ -259,6 +314,7 @@ export type Database = {
           id?: string
           nome: string
           senha_hash: string
+          setor_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -267,9 +323,18 @@ export type Database = {
           id?: string
           nome?: string
           senha_hash?: string
+          setor_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "marcadores_setor_id_fkey"
+            columns: ["setor_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       meta_producao_setor_dia: {
         Row: {
