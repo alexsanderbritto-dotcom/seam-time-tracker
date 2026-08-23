@@ -2,12 +2,15 @@ import { useEffect, useState } from "react";
 
 export const MARCADOR_STORAGE_KEY = "marcador-sessao";
 
-export type MarcadorCargo = "usuario" | "admin";
+/** admin = acesso total · usuario = só marcação · setor = marcação + dashboard do setor */
+export type MarcadorCargo = "usuario" | "admin" | "setor";
 
 export type MarcadorSession = {
   id: string;
   nome: string;
   cargo: MarcadorCargo;
+  setorId?: string | null;
+  setorNome?: string | null;
   token: string;
 };
 
@@ -50,5 +53,15 @@ export function useMarcadorSession() {
     };
   }, []);
 
-  return { session, ready, isAdmin: session?.cargo === "admin" };
+  const isAdmin = session?.cargo === "admin";
+  const isSetor = session?.cargo === "setor" && !!session?.setorId;
+
+  return {
+    session,
+    ready,
+    isAdmin,
+    isSetor,
+    setorId: isSetor ? (session?.setorId ?? null) : null,
+    setorNome: isSetor ? (session?.setorNome ?? null) : null,
+  };
 }

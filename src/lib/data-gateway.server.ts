@@ -21,15 +21,16 @@ const READABLE = new Set([
   "ocorrencias",
   "schedule_day_config",
   "feriados",
+  "avisos",
 ]);
 
 // Tables any signed-in marcador (usuario or admin) may write to.
-const USER_WRITABLE = new Set(["production_entries", "ocorrencias"]);
+const USER_WRITABLE = new Set(["production_entries", "ocorrencias", "avisos"]);
 
 const BUCKET = "product-files";
 const SAFE_PATH = /^(fichas|piloto)\/[A-Za-z0-9._-]+$/;
 
-type Claims = { id: string; cargo: "usuario" | "admin" };
+type Claims = { id: string; cargo: "usuario" | "admin" | "setor" };
 
 async function auth(token: string | undefined): Promise<Claims> {
   const claims = await readToken(token);
@@ -41,7 +42,9 @@ async function auth(token: string | undefined): Promise<Claims> {
     .eq("id", claims.id)
     .maybeSingle();
   if (!data) throw new Error("Sessão inválida. Faça login novamente.");
-  return { id: data.id, cargo: (data.cargo === "admin" ? "admin" : "usuario") };
+  const cargo: Claims["cargo"] =
+    data.cargo === "admin" ? "admin" : data.cargo === "setor" ? "setor" : "usuario";
+  return { id: data.id, cargo };
 }
 
 function applyFilters<T>(query: T, filters: Filter[]): T {

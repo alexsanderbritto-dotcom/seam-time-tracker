@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AvisosRouteImport } from './routes/avisos'
 import { Route as ColaboradoresRouteImport } from './routes/colaboradores'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as EsteiraRouteImport } from './routes/esteira'
@@ -22,10 +23,16 @@ import { Route as MarcadoresRouteImport } from './routes/marcadores'
 import { Route as OperacoesRouteImport } from './routes/operacoes'
 import { Route as PainelRouteImport } from './routes/painel'
 import { Route as ProdutosRouteImport } from './routes/produtos'
+import { Route as DashboardSetorSectorIdRouteImport } from './routes/dashboard-setor.$sectorId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AvisosRoute = AvisosRouteImport.update({
+  id: '/avisos',
+  path: '/avisos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ColaboradoresRoute = ColaboradoresRouteImport.update({
@@ -88,9 +95,15 @@ const ProdutosRoute = ProdutosRouteImport.update({
   path: '/produtos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardSetorSectorIdRoute = DashboardSetorSectorIdRouteImport.update({
+  id: '/dashboard-setor/$sectorId',
+  path: '/dashboard-setor/$sectorId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/avisos': typeof AvisosRoute
   '/colaboradores': typeof ColaboradoresRoute
   '/dashboard': typeof DashboardRoute
   '/esteira': typeof EsteiraRoute
@@ -103,9 +116,11 @@ export interface FileRoutesByFullPath {
   '/operacoes': typeof OperacoesRoute
   '/painel': typeof PainelRoute
   '/produtos': typeof ProdutosRoute
+  '/dashboard-setor/$sectorId': typeof DashboardSetorSectorIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/avisos': typeof AvisosRoute
   '/colaboradores': typeof ColaboradoresRoute
   '/dashboard': typeof DashboardRoute
   '/esteira': typeof EsteiraRoute
@@ -118,10 +133,12 @@ export interface FileRoutesByTo {
   '/operacoes': typeof OperacoesRoute
   '/painel': typeof PainelRoute
   '/produtos': typeof ProdutosRoute
+  '/dashboard-setor/$sectorId': typeof DashboardSetorSectorIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/avisos': typeof AvisosRoute
   '/colaboradores': typeof ColaboradoresRoute
   '/dashboard': typeof DashboardRoute
   '/esteira': typeof EsteiraRoute
@@ -134,11 +151,13 @@ export interface FileRoutesById {
   '/operacoes': typeof OperacoesRoute
   '/painel': typeof PainelRoute
   '/produtos': typeof ProdutosRoute
+  '/dashboard-setor/$sectorId': typeof DashboardSetorSectorIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/avisos'
     | '/colaboradores'
     | '/dashboard'
     | '/esteira'
@@ -151,9 +170,11 @@ export interface FileRouteTypes {
     | '/operacoes'
     | '/painel'
     | '/produtos'
+    | '/dashboard-setor/$sectorId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/avisos'
     | '/colaboradores'
     | '/dashboard'
     | '/esteira'
@@ -166,9 +187,11 @@ export interface FileRouteTypes {
     | '/operacoes'
     | '/painel'
     | '/produtos'
+    | '/dashboard-setor/$sectorId'
   id:
     | '__root__'
     | '/'
+    | '/avisos'
     | '/colaboradores'
     | '/dashboard'
     | '/esteira'
@@ -181,10 +204,12 @@ export interface FileRouteTypes {
     | '/operacoes'
     | '/painel'
     | '/produtos'
+    | '/dashboard-setor/$sectorId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AvisosRoute: typeof AvisosRoute
   ColaboradoresRoute: typeof ColaboradoresRoute
   DashboardRoute: typeof DashboardRoute
   EsteiraRoute: typeof EsteiraRoute
@@ -197,6 +222,7 @@ export interface RootRouteChildren {
   OperacoesRoute: typeof OperacoesRoute
   PainelRoute: typeof PainelRoute
   ProdutosRoute: typeof ProdutosRoute
+  DashboardSetorSectorIdRoute: typeof DashboardSetorSectorIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -206,6 +232,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/avisos': {
+      id: '/avisos'
+      path: '/avisos'
+      fullPath: '/avisos'
+      preLoaderRoute: typeof AvisosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/colaboradores': {
@@ -292,11 +325,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProdutosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard-setor/$sectorId': {
+      id: '/dashboard-setor/$sectorId'
+      path: '/dashboard-setor/$sectorId'
+      fullPath: '/dashboard-setor/$sectorId'
+      preLoaderRoute: typeof DashboardSetorSectorIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AvisosRoute: AvisosRoute,
   ColaboradoresRoute: ColaboradoresRoute,
   DashboardRoute: DashboardRoute,
   EsteiraRoute: EsteiraRoute,
@@ -309,6 +350,7 @@ const rootRouteChildren: RootRouteChildren = {
   OperacoesRoute: OperacoesRoute,
   PainelRoute: PainelRoute,
   ProdutosRoute: ProdutosRoute,
+  DashboardSetorSectorIdRoute: DashboardSetorSectorIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

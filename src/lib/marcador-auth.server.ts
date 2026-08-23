@@ -1,4 +1,4 @@
-type Cargo = "usuario" | "admin";
+type Cargo = "usuario" | "admin" | "setor";
 
 function fromB64url(s: string): Uint8Array {
   const pad = s.replace(/-/g, "+").replace(/_/g, "/");
@@ -38,6 +38,7 @@ export async function readToken(
       id: string;
       nome: string;
       cargo: Cargo;
+      setorId?: string | null;
     };
   } catch {
     return null;

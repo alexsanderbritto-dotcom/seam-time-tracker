@@ -48,7 +48,7 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
   return diff === 0;
 }
 
-type Cargo = "usuario" | "admin";
+type Cargo = "usuario" | "admin" | "setor";
 
 function b64url(bytes: Uint8Array): string {
   let s = "";
@@ -76,7 +76,12 @@ async function signingKey(): Promise<CryptoKey> {
 }
 
 // Sessões não expiram por tempo: o usuário só sai ao clicar em "Sair".
-async function issueToken(payload: { id: string; nome: string; cargo: Cargo }): Promise<string> {
+async function issueToken(payload: {
+  id: string;
+  nome: string;
+  cargo: Cargo;
+  setorId?: string | null;
+}): Promise<string> {
   const body = b64url(new TextEncoder().encode(JSON.stringify({ ...payload, iat: Date.now() })));
   const sig = await crypto.subtle.sign("HMAC", await signingKey(), new TextEncoder().encode(body));
   return `${body}.${b64url(new Uint8Array(sig))}`;
@@ -100,6 +105,7 @@ async function readToken(
       id: string;
       nome: string;
       cargo: Cargo;
+      setorId?: string | null;
     };
   } catch {
     return null;
@@ -127,21 +133,26 @@ export const listMarcadores = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows, error } = await supabaseAdmin
       .from("marcadores")
-      .select("id, nome, cargo, created_at")
+      .select("id, nome, cargo, setor_id, created_at")
       .order("nome");
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
 
 export const createMarcador = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string; nome: string; senha: string; cargo: Cargo }) => {
+  .inputValidator(
+    (data: { token: string; nome: string; senha: string; cargo: Cargo; setorId?: string | null }) => {
     const nome = data.nome?.trim() ?? "";
     const senha = data.senha ?? "";
-    const cargo: Cargo = data.cargo === "admin" ? "admin" : "usuario";
+    const cargo: Cargo =
+      data.cargo === "admin" ? "admin" : data.cargo === "setor" ? "setor" : "usuario";
+    const setorId = cargo === "setor" ? (data.setorId ?? null) : null;
+    if (cargo === "setor" && !setorId) throw new Error("Selecione o setor do marcador.");
     if (nome.length < 2 || nome.length > 60) throw new Error("Nome inválido (2 a 60 caracteres).");
     if (senha.length < 4 || senha.length > 100) throw new Error("Senha deve ter ao menos 4 caracteres.");
-    return { token: data.token, nome, senha, cargo };
-  })
+    return { token: data.token, nome, senha, cargo, setorId };
+  },
+  )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { count } = await supabaseAdmin
@@ -153,7 +164,12 @@ export const createMarcador = createServerFn({ method: "POST" })
     const senha_hash = await hashPassword(data.senha);
     const { error } = await supabaseAdmin
       .from("marcadores")
-      .insert({ nome: data.nome, senha_hash, cargo: isFirst ? "admin" : data.cargo });
+      .insert({
+        nome: data.nome,
+        senha_hash,
+        cargo: isFirst ? "admin" : data.cargo,
+        setor_id: isFirst ? null : data.setorId,
+      });
     if (error) {
       if (error.code === "23505") return { ok: false as const, error: "Já existe um marcador com esse nome." };
       return { ok: false as const, error: error.message };
@@ -162,9 +178,13 @@ export const createMarcador = createServerFn({ method: "POST" })
   });
 
 export const updateMarcadorCargo = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string; id: string; cargo: Cargo }) => {
+  .inputValidator((data: { token: string; id: string; cargo: Cargo; setorId?: string | null }) => {
     if (!data.id) throw new Error("Marcador inválido.");
-    return { token: data.token, id: data.id, cargo: data.cargo === "admin" ? "admin" : "usuario" };
+    const cargo: Cargo =
+      data.cargo === "admin" ? "admin" : data.cargo === "setor" ? "setor" : "usuario";
+    const setorId = cargo === "setor" ? (data.setorId ?? null) : null;
+    if (cargo === "setor" && !setorId) throw new Error("Selecione o setor do marcador.");
+    return { token: data.token, id: data.id, cargo, setorId };
   })
   .handler(async ({ data }) => {
     await requireAdmin(data.token);
@@ -179,7 +199,7 @@ export const updateMarcadorCargo = createServerFn({ method: "POST" })
     }
     const { error } = await supabaseAdmin
       .from("marcadores")
-      .update({ cargo: data.cargo })
+      .update({ cargo: data.cargo, setor_id: data.setorId })
       .eq("id", data.id);
     if (error) return { ok: false as const, error: error.message };
     return { ok: true as const };
@@ -224,7 +244,7 @@ export const loginMarcador = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row } = await supabaseAdmin
       .from("marcadores")
-      .select("id, nome, cargo, senha_hash")
+      .select("id, nome, cargo, setor_id, senha_hash")
       .ilike("nome", data.nome)
       .maybeSingle();
     if (!row) {
@@ -234,9 +254,24 @@ export const loginMarcador = createServerFn({ method: "POST" })
     }
     const valid = await verifyPassword(data.senha, row.senha_hash);
     if (!valid) return { ok: false as const };
-    const cargo = (row.cargo === "admin" ? "admin" : "usuario") as Cargo;
-    const token = await issueToken({ id: row.id, nome: row.nome, cargo });
-    return { ok: true as const, marcador: { id: row.id, nome: row.nome, cargo, token } };
+    const cargo = (
+      row.cargo === "admin" ? "admin" : row.cargo === "setor" && row.setor_id ? "setor" : "usuario"
+    ) as Cargo;
+    const setorId = cargo === "setor" ? row.setor_id : null;
+    let setorNome: string | null = null;
+    if (setorId) {
+      const { data: sec } = await supabaseAdmin
+        .from("sectors")
+        .select("name")
+        .eq("id", setorId)
+        .maybeSingle();
+      setorNome = sec?.name ?? null;
+    }
+    const token = await issueToken({ id: row.id, nome: row.nome, cargo, setorId });
+    return {
+      ok: true as const,
+      marcador: { id: row.id, nome: row.nome, cargo, setorId, setorNome, token },
+    };
   });
 
 export const hasMarcadores = createServerFn({ method: "GET" }).handler(async () => {

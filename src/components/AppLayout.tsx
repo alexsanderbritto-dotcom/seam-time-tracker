@@ -15,7 +15,8 @@ import {
   AlertTriangle,
   MonitorPlay,
   Unlink,
-
+  Megaphone,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -35,6 +36,7 @@ const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: true },
   { to: "/painel", label: "Painel (TV)", icon: MonitorPlay, adminOnly: true },
   { to: "/marcacoes-orfas", label: "Marcações sem OP Interna", icon: Unlink, adminOnly: true },
+  { to: "/avisos", label: "Avisos", icon: Megaphone, adminOnly: false },
 
 ] as const;
 
@@ -49,13 +51,14 @@ export function AppLayout({
   requireAdmin?: boolean;
   children: ReactNode;
 }) {
-  const { session, ready, isAdmin } = useMarcadorSession();
+  const { session, ready, isAdmin, isSetor, setorId, setorNome } = useMarcadorSession();
   const [menuOpen, setMenuOpen] = useState(false);
 
   if (!ready) return null;
   if (!session) return <MarcadorLogin />;
 
   const items = nav.filter((item) => isAdmin || !item.adminOnly);
+  const cargoLabel = isAdmin ? "Admin" : isSetor ? `Setor · ${setorNome ?? ""}`.trim() : "Usuário";
   const blocked = requireAdmin && !isAdmin;
 
   const navList = (onNavigate?: () => void) => (
@@ -74,13 +77,25 @@ export function AppLayout({
           {item.label}
         </Link>
       ))}
+      {isSetor && setorId ? (
+        <Link
+          to="/dashboard-setor/$sectorId"
+          params={{ sectorId: setorId }}
+          onClick={onNavigate}
+          activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
+          className="flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        >
+          <BarChart3 className="h-4 w-4 shrink-0" />
+          Dashboard do setor
+        </Link>
+      ) : null}
     </nav>
   );
 
   const footer = (
     <div className="border-t border-sidebar-border px-5 py-4">
       <p className="text-xs text-sidebar-foreground/70">
-        {session.nome} · {isAdmin ? "Admin" : "Usuário"}
+        {session.nome} · {cargoLabel}
       </p>
       <button
         type="button"
@@ -140,7 +155,7 @@ export function AppLayout({
             <div className="mx-auto max-w-md rounded-lg border border-border bg-card p-6 text-center">
               <h2 className="text-base font-semibold">Acesso restrito</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Seu cargo é "Usuário" e permite apenas a marcação de produção.
+                Seu cargo não permite acessar esta tela.
               </p>
               <Button asChild className="mt-4">
                 <Link to="/marcacao-producao">Ir para Marcação de Produção</Link>
