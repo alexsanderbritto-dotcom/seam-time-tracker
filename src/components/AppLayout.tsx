@@ -80,7 +80,7 @@ export function AppLayout({
       {isSetor && setorId ? (
         <Link
           to="/dashboard-setor/$sectorId"
-          params={{ sectorId }}
+          params={{ sectorId: setorId }}
           onClick={onNavigate}
           activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
           className="flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
