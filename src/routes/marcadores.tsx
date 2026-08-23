@@ -33,6 +33,7 @@ import {
 } from "@/lib/marcadores.functions";
 import { useMarcadorSession, type MarcadorCargo } from "@/lib/marcador-session";
 import { KeyRound, Trash2, UserPlus } from "lucide-react";
+import { sectorsQuery } from "@/lib/production";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
 
 export const Route = createFileRoute("/marcadores")({
@@ -68,7 +69,13 @@ function MarcadoresPage() {
 
   const [nome, setNome] = useState("");
   const [senha, setSenha] = useState("");
-  const [cargo, setCargo] = useState<MarcadorCargo>("usuario");
+  const [cargoValue, setCargoValue] = useState<string>("usuario");
+  const { data: sectors = [] } = useQuery(sectorsQuery);
+  /** "usuario" | "admin" | "setor:<id>" -> cargo + setor */
+  const parseCargo = (v: string): { cargo: MarcadorCargo; setorId: string | null } =>
+    v.startsWith("setor:")
+      ? { cargo: "setor", setorId: v.slice(6) }
+      : { cargo: v === "admin" ? "admin" : "usuario", setorId: null };
   const [resetId, setResetId] = useState<string | null>(null);
   const [novaSenha, setNovaSenha] = useState("");
 
@@ -79,7 +86,10 @@ function MarcadoresPage() {
   });
 
   const createMut = useMutation({
-    mutationFn: () => create({ data: { token, nome, senha, cargo } }),
+    mutationFn: () => {
+      const { cargo, setorId } = parseCargo(cargoValue);
+      return create({ data: { token, nome, senha, cargo, setorId } });
+    },
     onSuccess: (res) => {
       if (!res.ok) {
         toast.error(res.error);
@@ -88,7 +98,7 @@ function MarcadoresPage() {
       toast.success("Marcador cadastrado.");
       setNome("");
       setSenha("");
-      setCargo("usuario");
+      setCargoValue("usuario");
       qc.invalidateQueries({ queryKey: ["marcadores"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -109,8 +119,10 @@ function MarcadoresPage() {
   });
 
   const cargoMut = useMutation({
-    mutationFn: (v: { id: string; cargo: MarcadorCargo }) =>
-      updateCargo({ data: { token, id: v.id, cargo: v.cargo } }),
+    mutationFn: (v: { id: string; value: string }) => {
+      const { cargo, setorId } = parseCargo(v.value);
+      return updateCargo({ data: { token, id: v.id, cargo, setorId } });
+    },
     onSuccess: (res) => {
       if (!res.ok) {
         toast.error(res.error);
@@ -164,13 +176,18 @@ function MarcadoresPage() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="m-cargo">Cargo</Label>
-                <Select value={cargo} onValueChange={(v) => setCargo(v as MarcadorCargo)}>
+                <Select value={cargoValue} onValueChange={setCargoValue}>
                   <SelectTrigger id="m-cargo">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="usuario">Usuário (só marcação de produção)</SelectItem>
                     <SelectItem value="admin">Admin (acesso total)</SelectItem>
+                    {sectors.map((sec) => (
+                      <SelectItem key={sec.id} value={`setor:${sec.id}`}>
+                        {sec.name} (marcação + dashboard do setor)
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -235,17 +252,26 @@ function MarcadoresPage() {
                       </TableCell>
                       <TableCell>
                         <Select
-                          value={m.cargo === "admin" ? "admin" : "usuario"}
-                          onValueChange={(v) =>
-                            cargoMut.mutate({ id: m.id, cargo: v as MarcadorCargo })
+                          value={
+                            m.cargo === "admin"
+                              ? "admin"
+                              : m.cargo === "setor" && m.setor_id
+                                ? `setor:${m.setor_id}`
+                                : "usuario"
                           }
+                          onValueChange={(v) => cargoMut.mutate({ id: m.id, value: v })}
                         >
-                          <SelectTrigger className="h-8 w-36">
+                          <SelectTrigger className="h-8 w-44">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="usuario">Usuário</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
+                            {sectors.map((sec) => (
+                              <SelectItem key={sec.id} value={`setor:${sec.id}`}>
+                                Setor · {sec.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </TableCell>
