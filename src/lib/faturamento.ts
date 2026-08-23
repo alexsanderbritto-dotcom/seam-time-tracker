@@ -58,6 +58,38 @@ export const faturamentoMesProdutosQuery = {
   },
 };
 
+export type MetaSimulacaoItem = {
+  date: string;
+  productId: string;
+  loteId: string | null;
+  quantity: number;
+};
+
+export type MetaSimulacao = {
+  id: string;
+  sector_id: string;
+  mes: number;
+  ano: number;
+  nome: string;
+  itens: MetaSimulacaoItem[];
+  created_at: string;
+};
+
+export const metaSimulacoesQuery = {
+  queryKey: ["meta_simulacoes"],
+  queryFn: async (): Promise<MetaSimulacao[]> => {
+    const { data, error } = await db
+      .from("meta_simulacoes")
+      .select("id,sector_id,mes,ano,nome,itens,created_at")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return ((data as MetaSimulacao[]) ?? []).map((s) => ({
+      ...s,
+      itens: Array.isArray(s.itens) ? s.itens : [],
+    }));
+  },
+};
+
 export const metaSetorMesQuery = {
   queryKey: ["meta_setor_mes"],
   queryFn: async (): Promise<MetaSetorMes[]> => {
