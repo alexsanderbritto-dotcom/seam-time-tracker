@@ -13,6 +13,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { SearchableSelect } from "@/components/SearchableSelect";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { db } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { useMarcadorSession } from "@/lib/marcador-session";
@@ -36,10 +37,12 @@ import {
   MES_NOMES,
   mesLabel,
   metaSetorMesQuery,
+  metaSimulacoesQuery,
   todayIso,
   workingDays,
   type LoteRef,
   type MetaSetorMes,
+  type MetaSimulacao,
   type SimEntry,
 } from "@/lib/faturamento";
 import { feriadosQuery } from "@/lib/schedule";
