@@ -578,6 +578,10 @@ function SimulationBlock({
   allowedProductIds,
   lotes,
   closedDays,
+  sectorId,
+  mes,
+  ano,
+  metaRestante,
 }: {
   days: string[];
   metaDia: number;
@@ -587,9 +591,76 @@ function SimulationBlock({
   allowedProductIds: Set<string>;
   lotes: LoteRef[];
   closedDays: string[];
+  sectorId: string;
+  mes: number;
+  ano: number;
+  /** Meta total do mês − atingido acumulado dos dias já vencidos */
+  metaRestante: number;
 }) {
+  const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [sim, setSim] = useState<SimEntry[]>([]);
+  const [cenarioNome, setCenarioNome] = useState("");
+  const [savingCenario, setSavingCenario] = useState(false);
+  const { data: cenariosAll = [] } = useQuery(metaSimulacoesQuery);
+  const cenarios = useMemo(
+    () => cenariosAll.filter((c) => c.sector_id === sectorId && c.mes === mes && c.ano === ano),
+    [cenariosAll, sectorId, mes, ano],
+  );
+
+  const salvarCenario = async () => {
+    if (sim.length === 0) {
+      toast.error("Adicione ao menos um produto à simulação antes de salvar.");
+      return;
+    }
+    setSavingCenario(true);
+    const nome =
+      cenarioNome.trim() ||
+      `Cenário ${new Date().toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}`;
+    const { error } = await db.from("meta_simulacoes").insert({
+      sector_id: sectorId,
+      mes,
+      ano,
+      nome,
+      itens: sim.map((s) => ({
+        date: s.date,
+        productId: s.productId,
+        loteId: s.loteId ?? null,
+        quantity: s.quantity,
+      })),
+    });
+    setSavingCenario(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setCenarioNome("");
+    toast.success("Cenário de simulação salvo");
+    void qc.invalidateQueries({ queryKey: metaSimulacoesQuery.queryKey });
+  };
+
+  const carregarCenario = (c: MetaSimulacao) => {
+    setSim(
+      c.itens.map((i) => ({
+        date: i.date,
+        productId: i.productId,
+        loteId: i.loteId ?? null,
+        quantity: Number(i.quantity) || 0,
+      })),
+    );
+    toast.success(`Cenário "${c.nome}" carregado na simulação`);
+  };
+
+  const excluirCenario = async (id: string) => {
+    const { error } = await db.from("meta_simulacoes").delete().eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Cenário excluído");
+    void qc.invalidateQueries({ queryKey: metaSimulacoesQuery.queryKey });
+  };
+
   const today = todayIso();
   const openDays = useMemo(
     () => days.filter((d) => d >= today && !closedDays.includes(d)),
