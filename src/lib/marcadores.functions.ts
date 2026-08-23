@@ -48,7 +48,7 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
   return diff === 0;
 }
 
-type Cargo = "usuario" | "admin";
+type Cargo = "usuario" | "admin" | "setor";
 
 function b64url(bytes: Uint8Array): string {
   let s = "";
