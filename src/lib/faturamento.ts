@@ -120,6 +120,8 @@ export const fmtDayLabel = (iso: string) => {
 
 export type DayProductLine = {
   productId: string;
+  /** fração (OP Interna) que gerou a produção; null quando não fracionado */
+  loteId: string | null;
   opInterna: string | null;
   name: string;
   quantity: number;
@@ -167,13 +169,29 @@ export function lastOpsOfSector(
   return map;
 }
 
-export type SimEntry = { date: string; productId: string; quantity: number };
+export type SimEntry = {
+  date: string;
+  productId: string;
+  quantity: number;
+  loteId?: string | null;
+};
+
+/** fração da esteira (ativa ou removida) usada para resolver a OP Interna */
+export type LoteRef = {
+  id: string;
+  produto_id: string;
+  op_interna: string | null;
+  quantidade: number;
+};
+
+const lineKey = (productId: string, loteId: string | null) => `${productId}|${loteId ?? ""}`;
 
 /**
  * Monta o cálculo de valor por dia.
  * Regra: a quantidade real produzida (última operação do setor) é limitada à
- * quantidade total do produto — o excedente não gera valor.
- * Produtos hipotéticos da simulação não sofrem essa trava.
+ * quantidade da fração (ou do produto, quando não fracionado) — o excedente não
+ * gera valor. Produtos hipotéticos da simulação não sofrem essa trava.
+ * A OP Interna vem sempre da fração vinculada à marcação de produção.
  */
 function makeValueOf(params: {
   days: string[];
@@ -182,9 +200,11 @@ function makeValueOf(params: {
   products: Product[];
   allowedProductIds: Set<string>;
   simulated: SimEntry[];
+  lotes?: LoteRef[];
 }): (date: string) => DayProductLine[] {
-  const { days, entries, opToProduct, products, allowedProductIds, simulated } = params;
+  const { days, entries, opToProduct, products, allowedProductIds, simulated, lotes = [] } = params;
   const productById = new Map(products.map((p) => [p.id, p] as const));
+  const loteById = new Map(lotes.map((l) => [l.id, l] as const));
 
   const real = new Map<string, Map<string, number>>();
   const sim = new Map<string, Map<string, number>>();
@@ -192,50 +212,63 @@ function makeValueOf(params: {
     target: Map<string, Map<string, number>>,
     date: string,
     productId: string,
+    loteId: string | null,
     qty: number,
   ) => {
     if (!allowedProductIds.has(productId)) return;
     const m = target.get(date) ?? new Map<string, number>();
-    m.set(productId, (m.get(productId) ?? 0) + qty);
+    const k = lineKey(productId, loteId);
+    m.set(k, (m.get(k) ?? 0) + qty);
     target.set(date, m);
   };
 
   for (const e of entries) {
     const productId = opToProduct.get(e.operation_id);
     if (!productId) continue;
-    add(real, e.entry_date, productId, e.quantity);
+    const loteId = e.lote_id && loteById.has(e.lote_id) ? e.lote_id : null;
+    add(real, e.entry_date, productId, loteId, e.quantity);
   }
-  for (const s of simulated) add(sim, s.date, s.productId, s.quantity);
+  for (const s of simulated) add(sim, s.date, s.productId, s.loteId ?? null, s.quantity);
 
-  // trava cumulativa: limita o real ao total do produto, em ordem cronológica
+  const capOf = (productId: string, loteId: string | null) =>
+    loteId
+      ? Number(loteById.get(loteId)?.quantidade ?? 0)
+      : Number(productById.get(productId)?.total_quantity ?? 0);
+
+  // trava cumulativa: limita o real ao total da fração/produto, em ordem cronológica
   const capped = new Map<string, Map<string, number>>();
   const used = new Map<string, number>();
   for (const date of [...days].sort()) {
     const dayMap = real.get(date);
     if (!dayMap) continue;
     const out = new Map<string, number>();
-    for (const [productId, qty] of dayMap) {
-      const total = Number(productById.get(productId)?.total_quantity ?? 0);
-      const already = used.get(productId) ?? 0;
+    for (const [k, qty] of dayMap) {
+      const [productId, loteRaw] = k.split("|");
+      const loteId = loteRaw ? loteRaw : null;
+      const total = capOf(productId as string, loteId);
+      const already = used.get(k) ?? 0;
       const allowed = Math.max(0, Math.min(qty, total - already));
-      used.set(productId, already + allowed);
-      if (allowed > 0) out.set(productId, allowed);
+      used.set(k, already + allowed);
+      if (allowed > 0) out.set(k, allowed);
     }
     capped.set(date, out);
   }
 
   return (date: string): DayProductLine[] => {
     const merged = new Map<string, number>(capped.get(date) ?? []);
-    for (const [productId, qty] of sim.get(date) ?? []) {
-      merged.set(productId, (merged.get(productId) ?? 0) + qty);
+    for (const [k, qty] of sim.get(date) ?? []) {
+      merged.set(k, (merged.get(k) ?? 0) + qty);
     }
     const lines: DayProductLine[] = [];
-    for (const [productId, qty] of merged) {
-      const p = productById.get(productId);
+    for (const [k, qty] of merged) {
+      const [productId, loteRaw] = k.split("|");
+      const loteId = loteRaw ? loteRaw : null;
+      const p = productById.get(productId as string);
       if (!p) continue;
       lines.push({
-        productId,
-        opInterna: p.op_interna,
+        productId: productId as string,
+        loteId,
+        opInterna: loteId ? (loteById.get(loteId)?.op_interna ?? null) : p.op_interna,
         name: p.name,
         quantity: qty,
         value: qty * Number(p.unit_value ?? 0),
@@ -245,6 +278,7 @@ function makeValueOf(params: {
     return lines;
   };
 }
+
 
 /**
  * Monta as linhas de dia.
@@ -261,6 +295,7 @@ export function buildMonthRows(params: {
   products: Product[];
   allowedProductIds: Set<string>;
   simulated?: SimEntry[];
+  lotes?: LoteRef[];
   allDue?: boolean;
   today?: string;
   /** dias encerrados manualmente */
@@ -274,6 +309,7 @@ export function buildMonthRows(params: {
     products,
     allowedProductIds,
     simulated = [],
+    lotes = [],
     allDue = false,
     today = todayIso(),
     closedDays = [],
@@ -288,6 +324,7 @@ export function buildMonthRows(params: {
     products,
     allowedProductIds,
     simulated,
+    lotes,
   });
 
   const isDue = (date: string) => allDue || date <= today;
@@ -351,6 +388,7 @@ export function buildSimulationRows(params: {
   products: Product[];
   allowedProductIds: Set<string>;
   simulated?: SimEntry[];
+  lotes?: LoteRef[];
   today?: string;
   closedDays?: string[];
 }): { rows: DayRow[]; metaTotal: number; atingidoTotal: number } {
@@ -362,6 +400,7 @@ export function buildSimulationRows(params: {
     products,
     allowedProductIds,
     simulated = [],
+    lotes = [],
     today = todayIso(),
     closedDays = [],
   } = params;
@@ -374,6 +413,7 @@ export function buildSimulationRows(params: {
     products,
     allowedProductIds,
     simulated,
+    lotes,
   });
 
   // saldo real dos dias já encerrados → meta base herdada dos dias abertos

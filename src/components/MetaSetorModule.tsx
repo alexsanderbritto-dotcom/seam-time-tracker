@@ -20,6 +20,7 @@ import {
   brl,
   catalogOperationsQuery,
   entriesQuery,
+  esteiraTodasQuery,
   operationsQuery,
   productsQuery,
   sectorsQuery,
@@ -37,6 +38,7 @@ import {
   metaSetorMesQuery,
   todayIso,
   workingDays,
+  type LoteRef,
   type MetaSetorMes,
   type SimEntry,
 } from "@/lib/faturamento";
@@ -183,7 +185,20 @@ function MetaMesBlock({ meta, sectorName }: { meta: MetaSetorMes; sectorName: st
   const { data: operations = [] } = useQuery(operationsQuery);
   const { data: catalogOps = [] } = useQuery(catalogOperationsQuery);
   const { data: entries = [] } = useQuery(entriesQuery());
+  const { data: esteiraTodas = [] } = useQuery(esteiraTodasQuery);
   const { data: meses = [] } = useQuery(faturamentoMesesQuery);
+
+  /** frações (OP Interna) — fonte correta da OP Interna de cada marcação */
+  const lotes: LoteRef[] = useMemo(
+    () =>
+      esteiraTodas.map((e) => ({
+        id: e.id,
+        produto_id: e.produto_id,
+        op_interna: e.op_interna,
+        quantidade: e.quantidade || 0,
+      })),
+    [esteiraTodas],
+  );
   const { data: mesProdutos = [] } = useQuery(faturamentoMesProdutosQuery);
 
   const { data: feriadosCentral = [] } = useQuery(feriadosQuery);
@@ -216,9 +231,19 @@ function MetaMesBlock({ meta, sectorName }: { meta: MetaSetorMes; sectorName: st
         opToProduct,
         products,
         allowedProductIds,
+        lotes,
         closedDays: meta.dias_encerrados,
       }),
-    [days, meta.meta_dia, entries, opToProduct, products, allowedProductIds, meta.dias_encerrados],
+    [
+      days,
+      meta.meta_dia,
+      entries,
+      opToProduct,
+      products,
+      allowedProductIds,
+      lotes,
+      meta.dias_encerrados,
+    ],
   );
 
   const encerrarDia = async (date: string) => {
@@ -393,6 +418,7 @@ function MetaMesBlock({ meta, sectorName }: { meta: MetaSetorMes; sectorName: st
               opToProduct={opToProduct}
               products={products}
               allowedProductIds={allowedProductIds}
+              lotes={lotes}
               closedDays={meta.dias_encerrados}
             />
           </div>
@@ -459,7 +485,7 @@ function DayGrid({
                 <p className="text-xs text-muted-foreground">Sem produção</p>
               ) : (
                 r.lines.map((l) => (
-                  <div key={l.productId} className="text-xs">
+                  <div key={`${l.productId}:${l.loteId ?? ""}`} className="text-xs">
                     <p className="font-semibold">OP interna: {l.opInterna || "não definida"}</p>
                     <p className="text-muted-foreground">
                       {l.quantity} pçs · {brl(l.value)}
@@ -546,6 +572,7 @@ function SimulationBlock({
   opToProduct,
   products,
   allowedProductIds,
+  lotes,
   closedDays,
 }: {
   days: string[];
@@ -554,6 +581,7 @@ function SimulationBlock({
   opToProduct: Map<string, string>;
   products: Product[];
   allowedProductIds: Set<string>;
+  lotes: LoteRef[];
   closedDays: string[];
 }) {
   const [open, setOpen] = useState(false);
@@ -571,30 +599,58 @@ function SimulationBlock({
     if (openDays.length > 0 && !openDays.includes(day)) setDay(openDays[0]!);
   }, [openDays, day]);
 
-  /** produzido na última operação do setor, por produto */
-  const producedByProduct = useMemo(() => {
+  /** produzido na última operação do setor, por fração (ou produto sem fração) */
+  const producedByLine = useMemo(() => {
     const map = new Map<string, number>();
+    const loteIds = new Set(lotes.map((l) => l.id));
     for (const e of entries) {
       const pid = opToProduct.get(e.operation_id);
       if (!pid) continue;
-      map.set(pid, (map.get(pid) ?? 0) + e.quantity);
+      const k = `${pid}|${e.lote_id && loteIds.has(e.lote_id) ? e.lote_id : ""}`;
+      map.set(k, (map.get(k) ?? 0) + e.quantity);
     }
     return map;
-  }, [entries, opToProduct]);
+  }, [entries, opToProduct, lotes]);
 
-  const pending = useMemo(
-    () =>
-      products
-        .filter((p) => allowedProductIds.has(p.id))
-        .map((p) => ({
+  /** linhas simuláveis: cada fração do produto, ou o produto quando não fracionado */
+  const pending = useMemo(() => {
+    const list: {
+      key: string;
+      productId: string;
+      loteId: string | null;
+      opInterna: string | null;
+      product: Product;
+      restante: number;
+    }[] = [];
+    for (const p of products) {
+      if (!allowedProductIds.has(p.id)) continue;
+      const doProduto = lotes.filter((l) => l.produto_id === p.id);
+      if (doProduto.length === 0) {
+        list.push({
+          key: `${p.id}|`,
+          productId: p.id,
+          loteId: null,
+          opInterna: p.op_interna,
           product: p,
-          restante: Math.max(p.total_quantity - (producedByProduct.get(p.id) ?? 0), 0),
-        }))
-        .filter((x) => x.restante > 0),
-    [products, allowedProductIds, producedByProduct],
-  );
+          restante: Math.max(p.total_quantity - (producedByLine.get(`${p.id}|`) ?? 0), 0),
+        });
+        continue;
+      }
+      for (const l of doProduto) {
+        list.push({
+          key: `${p.id}|${l.id}`,
+          productId: p.id,
+          loteId: l.id,
+          opInterna: l.op_interna,
+          product: p,
+          restante: Math.max(l.quantidade - (producedByLine.get(`${p.id}|${l.id}`) ?? 0), 0),
+        });
+      }
+    }
+    return list.filter((x) => x.restante > 0);
+  }, [products, allowedProductIds, lotes, producedByLine]);
 
-  const selected = pending.find((x) => x.product.id === productId);
+  const selected = pending.find((x) => x.key === productId);
   const result = buildSimulationRows({
     days,
     metaDia,
@@ -602,6 +658,7 @@ function SimulationBlock({
     opToProduct,
     products,
     allowedProductIds,
+    lotes,
     simulated: sim,
     today,
     closedDays,
@@ -609,10 +666,13 @@ function SimulationBlock({
 
 
   const add = () => {
-    if (!day || !productId) return;
-    const quantity = Number(qty) || selected?.restante || 0;
+    if (!day || !selected) return;
+    const quantity = Number(qty) || selected.restante || 0;
     if (quantity <= 0) return;
-    setSim([...sim, { date: day, productId, quantity }]);
+    setSim([
+      ...sim,
+      { date: day, productId: selected.productId, loteId: selected.loteId, quantity },
+    ]);
     setProductId("");
     setQty("");
   };
@@ -665,14 +725,14 @@ function SimulationBlock({
                 <Label>Produto não finalizado no setor</Label>
                 <SearchableSelect
                   options={pending.map((x) => ({
-                    value: x.product.id,
-                    label: `${x.product.op_interna || "s/ OP interna"} — ${x.product.name}`,
-                    searchText: `${x.product.op_number} ${x.product.reference}`,
+                    value: x.key,
+                    label: `${x.opInterna || "s/ OP interna"} — ${x.product.name}`,
+                    searchText: `${x.product.op_number} ${x.product.reference} ${x.opInterna ?? ""}`,
                   }))}
                   value={productId}
                   onChange={(v) => {
                     setProductId(v);
-                    const p = pending.find((x) => x.product.id === v);
+                    const p = pending.find((x) => x.key === v);
                     setQty(String(p?.restante ?? ""));
                   }}
                   placeholder="Selecione o produto"
@@ -698,9 +758,12 @@ function SimulationBlock({
               <div className="flex flex-wrap gap-2">
                 {sim.map((s, i) => {
                   const p = products.find((x) => x.id === s.productId);
+                  const op = s.loteId
+                    ? (lotes.find((l) => l.id === s.loteId)?.op_interna ?? null)
+                    : p?.op_interna;
                   return (
                     <Badge key={`${s.date}-${s.productId}-${i}`} variant="secondary" className="gap-1">
-                      {fmtDayLabel(s.date)} · {p?.op_interna || p?.name} · {s.quantity} pçs
+                      {fmtDayLabel(s.date)} · {op || p?.name} · {s.quantity} pçs
                       <button
                         type="button"
                         aria-label="Remover simulação"

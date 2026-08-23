@@ -50,9 +50,15 @@ function GargaloPage() {
   const { data: sectors = [] } = useQuery(sectorsQuery);
   const { data: entries = [] } = useQuery(entriesQuery());
 
-  const esteiraProducts = useMemo(() => {
-    const ids = new Set(esteira.map((e) => e.produto_id));
-    return products.filter((p) => ids.has(p.id));
+  /** frações ativas da esteira — a OP Interna vem daqui, não do produto mestre */
+  const lotes = useMemo(() => {
+    const byId = new Map(products.map((p) => [p.id, p] as const));
+    return esteira
+      .map((e) => {
+        const product = byId.get(e.produto_id);
+        return product ? { id: e.id, product, opInterna: e.op_interna } : null;
+      })
+      .filter((x): x is { id: string; product: (typeof products)[number]; opInterna: string | null } => !!x);
   }, [esteira, products]);
 
   const catSector = useMemo(
@@ -60,30 +66,40 @@ function GargaloPage() {
     [catalogOps],
   );
 
-  /** operação do produto -> total produzido */
-  const producedByOp = useMemo(() => {
+  const loteIds = useMemo(() => new Set(lotes.map((l) => l.id)), [lotes]);
+
+  /** operação do produto + fração -> total produzido */
+  const producedByOpLote = useMemo(() => {
     const map = new Map<string, number>();
     for (const e of entries) {
-      map.set(e.operation_id, (map.get(e.operation_id) ?? 0) + e.quantity);
+      if (!e.lote_id || !loteIds.has(e.lote_id)) continue;
+      const k = `${e.operation_id}|${e.lote_id}`;
+      map.set(k, (map.get(k) ?? 0) + e.quantity);
     }
     return map;
-  }, [entries]);
+  }, [entries, loteIds]);
+
+  const producedOf = (operationId: string, loteId: string) =>
+    producedByOpLote.get(`${operationId}|${loteId}`) ?? 0;
 
   /* ---------- 4.1 Gargalo por setor ---------- */
   const sectorTotals = useMemo(() => {
-    const productIds = new Set(esteiraProducts.map((p) => p.id));
     const totals = new Map<string, number>();
     for (const o of operations) {
-      if (!o.is_last_operation || !productIds.has(o.product_id) || !o.catalog_operation_id) continue;
+      if (!o.is_last_operation || !o.catalog_operation_id) continue;
       const sid = catSector.get(o.catalog_operation_id);
       if (!sid) continue;
-      totals.set(sid, (totals.get(sid) ?? 0) + (producedByOp.get(o.id) ?? 0));
+      for (const l of lotes) {
+        if (l.product.id !== o.product_id) continue;
+        totals.set(sid, (totals.get(sid) ?? 0) + producedOf(o.id, l.id));
+      }
     }
     return sectors
       .filter((s) => totals.has(s.id))
       .map((s) => ({ sector: s, total: totals.get(s.id) ?? 0 }))
       .sort((a, b) => b.total - a.total);
-  }, [operations, esteiraProducts, catSector, producedByOp, sectors]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [operations, lotes, catSector, producedByOpLote, sectors]);
 
   const topSector = sectorTotals[0];
 
@@ -91,6 +107,7 @@ function GargaloPage() {
   const operationGaps = useMemo(() => {
     const result: {
       productId: string;
+      loteId: string;
       productName: string;
       opInterna: string | null;
       sectorName: string;
@@ -99,12 +116,14 @@ function GargaloPage() {
       rows: { name: string; produced: number; gap: number }[];
     }[] = [];
 
-    for (const p of esteiraProducts) {
-      const ops = operations.filter((o) => o.product_id === p.id && o.catalog_operation_id);
+    for (const lote of lotes) {
+      const ops = operations.filter(
+        (o) => o.product_id === lote.product.id && o.catalog_operation_id,
+      );
       for (const s of sectors) {
         const list = ops.filter((o) => catSector.get(o.catalog_operation_id as string) === s.id);
         if (list.length < 2) continue;
-        const withQty = list.map((o) => ({ name: o.name, produced: producedByOp.get(o.id) ?? 0 }));
+        const withQty = list.map((o) => ({ name: o.name, produced: producedOf(o.id, lote.id) }));
         const max = Math.max(...withQty.map((x) => x.produced));
         const min = Math.min(...withQty.map((x) => x.produced));
         if (max - min <= LIMITE_OPERACAO) continue;
@@ -114,9 +133,10 @@ function GargaloPage() {
           .map((x) => ({ ...x, gap: max - x.produced }))
           .sort((a, b) => b.gap - a.gap);
         result.push({
-          productId: p.id,
-          productName: p.name,
-          opInterna: p.op_interna,
+          productId: lote.product.id,
+          loteId: lote.id,
+          productName: lote.product.name,
+          opInterna: lote.opInterna,
           sectorName: s.name,
           leader: leader?.name ?? "—",
           leaderQty: max,
@@ -125,7 +145,9 @@ function GargaloPage() {
       }
     }
     return result;
-  }, [esteiraProducts, operations, sectors, catSector, producedByOp]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lotes, operations, sectors, catSector, producedByOpLote]);
+
 
   return (
     <AppLayout
@@ -201,7 +223,7 @@ function GargaloPage() {
           ) : (
             operationGaps.map((g) => (
               <div
-                key={`${g.productId}-${g.sectorName}`}
+                key={`${g.loteId}-${g.sectorName}`}
                 className="rounded-lg border border-border p-3"
               >
                 <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
