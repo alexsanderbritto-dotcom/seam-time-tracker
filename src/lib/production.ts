@@ -500,26 +500,31 @@ export const sectorsQuery = {
 export const catalogOperationsQuery = {
   queryKey: ["catalog_operations"],
   queryFn: async (): Promise<CatalogOperation[]> => {
-    const { data, error } = await db
-      .from("catalog_operations")
-      .select("id,sector_id,name,expected_per_hour,is_last_operation")
-      .order("created_at", { ascending: true });
-    if (error) throw error;
-    return data as CatalogOperation[];
+    return readAllOperations<CatalogOperation>("catalog_operations");
   },
 };
 
 export const operationsQuery = {
   queryKey: ["operations"],
   queryFn: async (): Promise<Operation[]> => {
-    const { data, error } = await db
-      .from("operations")
-      .select("*")
-      .order("created_at", { ascending: true });
-    if (error) throw error;
-    return data as Operation[];
+    return readAllOperations<Operation>("operations");
   },
 };
+
+/** Read every page in stable ID order, including operations beyond the API row cap. */
+export async function readAllOperations<T>(table: "operations" | "catalog_operations", productId?: string): Promise<T[]> {
+  const result: T[] = [];
+  const pageSize = 500;
+  for (let from = 0; ; from += pageSize) {
+    let query = db.from(table).select<T[]>("*").order("id").range(from, from + pageSize - 1);
+    if (productId) query = query.eq("product_id", productId);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    const page = data ?? [];
+    result.push(...page);
+    if (page.length < pageSize) return result;
+  }
+}
 
 export const employeesQuery = {
   queryKey: ["employees"],
