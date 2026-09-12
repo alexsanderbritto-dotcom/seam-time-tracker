@@ -47,6 +47,8 @@ import {
   entriesQuery,
   esteiraTodasQuery,
   operationsQuery,
+  readAllOperations,
+  type Operation,
   productsQuery,
   sectorsQuery,
   PECA_PILOTO_LABEL,
@@ -261,7 +263,7 @@ function ProdutosPage() {
   }
 
   async function syncOperations(productId: string) {
-    const current = operations.filter((o) => o.product_id === productId);
+    const current = await readAllOperations<Operation>("operations", productId);
     const keep = new Set(selectedOps);
     const usedOpIds = new Set(entries.map((e) => e.operation_id));
 
@@ -269,10 +271,11 @@ function ProdutosPage() {
       (o) => o.catalog_operation_id && !keep.has(o.catalog_operation_id) && !usedOpIds.has(o.id),
     );
     if (toRemove.length > 0) {
-      await db
+      const { error } = await db
         .from("operations")
         .delete()
         .in("id", toRemove.map((o) => o.id));
+      if (error) throw new Error(error.message);
     }
 
     const existing = new Set(
@@ -291,25 +294,27 @@ function ProdutosPage() {
           is_last_operation: lastIds.has(id),
         };
       });
-    if (toAdd.length > 0) await db.from("operations").insert(toAdd);
+    if (toAdd.length > 0) {
+      const { error } = await db.from("operations").insert(toAdd);
+      if (error) throw new Error(error.message);
+    }
 
     // sincroniza a marcação de "última operação do setor" das operações mantidas
-    const { data: rows } = await db
-      .from("operations")
-      .select("id,catalog_operation_id")
-      .eq("product_id", productId);
-    const list = (rows ?? []) as { id: string; catalog_operation_id: string | null }[];
+    const list = await readAllOperations<Operation>("operations", productId);
     const markTrue = list.filter((r) => r.catalog_operation_id && lastIds.has(r.catalog_operation_id));
     const markFalse = list.filter((r) => !r.catalog_operation_id || !lastIds.has(r.catalog_operation_id));
     if (markTrue.length > 0) {
-      await db.from("operations").update({ is_last_operation: true }).in("id", markTrue.map((r) => r.id));
+      const { error } = await db.from("operations").update({ is_last_operation: true }).in("id", markTrue.map((r) => r.id));
+      if (error) throw new Error(error.message);
     }
     if (markFalse.length > 0) {
-      await db.from("operations").update({ is_last_operation: false }).in("id", markFalse.map((r) => r.id));
+      const { error } = await db.from("operations").update({ is_last_operation: false }).in("id", markFalse.map((r) => r.id));
+      if (error) throw new Error(error.message);
     }
   }
 
   async function save() {
+    if (saving) return;
     if (!form.name || !form.reference || !form.op_number) {
       toast.error("Nome, referência e OP são obrigatórios.");
       return;
@@ -352,6 +357,8 @@ function ProdutosPage() {
         const { data, error } = await db.from("products").insert(payload).select().single();
         if (error) throw error;
         productId = (data as { id: string }).id;
+        // A retry after an operations error must update this product, not create another.
+        setEditing(data as Product);
       }
 
       if (productId) await syncOperations(productId);
@@ -367,6 +374,8 @@ function ProdutosPage() {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao salvar produto.");
     } finally {
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["operations"] });
       setSaving(false);
     }
   }
