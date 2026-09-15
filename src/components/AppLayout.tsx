@@ -125,7 +125,11 @@ export function AppLayout({
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground md:flex">
+      <aside
+        className={`sticky top-0 h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground ${
+          isPainel ? "hidden" : "hidden md:flex"
+        }`}
+      >
         <div className="flex items-center gap-2 border-b border-sidebar-border px-5 py-5">
           <Factory className="h-5 w-5 text-sidebar-primary" />
           <span className="text-sm font-semibold tracking-tight">Controle de Produção</span>
@@ -137,7 +141,7 @@ export function AppLayout({
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-b border-border bg-card px-4 py-3 md:flex md:px-5 md:py-4">
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-            <SheetTrigger asChild>
+            <SheetTrigger asChild disabled={isPainel}>
               <Button variant="outline" size="icon" className="h-10 w-10 md:hidden" aria-label="Abrir menu">
                 <Menu className="h-5 w-5" />
               </Button>
