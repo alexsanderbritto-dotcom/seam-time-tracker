@@ -713,8 +713,8 @@ function PainelPage() {
                                     onClick={() =>
                                       setScreen(b.def.id, {
                                         slots: on
-                                          ? b.cfg.slots.filter((v) => v !== s.start)
-                                          : [...b.cfg.slots, s.start],
+                                          ? b.cfg.slots.filter((v) => v !== key)
+                                          : [...b.cfg.slots, key],
                                       })
                                     }
                                     className={
