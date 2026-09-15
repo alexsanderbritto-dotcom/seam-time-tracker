@@ -704,7 +704,8 @@ function PainelPage() {
                           {b.cfg.mode === "custom" ? (
                             <div className="flex flex-wrap gap-2 pt-1">
                               {b.slots.map((s) => {
-                                const on = b.cfg.slots.includes(s.start);
+                                const key = slotKey(s);
+                                const on = b.cfg.slots.includes(key);
                                 return (
                                   <button
                                     key={`${s.start}-${s.overtime ? "x" : "n"}`}
