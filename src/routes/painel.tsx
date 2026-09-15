@@ -684,7 +684,7 @@ function PainelPage() {
                                   variant="ghost"
                                   onClick={() =>
                                     setScreen(b.def.id, {
-                                      slots: b.slots.map((s) => s.start),
+                                      slots: b.slots.filter((s) => !s.overtime).map(slotKey),
                                     })
                                   }
                                 >
