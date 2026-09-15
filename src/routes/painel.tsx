@@ -230,14 +230,16 @@ function PainelPage() {
     return screenDefs.map((def) => {
       const cfg = cfgOf(def.id);
       const slots = slotsForDate(cfg.date);
+      // Horas extras só entram quando marcadas explicitamente na configuração da tela.
+      const regular = slots.filter((s) => !s.overtime);
       let active: Slot[] = [];
       if (cfg.mode === "custom" && cfg.slots.length > 0) {
-        active = slots.filter((s) => cfg.slots.includes(s.start));
+        active = slots.filter((s) => cfg.slots.includes(slotKey(s)));
       } else if (cfg.date === today) {
-        const i = findCurrentSlot(slots, now);
-        active = i >= 0 && slots[i] ? [slots[i]] : [];
+        const i = findCurrentSlot(regular, now);
+        active = i >= 0 && regular[i] ? [regular[i]!] : [];
       } else {
-        active = slots;
+        active = regular;
       }
       const first = active[0];
       const last = active[active.length - 1];
