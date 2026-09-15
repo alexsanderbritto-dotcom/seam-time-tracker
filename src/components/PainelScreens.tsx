@@ -354,6 +354,10 @@ export function TelaSetor({
   
 
   const party = isCelebrating(data.key);
+  // Todos os horários ficam na mesma tela: a grade se adensa conforme a quantidade.
+  const hourCount = data.hours.length;
+  const cols = hourCount <= 3 ? Math.max(hourCount, 1) : hourCount <= 8 ? 4 : 5;
+  const dense = hourCount > 6;
   return (
     <div className="relative flex h-full min-h-0 flex-col gap-8 overflow-hidden">
       {party ? <Confetti /> : null}
