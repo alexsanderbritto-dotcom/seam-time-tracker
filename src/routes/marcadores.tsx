@@ -75,7 +75,10 @@ function MarcadoresPage() {
   const parseCargo = (v: string): { cargo: MarcadorCargo; setorId: string | null } =>
     v.startsWith("setor:")
       ? { cargo: "setor", setorId: v.slice(6) }
-      : { cargo: v === "admin" ? "admin" : "usuario", setorId: null };
+      : {
+          cargo: v === "admin" ? "admin" : v === "painel" ? "painel" : "usuario",
+          setorId: null,
+        };
   const [resetId, setResetId] = useState<string | null>(null);
   const [novaSenha, setNovaSenha] = useState("");
 
