@@ -1,4 +1,4 @@
-type Cargo = "usuario" | "admin" | "setor";
+type Cargo = "usuario" | "admin" | "setor" | "painel";
 
 function fromB64url(s: string): Uint8Array {
   const pad = s.replace(/-/g, "+").replace(/_/g, "/");

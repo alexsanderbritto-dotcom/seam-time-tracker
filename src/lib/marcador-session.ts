@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 
 export const MARCADOR_STORAGE_KEY = "marcador-sessao";
 
-/** admin = acesso total · usuario = só marcação · setor = marcação + dashboard do setor */
-export type MarcadorCargo = "usuario" | "admin" | "setor";
+/**
+ * admin = acesso total · usuario = só marcação · setor = marcação + dashboard do setor
+ * painel = acesso exclusivo ao Painel (TV)
+ */
+export type MarcadorCargo = "usuario" | "admin" | "setor" | "painel";
 
 export type MarcadorSession = {
   id: string;
@@ -12,11 +15,14 @@ export type MarcadorSession = {
   setorId?: string | null;
   setorNome?: string | null;
   token: string;
+  /** true = "Manter-me conectado": sessão permanente, só sai no logout explícito. */
+  persistent?: boolean;
 };
 
 export function readSession(): MarcadorSession | null {
   if (typeof window === "undefined") return null;
-  const raw = localStorage.getItem(MARCADOR_STORAGE_KEY);
+  const raw =
+    localStorage.getItem(MARCADOR_STORAGE_KEY) ?? sessionStorage.getItem(MARCADOR_STORAGE_KEY);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as MarcadorSession;
@@ -27,13 +33,19 @@ export function readSession(): MarcadorSession | null {
   }
 }
 
-export function writeSession(session: MarcadorSession) {
-  localStorage.setItem(MARCADOR_STORAGE_KEY, JSON.stringify(session));
+export function writeSession(session: MarcadorSession, keepLoggedIn = true) {
+  const payload = JSON.stringify({ ...session, persistent: keepLoggedIn });
+  // Sessão permanente fica no localStorage (sobrevive a reinício do dispositivo/TV).
+  localStorage.removeItem(MARCADOR_STORAGE_KEY);
+  sessionStorage.removeItem(MARCADOR_STORAGE_KEY);
+  if (keepLoggedIn) localStorage.setItem(MARCADOR_STORAGE_KEY, payload);
+  else sessionStorage.setItem(MARCADOR_STORAGE_KEY, payload);
   window.dispatchEvent(new Event("marcador-session"));
 }
 
 export function clearSession() {
   localStorage.removeItem(MARCADOR_STORAGE_KEY);
+  sessionStorage.removeItem(MARCADOR_STORAGE_KEY);
   window.dispatchEvent(new Event("marcador-session"));
 }
 
@@ -55,12 +67,14 @@ export function useMarcadorSession() {
 
   const isAdmin = session?.cargo === "admin";
   const isSetor = session?.cargo === "setor" && !!session?.setorId;
+  const isPainel = session?.cargo === "painel";
 
   return {
     session,
     ready,
     isAdmin,
     isSetor,
+    isPainel,
     setorId: isSetor ? (session?.setorId ?? null) : null,
     setorNome: isSetor ? (session?.setorNome ?? null) : null,
   };
