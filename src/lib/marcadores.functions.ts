@@ -256,9 +256,8 @@ export const loginMarcador = createServerFn({ method: "POST" })
     }
     const valid = await verifyPassword(data.senha, row.senha_hash);
     if (!valid) return { ok: false as const };
-    const cargo = (
-      row.cargo === "admin" ? "admin" : row.cargo === "setor" && row.setor_id ? "setor" : "usuario"
-    ) as Cargo;
+    const raw = normalizeCargo(row.cargo);
+    const cargo: Cargo = raw === "setor" && !row.setor_id ? "usuario" : raw;
     const setorId = cargo === "setor" ? row.setor_id : null;
     let setorNome: string | null = null;
     if (setorId) {
