@@ -1,5 +1,5 @@
-import { Link } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   ClipboardList,
   LayoutDashboard,
@@ -44,22 +44,37 @@ export function AppLayout({
   title,
   subtitle,
   requireAdmin = true,
+  allowPainel = false,
   children,
 }: {
   title: string;
   subtitle?: string | undefined;
   requireAdmin?: boolean;
+  /** true = tela liberada para contas com cargo "Painel". */
+  allowPainel?: boolean;
   children: ReactNode;
 }) {
-  const { session, ready, isAdmin, isSetor, setorId, setorNome } = useMarcadorSession();
+  const { session, ready, isAdmin, isSetor, isPainel, setorId, setorNome } = useMarcadorSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  // Conta de cargo "Painel" só acessa o módulo Painel.
+  useEffect(() => {
+    if (ready && session && isPainel && !allowPainel) void navigate({ to: "/painel" });
+  }, [ready, session, isPainel, allowPainel, navigate]);
 
   if (!ready) return null;
   if (!session) return <MarcadorLogin />;
 
-  const items = nav.filter((item) => isAdmin || !item.adminOnly);
-  const cargoLabel = isAdmin ? "Admin" : isSetor ? `Setor · ${setorNome ?? ""}`.trim() : "Usuário";
-  const blocked = requireAdmin && !isAdmin;
+  const items = isPainel ? [] : nav.filter((item) => isAdmin || !item.adminOnly);
+  const cargoLabel = isAdmin
+    ? "Admin"
+    : isPainel
+      ? "Painel"
+      : isSetor
+        ? `Setor · ${setorNome ?? ""}`.trim()
+        : "Usuário";
+  const blocked = isPainel ? !allowPainel : requireAdmin && !isAdmin;
 
   const navList = (onNavigate?: () => void) => (
     <nav className="flex flex-1 flex-col gap-1 p-3">
