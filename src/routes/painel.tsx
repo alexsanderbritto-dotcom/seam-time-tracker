@@ -16,6 +16,7 @@ import {
 import { Eye, Monitor, Volume2, VolumeX, X } from "lucide-react";
 import {
   ScaledPreview,
+  ScaledPanel,
   TelaColaboradores,
   TelaSetor,
   type EmployeeCardData,
@@ -426,21 +427,49 @@ function PainelPage() {
     return out.length > 0 ? out : [[]];
   };
   const groups = groupsOf(current?.cards ?? []);
+  const employeePages = groups.flatMap((cardGroup) => {
+    const hourPageCount = Math.max(
+      1,
+      ...cardGroup.map((card) => Math.ceil(card.hours.length / 4)),
+    );
+    return Array.from({ length: hourPageCount }, (_, hourPage) =>
+      cardGroup.map((card) => ({
+        ...card,
+        hours: card.hours.slice(hourPage * 4, hourPage * 4 + 4),
+      })),
+    );
+  });
+  const sectorGroups = (() => {
+    const products = current?.sector?.products ?? [];
+    const hours = current?.sector?.hours ?? [];
+    const count = Math.max(1, Math.ceil(products.length / 6), Math.ceil(hours.length / 3));
+    return Array.from({ length: count }, (_, page) => ({
+      products: products.slice(
+        Math.min(page, Math.max(Math.ceil(products.length / 6) - 1, 0)) * 6,
+        Math.min(page, Math.max(Math.ceil(products.length / 6) - 1, 0)) * 6 + 6,
+      ),
+      hours: hours.slice(
+        Math.min(page, Math.max(Math.ceil(hours.length / 3) - 1, 0)) * 3,
+        Math.min(page, Math.max(Math.ceil(hours.length / 3) - 1, 0)) * 3 + 3,
+      ),
+    }));
+  })();
+  const pageCount = current?.def.kind === "sector" ? sectorGroups.length : employeePages.length;
 
   useEffect(() => {
     if (screenIdx >= screenCount) setScreenIdx(0);
   }, [screenIdx, screenCount]);
   useEffect(() => {
-    if (groupIdx >= groups.length) setGroupIdx(0);
-  }, [groupIdx, groups.length]);
+    if (groupIdx >= pageCount) setGroupIdx(0);
+  }, [groupIdx, pageCount]);
 
   useEffect(() => {
     if (!display || screenCount === 0) return;
     const isEmployees = current?.def.kind === "employees";
-    const lastGroup = groupIdx >= groups.length - 1;
+    const lastGroup = groupIdx >= pageCount - 1;
     const wait = (isEmployees ? prefs.groupSeconds : prefs.screenSeconds) * 1000;
     const t = window.setTimeout(() => {
-      if (isEmployees && !lastGroup) {
+      if (!lastGroup) {
         setGroupIdx((g) => g + 1);
       } else {
         setGroupIdx(0);
@@ -452,7 +481,7 @@ function PainelPage() {
     display,
     current,
     groupIdx,
-    groups.length,
+    pageCount,
     prefs.groupSeconds,
     prefs.screenSeconds,
     screenCount,
@@ -492,7 +521,11 @@ function PainelPage() {
     };
   }, []);
 
-  const activeGroup = groups[Math.min(groupIdx, groups.length - 1)] ?? [];
+  const activeGroup = employeePages[Math.min(groupIdx, employeePages.length - 1)] ?? [];
+  const activeSectorGroup = sectorGroups[Math.min(groupIdx, sectorGroups.length - 1)] ?? {
+    products: [],
+    hours: [],
+  };
   const previewScreen = previewId ? builtById.get(previewId) : undefined;
 
   const renderScreen = (b: BuiltScreen, cards: EmployeeCardData[], gi: number, gc: number) =>
@@ -506,7 +539,17 @@ function PainelPage() {
         pastDateLabel={b.pastDateLabel}
       />
     ) : b.sector ? (
-      <TelaSetor data={b.sector} isCelebrating={isCelebrating} pastDateLabel={b.pastDateLabel} />
+      <TelaSetor
+        data={{
+          ...b.sector,
+          products: b === current ? activeSectorGroup.products : b.sector.products.slice(0, 6),
+          hours: b === current ? activeSectorGroup.hours : b.sector.hours.slice(0, 3),
+        }}
+        isCelebrating={isCelebrating}
+        pastDateLabel={b.pastDateLabel}
+        groupIndex={gi}
+        groupCount={b === current ? sectorGroups.length : Math.max(1, Math.ceil(b.sector.products.length / 6))}
+      />
     ) : null;
 
   return (
@@ -515,9 +558,12 @@ function PainelPage() {
       subtitle="Modo exibição para a TV do chão de fábrica."
       allowPainel
     >
-      <div ref={rootRef} className={display ? "fixed inset-0 z-50 bg-slate-950" : undefined}>
+      <div
+        ref={rootRef}
+        className={display ? "fixed inset-0 z-50 overflow-hidden bg-slate-950" : undefined}
+      >
         {display ? (
-          <div className="relative h-full w-full p-8 text-slate-100">
+          <div className="relative h-[100dvh] w-full overflow-hidden text-slate-100">
             <div className="absolute right-4 top-4 z-10 flex gap-2">
               <Button
                 size="icon"
@@ -538,15 +584,17 @@ function PainelPage() {
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <div key={`${current?.def.id}-${groupIdx}`} className="h-full animate-fade-in">
-              {screenCount === 0 || !current ? (
-                <div className="flex h-full items-center justify-center text-3xl text-slate-500">
-                  Nenhuma tela selecionada.
-                </div>
-              ) : (
-                renderScreen(current, activeGroup, groupIdx, groups.length)
-              )}
-            </div>
+            <ScaledPanel>
+              <div key={`${current?.def.id}-${groupIdx}`} className="h-full animate-fade-in">
+                {screenCount === 0 || !current ? (
+                  <div className="flex h-full items-center justify-center text-4xl text-slate-500">
+                    Nenhuma tela selecionada.
+                  </div>
+                ) : (
+                  renderScreen(current, activeGroup, groupIdx, pageCount)
+                )}
+              </div>
+            </ScaledPanel>
           </div>
         ) : (
           <div className="space-y-5">
