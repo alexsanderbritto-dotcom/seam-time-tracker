@@ -172,6 +172,13 @@ export function AppLayout({
               <p className="hidden text-sm text-muted-foreground sm:block">{subtitle}</p>
             ) : null}
           </div>
+
+          {isPainel ? (
+            <Button variant="outline" size="sm" className="ml-auto" onClick={clearSession}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
+          ) : null}
         </header>
 
         <main className="flex-1 p-4 md:p-5">
@@ -182,7 +189,11 @@ export function AppLayout({
                 Seu cargo não permite acessar esta tela.
               </p>
               <Button asChild className="mt-4">
-                <Link to="/marcacao-producao">Ir para Marcação de Produção</Link>
+                {isPainel ? (
+                  <Link to="/painel">Ir para o Painel</Link>
+                ) : (
+                  <Link to="/marcacao-producao">Ir para Marcação de Produção</Link>
+                )}
               </Button>
             </div>
           ) : (
