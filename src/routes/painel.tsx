@@ -445,19 +445,14 @@ function PainelPage() {
       })),
     );
   });
+  // Painel de setor: todos os horários ficam na mesma tela; apenas as OPs paginam.
   const sectorGroups = (() => {
     const products = current?.sector?.products ?? [];
     const hours = current?.sector?.hours ?? [];
-    const count = Math.max(1, Math.ceil(products.length / 6), Math.ceil(hours.length / 3));
+    const count = Math.max(1, Math.ceil(products.length / 6));
     return Array.from({ length: count }, (_, page) => ({
-      products: products.slice(
-        Math.min(page, Math.max(Math.ceil(products.length / 6) - 1, 0)) * 6,
-        Math.min(page, Math.max(Math.ceil(products.length / 6) - 1, 0)) * 6 + 6,
-      ),
-      hours: hours.slice(
-        Math.min(page, Math.max(Math.ceil(hours.length / 3) - 1, 0)) * 3,
-        Math.min(page, Math.max(Math.ceil(hours.length / 3) - 1, 0)) * 3 + 3,
-      ),
+      products: products.slice(page * 6, page * 6 + 6),
+      hours,
     }));
   })();
   const pageCount = current?.def.kind === "sector" ? sectorGroups.length : employeePages.length;
