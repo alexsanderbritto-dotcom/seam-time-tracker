@@ -427,13 +427,34 @@ function PainelPage() {
     return out.length > 0 ? out : [[]];
   };
   const groups = groupsOf(current?.cards ?? []);
+  const employeePages = groups.flatMap((cardGroup) => {
+    const hourPageCount = Math.max(
+      1,
+      ...cardGroup.map((card) => Math.ceil(card.hours.length / 4)),
+    );
+    return Array.from({ length: hourPageCount }, (_, hourPage) =>
+      cardGroup.map((card) => ({
+        ...card,
+        hours: card.hours.slice(hourPage * 4, hourPage * 4 + 4),
+      })),
+    );
+  });
   const sectorGroups = (() => {
     const products = current?.sector?.products ?? [];
-    const out: SectorScreenData["products"][] = [];
-    for (let i = 0; i < products.length; i += 6) out.push(products.slice(i, i + 6));
-    return out.length > 0 ? out : [[]];
+    const hours = current?.sector?.hours ?? [];
+    const count = Math.max(1, Math.ceil(products.length / 6), Math.ceil(hours.length / 3));
+    return Array.from({ length: count }, (_, page) => ({
+      products: products.slice(
+        Math.min(page, Math.max(Math.ceil(products.length / 6) - 1, 0)) * 6,
+        Math.min(page, Math.max(Math.ceil(products.length / 6) - 1, 0)) * 6 + 6,
+      ),
+      hours: hours.slice(
+        Math.min(page, Math.max(Math.ceil(hours.length / 3) - 1, 0)) * 3,
+        Math.min(page, Math.max(Math.ceil(hours.length / 3) - 1, 0)) * 3 + 3,
+      ),
+    }));
   })();
-  const pageCount = current?.def.kind === "sector" ? sectorGroups.length : groups.length;
+  const pageCount = current?.def.kind === "sector" ? sectorGroups.length : employeePages.length;
 
   useEffect(() => {
     if (screenIdx >= screenCount) setScreenIdx(0);
@@ -500,9 +521,11 @@ function PainelPage() {
     };
   }, []);
 
-  const activeGroup = groups[Math.min(groupIdx, groups.length - 1)] ?? [];
-  const activeSectorProducts =
-    sectorGroups[Math.min(groupIdx, sectorGroups.length - 1)] ?? [];
+  const activeGroup = employeePages[Math.min(groupIdx, employeePages.length - 1)] ?? [];
+  const activeSectorGroup = sectorGroups[Math.min(groupIdx, sectorGroups.length - 1)] ?? {
+    products: [],
+    hours: [],
+  };
   const previewScreen = previewId ? builtById.get(previewId) : undefined;
 
   const renderScreen = (b: BuiltScreen, cards: EmployeeCardData[], gi: number, gc: number) =>
@@ -519,7 +542,8 @@ function PainelPage() {
       <TelaSetor
         data={{
           ...b.sector,
-          products: b === current ? activeSectorProducts : b.sector.products.slice(0, 6),
+          products: b === current ? activeSectorGroup.products : b.sector.products.slice(0, 6),
+          hours: b === current ? activeSectorGroup.hours : b.sector.hours.slice(0, 3),
         }}
         isCelebrating={isCelebrating}
         pastDateLabel={b.pastDateLabel}
@@ -567,7 +591,7 @@ function PainelPage() {
                     Nenhuma tela selecionada.
                   </div>
                 ) : (
-                  renderScreen(current, activeGroup, groupIdx, groups.length)
+                  renderScreen(current, activeGroup, groupIdx, pageCount)
                 )}
               </div>
             </ScaledPanel>
