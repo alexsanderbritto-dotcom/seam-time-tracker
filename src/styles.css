@@ -163,3 +163,10 @@
     opacity: 0;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  [class*="painel-fall"] {
+    animation: none !important;
+  }
+}

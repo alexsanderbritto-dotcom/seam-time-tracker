@@ -342,10 +342,14 @@ export function TelaSetor({
   data,
   isCelebrating,
   pastDateLabel,
+  groupIndex = 0,
+  groupCount = 1,
 }: {
   data: SectorScreenData;
   isCelebrating: (key: string) => boolean;
   pastDateLabel?: string | undefined;
+  groupIndex?: number;
+  groupCount?: number;
 }) {
   
 
@@ -353,15 +357,30 @@ export function TelaSetor({
   return (
     <div className="relative flex h-full min-h-0 flex-col gap-8 overflow-hidden">
       {party ? <Confetti /> : null}
-      <header className="shrink-0 pr-16">
-        <p className="text-xl font-semibold uppercase tracking-[0.3em] text-sky-400">Setor</p>
-        <h2 className="truncate text-7xl font-black uppercase tracking-tight text-slate-50">
-          {data.sectorName}
-        </h2>
-        <p className="mt-2 text-2xl text-slate-400">Janela {data.slotLabel}</p>
-        <div className="mt-2">
-          <PastBadge label={pastDateLabel} />
+      <header className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-8 pr-16">
+        <div className="min-w-0">
+          <p className="text-xl font-semibold uppercase tracking-[0.3em] text-sky-400">Setor</p>
+          <h2 className="truncate text-7xl font-black uppercase tracking-tight text-slate-50">
+            {data.sectorName}
+          </h2>
+          <p className="mt-2 text-2xl text-slate-400">Janela {data.slotLabel}</p>
+          <div className="mt-2">
+            <PastBadge label={pastDateLabel} />
+          </div>
         </div>
+        {groupCount > 1 ? (
+          <div className="mb-2 flex shrink-0 items-center gap-3">
+            {Array.from({ length: groupCount }, (_, i) => (
+              <span
+                key={i}
+                className={cn(
+                  "h-3 rounded-full transition-all",
+                  i === groupIndex ? "w-10 bg-sky-400" : "w-3 bg-slate-700",
+                )}
+              />
+            ))}
+          </div>
+        ) : null}
       </header>
 
 
@@ -438,7 +457,7 @@ export function TelaSetor({
         {data.products.length === 0 ? (
           <p className="text-2xl text-slate-500">Nenhuma meta cadastrada para hoje.</p>
         ) : (
-          <div className="grid h-[calc(100%-2.5rem)] min-h-0 auto-rows-fr grid-cols-3 gap-5 overflow-hidden">
+          <div className="grid min-h-0 auto-rows-fr grid-cols-3 gap-5 overflow-hidden">
             {data.products.map((p) => {
               const lv = perfLevel(p.pct);
               return (

@@ -427,21 +427,28 @@ function PainelPage() {
     return out.length > 0 ? out : [[]];
   };
   const groups = groupsOf(current?.cards ?? []);
+  const sectorGroups = (() => {
+    const products = current?.sector?.products ?? [];
+    const out: SectorScreenData["products"][] = [];
+    for (let i = 0; i < products.length; i += 6) out.push(products.slice(i, i + 6));
+    return out.length > 0 ? out : [[]];
+  })();
+  const pageCount = current?.def.kind === "sector" ? sectorGroups.length : groups.length;
 
   useEffect(() => {
     if (screenIdx >= screenCount) setScreenIdx(0);
   }, [screenIdx, screenCount]);
   useEffect(() => {
-    if (groupIdx >= groups.length) setGroupIdx(0);
-  }, [groupIdx, groups.length]);
+    if (groupIdx >= pageCount) setGroupIdx(0);
+  }, [groupIdx, pageCount]);
 
   useEffect(() => {
     if (!display || screenCount === 0) return;
     const isEmployees = current?.def.kind === "employees";
-    const lastGroup = groupIdx >= groups.length - 1;
+    const lastGroup = groupIdx >= pageCount - 1;
     const wait = (isEmployees ? prefs.groupSeconds : prefs.screenSeconds) * 1000;
     const t = window.setTimeout(() => {
-      if (isEmployees && !lastGroup) {
+      if (!lastGroup) {
         setGroupIdx((g) => g + 1);
       } else {
         setGroupIdx(0);
@@ -453,7 +460,7 @@ function PainelPage() {
     display,
     current,
     groupIdx,
-    groups.length,
+    pageCount,
     prefs.groupSeconds,
     prefs.screenSeconds,
     screenCount,
@@ -494,6 +501,8 @@ function PainelPage() {
   }, []);
 
   const activeGroup = groups[Math.min(groupIdx, groups.length - 1)] ?? [];
+  const activeSectorProducts =
+    sectorGroups[Math.min(groupIdx, sectorGroups.length - 1)] ?? [];
   const previewScreen = previewId ? builtById.get(previewId) : undefined;
 
   const renderScreen = (b: BuiltScreen, cards: EmployeeCardData[], gi: number, gc: number) =>
@@ -507,7 +516,16 @@ function PainelPage() {
         pastDateLabel={b.pastDateLabel}
       />
     ) : b.sector ? (
-      <TelaSetor data={b.sector} isCelebrating={isCelebrating} pastDateLabel={b.pastDateLabel} />
+      <TelaSetor
+        data={{
+          ...b.sector,
+          products: b === current ? activeSectorProducts : b.sector.products.slice(0, 6),
+        }}
+        isCelebrating={isCelebrating}
+        pastDateLabel={b.pastDateLabel}
+        groupIndex={gi}
+        groupCount={b === current ? sectorGroups.length : Math.max(1, Math.ceil(b.sector.products.length / 6))}
+      />
     ) : null;
 
   return (
