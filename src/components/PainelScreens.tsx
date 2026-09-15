@@ -3,42 +3,69 @@ import { PERF_COLOR, PERF_TEXT, perfLevel } from "@/lib/painel";
 import { cn } from "@/lib/utils";
 import { ArrowDownRight, ArrowUpRight, CalendarClock, PartyPopper } from "lucide-react";
 
-/* ---------------- prévia em escala reduzida ---------------- */
+/* ---------------- tela 16:9 com escala proporcional ---------------- */
 
-const BASE_W = 1280;
-const BASE_H = 720;
+const BASE_W = 1920;
+const BASE_H = 1080;
 
-export function ScaledPreview({ children }: { children: ReactNode }) {
+export function ScaledPanel({
+  children,
+  preview = false,
+}: {
+  children: ReactNode;
+  preview?: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.5);
+  const [viewport, setViewport] = useState({ width: BASE_W, height: BASE_H, scale: 1 });
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setScale(el.clientWidth / BASE_W));
+    const measure = () => {
+      const width = el.clientWidth;
+      const availableHeight = preview ? width * (BASE_H / BASE_W) : el.clientHeight;
+      const height = Math.max(1, availableHeight);
+      setViewport({ width, height, scale: Math.min(width / BASE_W, height / BASE_H) });
+    };
+    const ro = new ResizeObserver(measure);
     ro.observe(el);
-    setScale(el.clientWidth / BASE_W);
+    measure();
     return () => ro.disconnect();
-  }, []);
+  }, [preview]);
+
+  const renderedWidth = BASE_W * viewport.scale;
+  const renderedHeight = BASE_H * viewport.scale;
 
   return (
     <div
       ref={ref}
-      className="w-full overflow-hidden rounded-xl bg-slate-950"
-      style={{ height: BASE_H * scale }}
+      className={cn(
+        "relative w-full overflow-hidden bg-slate-950",
+        preview ? "aspect-video rounded-xl" : "h-full",
+      )}
     >
       <div
-        className="p-8 text-slate-100"
+        className="absolute p-12 text-slate-100"
         style={{
           width: BASE_W,
           height: BASE_H,
-          transform: `scale(${scale})`,
+          left: Math.max(0, (viewport.width - renderedWidth) / 2),
+          top: Math.max(0, (viewport.height - renderedHeight) / 2),
+          transform: `scale(${viewport.scale})`,
           transformOrigin: "top left",
         }}
       >
         {children}
       </div>
     </div>
+  );
+}
+
+export function ScaledPreview({ children }: { children: ReactNode }) {
+  return (
+    <ScaledPanel preview>
+      {children}
+    </ScaledPanel>
   );
 }
 
@@ -120,7 +147,7 @@ export function ProgressRing({
           <span style={{ fontSize: size * 0.13 }}>%</span>
         </span>
         {label ? (
-          <span className="mt-1 text-[10px] uppercase tracking-widest text-slate-400">
+          <span className="mt-1 text-sm uppercase tracking-widest text-slate-400">
             {label}
           </span>
         ) : null}
@@ -154,7 +181,7 @@ function HourBlock({ h }: { h: HourBlockData }) {
   return (
     <div
       className={cn(
-        "rounded-lg border px-3 py-2",
+        "min-h-0 rounded-lg border px-4 py-3",
         lv === "ok"
           ? "border-emerald-500/60 bg-emerald-500/10"
           : lv === "near"
@@ -162,18 +189,20 @@ function HourBlock({ h }: { h: HourBlockData }) {
             : "border-red-500/50 bg-red-500/10",
       )}
     >
-      <p className="text-sm font-semibold tracking-wide text-slate-300">{h.label}</p>
+      <p className="text-lg font-semibold tracking-wide text-slate-300">{h.label}</p>
       <div className="flex items-baseline justify-between gap-2">
-        <p className="text-xl font-bold tabular-nums text-slate-100">
+        <p className="text-2xl font-bold tabular-nums text-slate-100">
           {h.produced}
           <span className="text-slate-500">/{h.meta == null ? "–" : Math.round(h.meta)}</span>
         </p>
-        <p className={cn("text-xl font-black tabular-nums", PERF_TEXT[lv])}>
+        <p className={cn("text-2xl font-black tabular-nums", PERF_TEXT[lv])}>
           {h.pct == null ? "–" : `${Math.round(h.pct)}%`}
         </p>
       </div>
       {h.occurrence ? (
-        <p className="mt-0.5 text-sm font-semibold leading-tight text-red-400">{h.occurrence}</p>
+        <p className="mt-1 line-clamp-2 text-base font-semibold leading-tight text-red-400">
+          {h.occurrence}
+        </p>
       ) : null}
     </div>
   );
@@ -196,13 +225,13 @@ export function TelaColaboradores({
   pastDateLabel?: string | undefined;
 }) {
   return (
-    <div className="flex h-full flex-col gap-6">
-      <header className="flex items-end justify-between">
+    <div className="flex h-full min-h-0 flex-col gap-8">
+      <header className="flex shrink-0 items-end justify-between pr-16">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-sky-400">
+          <p className="text-xl font-semibold uppercase tracking-[0.3em] text-sky-400">
             Produtividade da hora
           </p>
-          <h2 className="text-5xl font-black tracking-tight text-slate-50">{slotLabel}</h2>
+          <h2 className="text-7xl font-black tracking-tight text-slate-50">{slotLabel}</h2>
           <div className="mt-2">
             <PastBadge label={pastDateLabel} />
           </div>
@@ -228,7 +257,7 @@ export function TelaColaboradores({
           Nenhuma marcação nesta hora ainda
         </div>
       ) : (
-        <div className="grid flex-1 grid-cols-2 gap-5 xl:grid-cols-3">
+        <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-3 gap-6">
           {cards.map((c) => {
             const level = perfLevel(c.pct);
             const party = isCelebrating(c.key);
@@ -236,7 +265,7 @@ export function TelaColaboradores({
               <div
                 key={c.key}
                 className={cn(
-                  "relative flex flex-col gap-4 overflow-hidden rounded-2xl border-2 bg-slate-900/70 p-5 transition-colors",
+                  "relative flex min-h-0 flex-col gap-5 overflow-hidden rounded-2xl border-2 bg-slate-900/70 p-6 transition-colors",
                   level === "ok"
                     ? "border-emerald-500/70"
                     : level === "near"
@@ -245,27 +274,27 @@ export function TelaColaboradores({
                 )}
               >
                 {party ? <Confetti /> : null}
-                <div className="flex items-center gap-5">
-                  <ProgressRing pct={c.pct} size={130} />
+                <div className="flex min-h-0 items-center gap-6">
+                  <ProgressRing pct={c.pct} size={156} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-3xl font-bold leading-tight text-slate-50">
+                    <p className="truncate text-4xl font-bold leading-tight text-slate-50">
                       {c.name}
                     </p>
-                    <p className="mt-1 line-clamp-2 text-lg text-slate-400">
+                    <p className="mt-2 line-clamp-2 text-xl text-slate-400">
                       {c.operations.join(" · ") || "—"}
                     </p>
-                    <p className="mt-2 text-xl font-semibold tabular-nums text-slate-200">
-                      {c.produced} <span className="text-sm text-slate-500">peças</span>
+                    <p className="mt-3 text-2xl font-semibold tabular-nums text-slate-200">
+                      {c.produced} <span className="text-base text-slate-500">peças</span>
                     </p>
                     {party ? (
-                      <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-3 py-1 text-sm font-bold text-emerald-300">
-                        <PartyPopper className="h-4 w-4" /> Meta batida!
+                      <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-4 py-1.5 text-base font-bold text-emerald-300">
+                        <PartyPopper className="h-5 w-5" /> Meta batida!
                       </p>
                     ) : null}
                   </div>
                 </div>
                 {c.hours.length > 0 ? (
-                  <div className="grid max-h-52 grid-cols-2 gap-2 overflow-y-auto pr-1">
+                  <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-3 overflow-hidden">
                     {c.hours.map((h) => (
                       <HourBlock key={h.key} h={h} />
                     ))}
@@ -322,23 +351,23 @@ export function TelaSetor({
 
   const party = isCelebrating(data.key);
   return (
-    <div className="relative flex h-full flex-col gap-6 overflow-hidden">
+    <div className="relative flex h-full min-h-0 flex-col gap-8 overflow-hidden">
       {party ? <Confetti /> : null}
-      <header>
-        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-sky-400">Setor</p>
-        <h2 className="text-6xl font-black uppercase tracking-tight text-slate-50">
+      <header className="shrink-0 pr-16">
+        <p className="text-xl font-semibold uppercase tracking-[0.3em] text-sky-400">Setor</p>
+        <h2 className="truncate text-7xl font-black uppercase tracking-tight text-slate-50">
           {data.sectorName}
         </h2>
-        <p className="mt-1 text-xl text-slate-400">Janela {data.slotLabel}</p>
+        <p className="mt-2 text-2xl text-slate-400">Janela {data.slotLabel}</p>
         <div className="mt-2">
           <PastBadge label={pastDateLabel} />
         </div>
       </header>
 
 
-      <div className="flex items-center gap-8 rounded-2xl border-2 border-slate-800 bg-slate-900/70 p-6">
-        <ProgressRing pct={data.pct} size={180} label="do período" />
-        <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 xl:grid-cols-3">
+      <div className="flex min-h-0 shrink-0 items-center gap-10 rounded-2xl border-2 border-slate-800 bg-slate-900/70 p-7">
+        <ProgressRing pct={data.pct} size={220} label="do período" />
+        <div className="grid min-w-0 flex-1 auto-rows-fr grid-cols-3 gap-4">
           {data.hours.length === 0 ? (
             <p className="text-2xl text-slate-500">Nenhuma janela selecionada.</p>
           ) : (
@@ -349,7 +378,7 @@ export function TelaSetor({
                 <div
                   key={h.key}
                   className={cn(
-                    "rounded-xl border-2 p-4",
+                    "min-h-0 rounded-xl border-2 p-5",
                     lv === "ok"
                       ? "border-emerald-500/60 bg-emerald-500/10"
                       : lv === "near"
@@ -358,8 +387,8 @@ export function TelaSetor({
                   )}
                 >
                   <div className="flex items-baseline justify-between gap-2">
-                    <p className="text-2xl font-black text-slate-50">{h.label}</p>
-                    <p className={cn("text-2xl font-black tabular-nums", PERF_TEXT[lv])}>
+                    <p className="text-3xl font-black text-slate-50">{h.label}</p>
+                    <p className={cn("text-3xl font-black tabular-nums", PERF_TEXT[lv])}>
                       {h.pct == null ? "–" : Math.round(h.pct)}%
                     </p>
                   </div>
@@ -367,17 +396,17 @@ export function TelaSetor({
                     <MiniStat label="Meta" value={Math.round(h.meta)} tone="text-slate-100" />
                     <MiniStat label="Atingido" value={h.atingido} tone={PERF_TEXT[lv]} />
                     <div>
-                      <p className="text-xs uppercase tracking-widest text-slate-400">Resultado</p>
+                      <p className="text-base uppercase tracking-widest text-slate-400">Resultado</p>
                       <p
                         className={cn(
-                          "flex items-center gap-1 text-2xl font-black tabular-nums",
+                          "flex items-center gap-1 text-3xl font-black tabular-nums",
                           res >= 0 ? "text-emerald-400" : "text-red-400",
                         )}
                       >
                         {res >= 0 ? (
-                          <ArrowUpRight className="h-5 w-5" />
+                          <ArrowUpRight className="h-6 w-6" />
                         ) : (
-                          <ArrowDownRight className="h-5 w-5" />
+                          <ArrowDownRight className="h-6 w-6" />
                         )}
                         {res > 0 ? "+" : ""}
                         {Math.round(res)}
@@ -403,29 +432,29 @@ export function TelaSetor({
 
 
       <div className="min-h-0 flex-1">
-        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-slate-400">
+        <p className="mb-4 text-xl font-semibold uppercase tracking-[0.3em] text-slate-400">
           Metas do dia por OP interna
         </p>
         {data.products.length === 0 ? (
           <p className="text-2xl text-slate-500">Nenhuma meta cadastrada para hoje.</p>
         ) : (
-          <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
+          <div className="grid h-[calc(100%-2.5rem)] min-h-0 auto-rows-fr grid-cols-3 gap-5 overflow-hidden">
             {data.products.map((p) => {
               const lv = perfLevel(p.pct);
               return (
                 <div
                   key={p.id}
-                  className="rounded-2xl border-2 border-slate-800 bg-slate-900/70 p-4"
+                  className="min-h-0 rounded-2xl border-2 border-slate-800 bg-slate-900/70 p-5"
                 >
                   <div className="flex items-baseline justify-between gap-3">
-                    <p className="truncate text-2xl font-black text-slate-50">
+                    <p className="truncate text-3xl font-black text-slate-50">
                       OP {p.opInterna}
                     </p>
-                    <p className={cn("text-2xl font-bold tabular-nums", PERF_TEXT[lv])}>
+                    <p className={cn("text-3xl font-bold tabular-nums", PERF_TEXT[lv])}>
                       {Math.round(p.pct)}%
                     </p>
                   </div>
-                  <p className="mt-1 text-lg tabular-nums text-slate-300">
+                  <p className="mt-2 text-2xl tabular-nums text-slate-300">
                     {p.produced} <span className="text-slate-500">/ {p.meta} peças</span>
                   </p>
                   <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-slate-800">
@@ -450,8 +479,8 @@ export function TelaSetor({
 function MiniStat({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
     <div>
-      <p className="text-xs uppercase tracking-widest text-slate-400">{label}</p>
-      <p className={cn("text-2xl font-black tabular-nums", tone)}>{value}</p>
+      <p className="text-base uppercase tracking-widest text-slate-400">{label}</p>
+      <p className={cn("text-3xl font-black tabular-nums", tone)}>{value}</p>
     </div>
   );
 }

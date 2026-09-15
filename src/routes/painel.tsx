@@ -16,6 +16,7 @@ import {
 import { Eye, Monitor, Volume2, VolumeX, X } from "lucide-react";
 import {
   ScaledPreview,
+  ScaledPanel,
   TelaColaboradores,
   TelaSetor,
   type EmployeeCardData,
@@ -515,9 +516,12 @@ function PainelPage() {
       subtitle="Modo exibição para a TV do chão de fábrica."
       allowPainel
     >
-      <div ref={rootRef} className={display ? "fixed inset-0 z-50 bg-slate-950" : undefined}>
+      <div
+        ref={rootRef}
+        className={display ? "fixed inset-0 z-50 overflow-hidden bg-slate-950" : undefined}
+      >
         {display ? (
-          <div className="relative h-full w-full p-8 text-slate-100">
+          <div className="relative h-[100dvh] w-full overflow-hidden text-slate-100">
             <div className="absolute right-4 top-4 z-10 flex gap-2">
               <Button
                 size="icon"
@@ -538,15 +542,17 @@ function PainelPage() {
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <div key={`${current?.def.id}-${groupIdx}`} className="h-full animate-fade-in">
-              {screenCount === 0 || !current ? (
-                <div className="flex h-full items-center justify-center text-3xl text-slate-500">
-                  Nenhuma tela selecionada.
-                </div>
-              ) : (
-                renderScreen(current, activeGroup, groupIdx, groups.length)
-              )}
-            </div>
+            <ScaledPanel>
+              <div key={`${current?.def.id}-${groupIdx}`} className="h-full animate-fade-in">
+                {screenCount === 0 || !current ? (
+                  <div className="flex h-full items-center justify-center text-4xl text-slate-500">
+                    Nenhuma tela selecionada.
+                  </div>
+                ) : (
+                  renderScreen(current, activeGroup, groupIdx, groups.length)
+                )}
+              </div>
+            </ScaledPanel>
           </div>
         ) : (
           <div className="space-y-5">
