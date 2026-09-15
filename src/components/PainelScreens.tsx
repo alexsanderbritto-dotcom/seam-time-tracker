@@ -404,7 +404,8 @@ export function TelaSetor({
                 <div
                   key={h.key}
                   className={cn(
-                    "min-h-0 rounded-xl border-2 p-5",
+                    "min-h-0 rounded-xl border-2",
+                    dense ? "p-3" : "p-5",
                     lv === "ok"
                       ? "border-emerald-500/60 bg-emerald-500/10"
                       : lv === "near"
@@ -413,26 +414,57 @@ export function TelaSetor({
                   )}
                 >
                   <div className="flex items-baseline justify-between gap-2">
-                    <p className="text-3xl font-black text-slate-50">{h.label}</p>
-                    <p className={cn("text-3xl font-black tabular-nums", PERF_TEXT[lv])}>
+                    <p
+                      className={cn(
+                        "truncate font-black text-slate-50",
+                        dense ? "text-xl" : "text-3xl",
+                      )}
+                    >
+                      {h.label}
+                    </p>
+                    <p
+                      className={cn(
+                        "font-black tabular-nums",
+                        dense ? "text-2xl" : "text-3xl",
+                        PERF_TEXT[lv],
+                      )}
+                    >
                       {h.pct == null ? "–" : Math.round(h.pct)}%
                     </p>
                   </div>
                   <div className="mt-2 grid grid-cols-3 gap-2">
-                    <MiniStat label="Meta" value={Math.round(h.meta)} tone="text-slate-100" />
-                    <MiniStat label="Atingido" value={h.atingido} tone={PERF_TEXT[lv]} />
+                    <MiniStat
+                      label="Meta"
+                      value={Math.round(h.meta)}
+                      tone="text-slate-100"
+                      dense={dense}
+                    />
+                    <MiniStat
+                      label="Atingido"
+                      value={h.atingido}
+                      tone={PERF_TEXT[lv]}
+                      dense={dense}
+                    />
                     <div>
-                      <p className="text-base uppercase tracking-widest text-slate-400">Resultado</p>
                       <p
                         className={cn(
-                          "flex items-center gap-1 text-3xl font-black tabular-nums",
+                          "uppercase tracking-widest text-slate-400",
+                          dense ? "text-sm" : "text-base",
+                        )}
+                      >
+                        Resultado
+                      </p>
+                      <p
+                        className={cn(
+                          "flex items-center gap-1 font-black tabular-nums",
+                          dense ? "text-2xl" : "text-3xl",
                           res >= 0 ? "text-emerald-400" : "text-red-400",
                         )}
                       >
                         {res >= 0 ? (
-                          <ArrowUpRight className="h-6 w-6" />
+                          <ArrowUpRight className={dense ? "h-5 w-5" : "h-6 w-6"} />
                         ) : (
-                          <ArrowDownRight className="h-6 w-6" />
+                          <ArrowDownRight className={dense ? "h-5 w-5" : "h-6 w-6"} />
                         )}
                         {res > 0 ? "+" : ""}
                         {Math.round(res)}
