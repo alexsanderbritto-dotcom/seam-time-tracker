@@ -354,6 +354,10 @@ export function TelaSetor({
   
 
   const party = isCelebrating(data.key);
+  // Todos os horários ficam na mesma tela: a grade se adensa conforme a quantidade.
+  const hourCount = data.hours.length;
+  const cols = hourCount <= 3 ? Math.max(hourCount, 1) : hourCount <= 8 ? 4 : 5;
+  const dense = hourCount > 6;
   return (
     <div className="relative flex h-full min-h-0 flex-col gap-8 overflow-hidden">
       {party ? <Confetti /> : null}
@@ -384,9 +388,12 @@ export function TelaSetor({
       </header>
 
 
-      <div className="flex min-h-0 shrink-0 items-center gap-10 rounded-2xl border-2 border-slate-800 bg-slate-900/70 p-7">
-        <ProgressRing pct={data.pct} size={220} label="do período" />
-        <div className="grid min-w-0 flex-1 auto-rows-fr grid-cols-3 gap-4">
+      <div className="flex min-h-0 flex-[2] items-center gap-8 rounded-2xl border-2 border-slate-800 bg-slate-900/70 p-6">
+        <ProgressRing pct={data.pct} size={dense ? 170 : 220} label="do período" />
+        <div
+          className={cn("grid min-h-0 min-w-0 flex-1 auto-rows-fr", dense ? "gap-3" : "gap-4")}
+          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+        >
           {data.hours.length === 0 ? (
             <p className="text-2xl text-slate-500">Nenhuma janela selecionada.</p>
           ) : (
@@ -397,7 +404,8 @@ export function TelaSetor({
                 <div
                   key={h.key}
                   className={cn(
-                    "min-h-0 rounded-xl border-2 p-5",
+                    "min-h-0 rounded-xl border-2",
+                    dense ? "p-3" : "p-5",
                     lv === "ok"
                       ? "border-emerald-500/60 bg-emerald-500/10"
                       : lv === "near"
@@ -406,26 +414,57 @@ export function TelaSetor({
                   )}
                 >
                   <div className="flex items-baseline justify-between gap-2">
-                    <p className="text-3xl font-black text-slate-50">{h.label}</p>
-                    <p className={cn("text-3xl font-black tabular-nums", PERF_TEXT[lv])}>
+                    <p
+                      className={cn(
+                        "truncate font-black text-slate-50",
+                        dense ? "text-xl" : "text-3xl",
+                      )}
+                    >
+                      {h.label}
+                    </p>
+                    <p
+                      className={cn(
+                        "font-black tabular-nums",
+                        dense ? "text-2xl" : "text-3xl",
+                        PERF_TEXT[lv],
+                      )}
+                    >
                       {h.pct == null ? "–" : Math.round(h.pct)}%
                     </p>
                   </div>
                   <div className="mt-2 grid grid-cols-3 gap-2">
-                    <MiniStat label="Meta" value={Math.round(h.meta)} tone="text-slate-100" />
-                    <MiniStat label="Atingido" value={h.atingido} tone={PERF_TEXT[lv]} />
+                    <MiniStat
+                      label="Meta"
+                      value={Math.round(h.meta)}
+                      tone="text-slate-100"
+                      dense={dense}
+                    />
+                    <MiniStat
+                      label="Atingido"
+                      value={h.atingido}
+                      tone={PERF_TEXT[lv]}
+                      dense={dense}
+                    />
                     <div>
-                      <p className="text-base uppercase tracking-widest text-slate-400">Resultado</p>
                       <p
                         className={cn(
-                          "flex items-center gap-1 text-3xl font-black tabular-nums",
+                          "uppercase tracking-widest text-slate-400",
+                          dense ? "text-sm" : "text-base",
+                        )}
+                      >
+                        Resultado
+                      </p>
+                      <p
+                        className={cn(
+                          "flex items-center gap-1 font-black tabular-nums",
+                          dense ? "text-2xl" : "text-3xl",
                           res >= 0 ? "text-emerald-400" : "text-red-400",
                         )}
                       >
                         {res >= 0 ? (
-                          <ArrowUpRight className="h-6 w-6" />
+                          <ArrowUpRight className={dense ? "h-5 w-5" : "h-6 w-6"} />
                         ) : (
-                          <ArrowDownRight className="h-6 w-6" />
+                          <ArrowDownRight className={dense ? "h-5 w-5" : "h-6 w-6"} />
                         )}
                         {res > 0 ? "+" : ""}
                         {Math.round(res)}
@@ -495,11 +534,30 @@ export function TelaSetor({
   );
 }
 
-function MiniStat({ label, value, tone }: { label: string; value: number; tone: string }) {
+function MiniStat({
+  label,
+  value,
+  tone,
+  dense = false,
+}: {
+  label: string;
+  value: number;
+  tone: string;
+  dense?: boolean;
+}) {
   return (
     <div>
-      <p className="text-base uppercase tracking-widest text-slate-400">{label}</p>
-      <p className={cn("text-3xl font-black tabular-nums", tone)}>{value}</p>
+      <p
+        className={cn(
+          "uppercase tracking-widest text-slate-400",
+          dense ? "text-sm" : "text-base",
+        )}
+      >
+        {label}
+      </p>
+      <p className={cn("font-black tabular-nums", dense ? "text-2xl" : "text-3xl", tone)}>
+        {value}
+      </p>
     </div>
   );
 }
