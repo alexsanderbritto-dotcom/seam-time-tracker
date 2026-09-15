@@ -186,6 +186,7 @@ function MarcadoresPage() {
                   <SelectContent>
                     <SelectItem value="usuario">Usuário (só marcação de produção)</SelectItem>
                     <SelectItem value="admin">Admin (acesso total)</SelectItem>
+                    <SelectItem value="painel">Painel (só a TV do painel)</SelectItem>
                     {sectors.map((sec) => (
                       <SelectItem key={sec.id} value={`setor:${sec.id}`}>
                         {sec.name} (marcação + dashboard do setor)
@@ -258,9 +259,11 @@ function MarcadoresPage() {
                           value={
                             m.cargo === "admin"
                               ? "admin"
-                              : m.cargo === "setor" && m.setor_id
-                                ? `setor:${m.setor_id}`
-                                : "usuario"
+                              : m.cargo === "painel"
+                                ? "painel"
+                                : m.cargo === "setor" && m.setor_id
+                                  ? `setor:${m.setor_id}`
+                                  : "usuario"
                           }
                           onValueChange={(v) => cargoMut.mutate({ id: m.id, value: v })}
                         >
@@ -270,6 +273,7 @@ function MarcadoresPage() {
                           <SelectContent>
                             <SelectItem value="usuario">Usuário</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="painel">Painel</SelectItem>
                             {sectors.map((sec) => (
                               <SelectItem key={sec.id} value={`setor:${sec.id}`}>
                                 Setor · {sec.name}
