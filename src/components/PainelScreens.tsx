@@ -534,11 +534,30 @@ export function TelaSetor({
   );
 }
 
-function MiniStat({ label, value, tone }: { label: string; value: number; tone: string }) {
+function MiniStat({
+  label,
+  value,
+  tone,
+  dense = false,
+}: {
+  label: string;
+  value: number;
+  tone: string;
+  dense?: boolean;
+}) {
   return (
     <div>
-      <p className="text-base uppercase tracking-widest text-slate-400">{label}</p>
-      <p className={cn("text-3xl font-black tabular-nums", tone)}>{value}</p>
+      <p
+        className={cn(
+          "uppercase tracking-widest text-slate-400",
+          dense ? "text-sm" : "text-base",
+        )}
+      >
+        {label}
+      </p>
+      <p className={cn("font-black tabular-nums", dense ? "text-2xl" : "text-3xl", tone)}>
+        {value}
+      </p>
     </div>
   );
 }
