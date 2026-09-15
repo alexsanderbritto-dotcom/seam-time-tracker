@@ -48,7 +48,11 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
   return diff === 0;
 }
 
-type Cargo = "usuario" | "admin" | "setor";
+type Cargo = "usuario" | "admin" | "setor" | "painel";
+
+function normalizeCargo(v: unknown): Cargo {
+  return v === "admin" ? "admin" : v === "setor" ? "setor" : v === "painel" ? "painel" : "usuario";
+}
 
 function b64url(bytes: Uint8Array): string {
   let s = "";
@@ -144,8 +148,7 @@ export const createMarcador = createServerFn({ method: "POST" })
     (data: { token: string; nome: string; senha: string; cargo: Cargo; setorId?: string | null }) => {
     const nome = data.nome?.trim() ?? "";
     const senha = data.senha ?? "";
-    const cargo: Cargo =
-      data.cargo === "admin" ? "admin" : data.cargo === "setor" ? "setor" : "usuario";
+    const cargo: Cargo = normalizeCargo(data.cargo);
     const setorId = cargo === "setor" ? (data.setorId ?? null) : null;
     if (cargo === "setor" && !setorId) throw new Error("Selecione o setor do marcador.");
     if (nome.length < 2 || nome.length > 60) throw new Error("Nome inválido (2 a 60 caracteres).");
@@ -180,8 +183,7 @@ export const createMarcador = createServerFn({ method: "POST" })
 export const updateMarcadorCargo = createServerFn({ method: "POST" })
   .inputValidator((data: { token: string; id: string; cargo: Cargo; setorId?: string | null }) => {
     if (!data.id) throw new Error("Marcador inválido.");
-    const cargo: Cargo =
-      data.cargo === "admin" ? "admin" : data.cargo === "setor" ? "setor" : "usuario";
+    const cargo: Cargo = normalizeCargo(data.cargo);
     const setorId = cargo === "setor" ? (data.setorId ?? null) : null;
     if (cargo === "setor" && !setorId) throw new Error("Selecione o setor do marcador.");
     return { token: data.token, id: data.id, cargo, setorId };
@@ -254,9 +256,8 @@ export const loginMarcador = createServerFn({ method: "POST" })
     }
     const valid = await verifyPassword(data.senha, row.senha_hash);
     if (!valid) return { ok: false as const };
-    const cargo = (
-      row.cargo === "admin" ? "admin" : row.cargo === "setor" && row.setor_id ? "setor" : "usuario"
-    ) as Cargo;
+    const raw = normalizeCargo(row.cargo);
+    const cargo: Cargo = raw === "setor" && !row.setor_id ? "usuario" : raw;
     const setorId = cargo === "setor" ? row.setor_id : null;
     let setorNome: string | null = null;
     if (setorId) {

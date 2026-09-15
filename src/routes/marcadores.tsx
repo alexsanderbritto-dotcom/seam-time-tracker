@@ -75,7 +75,10 @@ function MarcadoresPage() {
   const parseCargo = (v: string): { cargo: MarcadorCargo; setorId: string | null } =>
     v.startsWith("setor:")
       ? { cargo: "setor", setorId: v.slice(6) }
-      : { cargo: v === "admin" ? "admin" : "usuario", setorId: null };
+      : {
+          cargo: v === "admin" ? "admin" : v === "painel" ? "painel" : "usuario",
+          setorId: null,
+        };
   const [resetId, setResetId] = useState<string | null>(null);
   const [novaSenha, setNovaSenha] = useState("");
 
@@ -183,6 +186,7 @@ function MarcadoresPage() {
                   <SelectContent>
                     <SelectItem value="usuario">Usuário (só marcação de produção)</SelectItem>
                     <SelectItem value="admin">Admin (acesso total)</SelectItem>
+                    <SelectItem value="painel">Painel (só a TV do painel)</SelectItem>
                     {sectors.map((sec) => (
                       <SelectItem key={sec.id} value={`setor:${sec.id}`}>
                         {sec.name} (marcação + dashboard do setor)
@@ -255,9 +259,11 @@ function MarcadoresPage() {
                           value={
                             m.cargo === "admin"
                               ? "admin"
-                              : m.cargo === "setor" && m.setor_id
-                                ? `setor:${m.setor_id}`
-                                : "usuario"
+                              : m.cargo === "painel"
+                                ? "painel"
+                                : m.cargo === "setor" && m.setor_id
+                                  ? `setor:${m.setor_id}`
+                                  : "usuario"
                           }
                           onValueChange={(v) => cargoMut.mutate({ id: m.id, value: v })}
                         >
@@ -267,6 +273,7 @@ function MarcadoresPage() {
                           <SelectContent>
                             <SelectItem value="usuario">Usuário</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="painel">Painel</SelectItem>
                             {sectors.map((sec) => (
                               <SelectItem key={sec.id} value={`setor:${sec.id}`}>
                                 Setor · {sec.name}

@@ -1,5 +1,5 @@
-import { Link } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   ClipboardList,
   LayoutDashboard,
@@ -44,22 +44,37 @@ export function AppLayout({
   title,
   subtitle,
   requireAdmin = true,
+  allowPainel = false,
   children,
 }: {
   title: string;
   subtitle?: string | undefined;
   requireAdmin?: boolean;
+  /** true = tela liberada para contas com cargo "Painel". */
+  allowPainel?: boolean;
   children: ReactNode;
 }) {
-  const { session, ready, isAdmin, isSetor, setorId, setorNome } = useMarcadorSession();
+  const { session, ready, isAdmin, isSetor, isPainel, setorId, setorNome } = useMarcadorSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  // Conta de cargo "Painel" só acessa o módulo Painel.
+  useEffect(() => {
+    if (ready && session && isPainel && !allowPainel) void navigate({ to: "/painel" });
+  }, [ready, session, isPainel, allowPainel, navigate]);
 
   if (!ready) return null;
   if (!session) return <MarcadorLogin />;
 
-  const items = nav.filter((item) => isAdmin || !item.adminOnly);
-  const cargoLabel = isAdmin ? "Admin" : isSetor ? `Setor · ${setorNome ?? ""}`.trim() : "Usuário";
-  const blocked = requireAdmin && !isAdmin;
+  const items = isPainel ? [] : nav.filter((item) => isAdmin || !item.adminOnly);
+  const cargoLabel = isAdmin
+    ? "Admin"
+    : isPainel
+      ? "Painel"
+      : isSetor
+        ? `Setor · ${setorNome ?? ""}`.trim()
+        : "Usuário";
+  const blocked = isPainel ? !allowPainel : requireAdmin && !isAdmin;
 
   const navList = (onNavigate?: () => void) => (
     <nav className="flex flex-1 flex-col gap-1 p-3">
@@ -110,7 +125,11 @@ export function AppLayout({
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground md:flex">
+      <aside
+        className={`sticky top-0 h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground ${
+          isPainel ? "hidden" : "hidden md:flex"
+        }`}
+      >
         <div className="flex items-center gap-2 border-b border-sidebar-border px-5 py-5">
           <Factory className="h-5 w-5 text-sidebar-primary" />
           <span className="text-sm font-semibold tracking-tight">Controle de Produção</span>
@@ -123,7 +142,12 @@ export function AppLayout({
         <header className="sticky top-0 z-30 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-b border-border bg-card px-4 py-3 md:flex md:px-5 md:py-4">
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="h-10 w-10 md:hidden" aria-label="Abrir menu">
+              <Button
+                variant="outline"
+                size="icon"
+                className={`h-10 w-10 ${isPainel ? "hidden" : "md:hidden"}`}
+                aria-label="Abrir menu"
+              >
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -148,6 +172,13 @@ export function AppLayout({
               <p className="hidden text-sm text-muted-foreground sm:block">{subtitle}</p>
             ) : null}
           </div>
+
+          {isPainel ? (
+            <Button variant="outline" size="sm" className="ml-auto" onClick={clearSession}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
+          ) : null}
         </header>
 
         <main className="flex-1 p-4 md:p-5">
@@ -158,7 +189,11 @@ export function AppLayout({
                 Seu cargo não permite acessar esta tela.
               </p>
               <Button asChild className="mt-4">
-                <Link to="/marcacao-producao">Ir para Marcação de Produção</Link>
+                {isPainel ? (
+                  <Link to="/painel">Ir para o Painel</Link>
+                ) : (
+                  <Link to="/marcacao-producao">Ir para Marcação de Produção</Link>
+                )}
               </Button>
             </div>
           ) : (

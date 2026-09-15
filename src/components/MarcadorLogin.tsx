@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,8 +24,10 @@ export function MarcadorLogin({
   const { data: state } = useQuery({ queryKey: ["marcadores-empty"], queryFn: () => checkEmpty() });
   const [nome, setNome] = useState("");
   const [senha, setSenha] = useState("");
+  const [keepLoggedIn, setKeepLoggedIn] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
   const first = state?.empty === true;
 
 
@@ -43,7 +47,11 @@ export function MarcadorLogin({
       }
       const res = await login({ data: { nome, senha } });
       if (res.ok && "marcador" in res) {
-        writeSession(res.marcador);
+        writeSession(res.marcador, keepLoggedIn);
+        if (res.marcador.cargo === "painel") {
+          void navigate({ to: "/painel" });
+          return;
+        }
         onSuccess?.();
       } else {
         setError("Nome ou senha incorretos.");
@@ -99,6 +107,23 @@ export function MarcadorLogin({
                 className="h-12 text-base"
                 onChange={(e) => setSenha(e.target.value)}
               />
+            </div>
+            <div className="flex items-start gap-3 rounded-md border border-border bg-muted/30 p-3">
+              <Checkbox
+                id="keep-logged"
+                checked={keepLoggedIn}
+                onCheckedChange={(v) => setKeepLoggedIn(v === true)}
+                className="mt-0.5 h-5 w-5"
+              />
+              <div className="space-y-0.5">
+                <Label htmlFor="keep-logged" className="text-sm font-medium">
+                  Manter-me conectado
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  A sessão fica ativa até você clicar em “Sair”. Ideal para a TV do Painel e
+                  tablets fixos.
+                </p>
+              </div>
             </div>
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <Button type="submit" className="h-12 w-full text-base" disabled={loading}>

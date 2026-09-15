@@ -510,7 +510,11 @@ function PainelPage() {
     ) : null;
 
   return (
-    <AppLayout title="Painel" subtitle="Modo exibição para a TV do chão de fábrica.">
+    <AppLayout
+      title="Painel"
+      subtitle="Modo exibição para a TV do chão de fábrica."
+      allowPainel
+    >
       <div ref={rootRef} className={display ? "fixed inset-0 z-50 bg-slate-950" : undefined}>
         {display ? (
           <div className="relative h-full w-full p-8 text-slate-100">
