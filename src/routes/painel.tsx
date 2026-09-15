@@ -68,6 +68,10 @@ export const Route = createFileRoute("/painel")({
 
 const REFETCH = 15000;
 
+/** Chave de seleção da janela: horas extras precisam de marcação explícita. */
+const slotKey = (s: { start: string; overtime?: boolean | undefined }) =>
+  s.overtime ? `x:${s.start}` : s.start;
+
 type ScreenDef = {
   id: string;
   kind: "employees" | "sector";
