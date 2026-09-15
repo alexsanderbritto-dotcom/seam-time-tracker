@@ -141,8 +141,13 @@ export function AppLayout({
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-b border-border bg-card px-4 py-3 md:flex md:px-5 md:py-4">
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-            <SheetTrigger asChild disabled={isPainel}>
-              <Button variant="outline" size="icon" className="h-10 w-10 md:hidden" aria-label="Abrir menu">
+            <SheetTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className={`h-10 w-10 ${isPainel ? "hidden" : "md:hidden"}`}
+                aria-label="Abrir menu"
+              >
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
