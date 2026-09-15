@@ -544,7 +544,7 @@ function PainelPage() {
         data={{
           ...b.sector,
           products: b === current ? activeSectorGroup.products : b.sector.products.slice(0, 6),
-          hours: b === current ? activeSectorGroup.hours : b.sector.hours.slice(0, 3),
+          hours: b.sector.hours,
         }}
         isCelebrating={isCelebrating}
         pastDateLabel={b.pastDateLabel}
