@@ -384,9 +384,12 @@ export function TelaSetor({
       </header>
 
 
-      <div className="flex min-h-0 shrink-0 items-center gap-10 rounded-2xl border-2 border-slate-800 bg-slate-900/70 p-7">
-        <ProgressRing pct={data.pct} size={220} label="do período" />
-        <div className="grid min-w-0 flex-1 auto-rows-fr grid-cols-3 gap-4">
+      <div className="flex min-h-0 flex-[2] items-center gap-8 rounded-2xl border-2 border-slate-800 bg-slate-900/70 p-6">
+        <ProgressRing pct={data.pct} size={dense ? 170 : 220} label="do período" />
+        <div
+          className={cn("grid min-h-0 min-w-0 flex-1 auto-rows-fr", dense ? "gap-3" : "gap-4")}
+          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+        >
           {data.hours.length === 0 ? (
             <p className="text-2xl text-slate-500">Nenhuma janela selecionada.</p>
           ) : (
