@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { MarcadorLogin } from "@/components/MarcadorLogin";
+import { AvisosBell } from "@/components/AvisosBell";
 import { clearSession, useMarcadorSession } from "@/lib/marcador-session";
 
 const nav = [
@@ -173,12 +174,15 @@ export function AppLayout({
             ) : null}
           </div>
 
-          {isPainel ? (
-            <Button variant="outline" size="sm" className="ml-auto" onClick={clearSession}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </Button>
-          ) : null}
+          <div className="col-start-2 row-start-1 ml-auto flex items-center gap-2 md:col-auto md:row-auto">
+            <AvisosBell variant={isPainel ? "silent" : "bell"} />
+            {isPainel ? (
+              <Button variant="outline" size="sm" onClick={clearSession}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+              </Button>
+            ) : null}
+          </div>
         </header>
 
         <main className="flex-1 p-4 md:p-5">
