@@ -656,15 +656,46 @@ export function MarcacaoProducao({
             </CollapsibleTrigger>
             <CollapsibleContent className="overflow-hidden transition-all data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
               <CardContent className="p-0">
+                {histFilterCount > 0 ? (
+                  <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2">
+                    <p className="text-xs text-muted-foreground">
+                      {histFilterCount} filtro(s) ativo(s) · {dayEntries.length} de {entries.length}{" "}
+                      marcações
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setHistFilters({})}
+                    >
+                      Limpar filtros
+                    </Button>
+                  </div>
+                ) : null}
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Horário</TableHead>
-                        <TableHead>Colaborador</TableHead>
-                        <TableHead>Produto / OP</TableHead>
-                        <TableHead>Operação</TableHead>
-                        <TableHead className="w-28">Qtd</TableHead>
+                        {(
+                          [
+                            ["horario", "Horário", ""],
+                            ["colaborador", "Colaborador", ""],
+                            ["produto", "Produto / OP", ""],
+                            ["operacao", "Operação", ""],
+                            ["qtd", "Qtd", "w-28"],
+                          ] as const
+                        ).map(([col, label, cls]) => (
+                          <TableHead key={col} className={cls || undefined}>
+                            <ColumnFilter
+                              label={label}
+                              options={histOptions[col] ?? []}
+                              selected={histFilters[col] ?? []}
+                              onChange={(values) =>
+                                setHistFilters((prev) => ({ ...prev, [col]: values }))
+                              }
+                            />
+                          </TableHead>
+                        ))}
                         <TableHead className="w-12" />
                       </TableRow>
                     </TableHeader>
