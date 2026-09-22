@@ -303,7 +303,39 @@ export function MarcacaoProducao({
     qc.invalidateQueries({ queryKey: ["production_entries"] });
   }
 
-  const dayEntries = entries;
+  type EntryRow = (typeof entries)[number];
+
+  const histAccessors = useMemo(
+    () => ({
+      horario: (e: EntryRow) =>
+        `${fmt(e.slot_start)}–${fmt(e.slot_end)}${e.is_overtime ? " (extra)" : ""}`,
+      colaborador: (e: EntryRow) => employees.find((x) => x.id === e.employee_id)?.name ?? "",
+      produto: (e: EntryRow) => {
+        const p = products.find((x) => x.id === e.product_id);
+        return p ? `${p.name} · OP ${p.op_number}` : "";
+      },
+      operacao: (e: EntryRow) => operations.find((x) => x.id === e.operation_id)?.name ?? "",
+      qtd: (e: EntryRow) => String(e.quantity),
+    }),
+    [employees, products, operations],
+  );
+
+  const histOptions = useMemo(() => {
+    const out: Record<string, string[]> = {};
+    for (const [col, get] of Object.entries(histAccessors)) {
+      const set = new Set<string>();
+      for (const e of entries) set.add(valueOf(get(e as EntryRow)));
+      out[col] = [...set].sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true }));
+    }
+    return out;
+  }, [entries, histAccessors]);
+
+  const dayEntries = useMemo(
+    () => applyColumnFilters(entries as EntryRow[], histFilters, histAccessors),
+    [entries, histFilters, histAccessors],
+  );
+
+  const histFilterCount = Object.values(histFilters).filter((v) => v.length > 0).length;
 
   function keepVisible(e: React.FocusEvent<HTMLElement>) {
     const el = e.currentTarget;
