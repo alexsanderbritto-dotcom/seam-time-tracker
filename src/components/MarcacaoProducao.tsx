@@ -67,6 +67,7 @@ export function MarcacaoProducao({
   const [saving, setSaving] = useState(false);
   const [opSearch, setOpSearch] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [histFilters, setHistFilters] = useState<ColumnFilterState>({});
   const opInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
   const { data: employees = [] } = useQuery(employeesQuery);
