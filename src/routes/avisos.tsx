@@ -67,7 +67,10 @@ function AvisosPage() {
   const [texto, setTexto] = useState("");
   const [histOpen, setHistOpen] = useState(false);
 
-  const refresh = () => qc.invalidateQueries({ queryKey: ["avisos"] });
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ["avisos"] });
+    void qc.invalidateQueries({ queryKey: ["avisos-notificacoes"] });
+  };
 
   const create = useMutation({
     mutationFn: async () => {
