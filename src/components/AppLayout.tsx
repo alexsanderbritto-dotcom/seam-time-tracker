@@ -78,7 +78,7 @@ export function AppLayout({
   const blocked = isPainel ? !allowPainel : requireAdmin && !isAdmin;
 
   const navList = (onNavigate?: () => void) => (
-    <nav className="flex flex-1 flex-col gap-1 p-3">
+    <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain p-3">
       {items.map((item) => (
         <Link
           key={item.to}

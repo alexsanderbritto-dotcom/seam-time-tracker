@@ -41,6 +41,12 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import { cn } from "@/lib/utils";
 import { Trash2, Check, LogOut, Search, ChevronDown, Plus } from "lucide-react";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
+import {
+  ColumnFilter,
+  applyColumnFilters,
+  valueOf,
+  type ColumnFilterState,
+} from "@/components/ColumnFilter";
 
 /** Native select: mobile browsers render their own picker, avoiding the
  * portal/scroll-lock crashes seen with the custom dropdown on some devices. */
@@ -67,6 +73,7 @@ export function MarcacaoProducao({
   const [saving, setSaving] = useState(false);
   const [opSearch, setOpSearch] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [histFilters, setHistFilters] = useState<ColumnFilterState>({});
   const opInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
   const { data: employees = [] } = useQuery(employeesQuery);
@@ -303,7 +310,39 @@ export function MarcacaoProducao({
     qc.invalidateQueries({ queryKey: ["production_entries"] });
   }
 
-  const dayEntries = entries;
+  type EntryRow = (typeof entries)[number];
+
+  const histAccessors = useMemo(
+    () => ({
+      horario: (e: EntryRow) =>
+        `${fmt(e.slot_start)}–${fmt(e.slot_end)}${e.is_overtime ? " (extra)" : ""}`,
+      colaborador: (e: EntryRow) => employees.find((x) => x.id === e.employee_id)?.name ?? "",
+      produto: (e: EntryRow) => {
+        const p = products.find((x) => x.id === e.product_id);
+        return p ? `${p.name} · OP ${p.op_number}` : "";
+      },
+      operacao: (e: EntryRow) => operations.find((x) => x.id === e.operation_id)?.name ?? "",
+      qtd: (e: EntryRow) => String(e.quantity),
+    }),
+    [employees, products, operations],
+  );
+
+  const histOptions = useMemo(() => {
+    const out: Record<string, string[]> = {};
+    for (const [col, get] of Object.entries(histAccessors)) {
+      const set = new Set<string>();
+      for (const e of entries) set.add(valueOf(get(e as EntryRow)));
+      out[col] = [...set].sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true }));
+    }
+    return out;
+  }, [entries, histAccessors]);
+
+  const dayEntries = useMemo(
+    () => applyColumnFilters(entries as EntryRow[], histFilters, histAccessors),
+    [entries, histFilters, histAccessors],
+  );
+
+  const histFilterCount = Object.values(histFilters).filter((v) => v.length > 0).length;
 
   function keepVisible(e: React.FocusEvent<HTMLElement>) {
     const el = e.currentTarget;
@@ -617,15 +656,46 @@ export function MarcacaoProducao({
             </CollapsibleTrigger>
             <CollapsibleContent className="overflow-hidden transition-all data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
               <CardContent className="p-0">
+                {histFilterCount > 0 ? (
+                  <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2">
+                    <p className="text-xs text-muted-foreground">
+                      {histFilterCount} filtro(s) ativo(s) · {dayEntries.length} de {entries.length}{" "}
+                      marcações
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setHistFilters({})}
+                    >
+                      Limpar filtros
+                    </Button>
+                  </div>
+                ) : null}
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Horário</TableHead>
-                        <TableHead>Colaborador</TableHead>
-                        <TableHead>Produto / OP</TableHead>
-                        <TableHead>Operação</TableHead>
-                        <TableHead className="w-28">Qtd</TableHead>
+                        {(
+                          [
+                            ["horario", "Horário", ""],
+                            ["colaborador", "Colaborador", ""],
+                            ["produto", "Produto / OP", ""],
+                            ["operacao", "Operação", ""],
+                            ["qtd", "Qtd", "w-28"],
+                          ] as const
+                        ).map(([col, label, cls]) => (
+                          <TableHead key={col} className={cls || undefined}>
+                            <ColumnFilter
+                              label={label}
+                              options={histOptions[col] ?? []}
+                              selected={histFilters[col] ?? []}
+                              onChange={(values) =>
+                                setHistFilters((prev) => ({ ...prev, [col]: values }))
+                              }
+                            />
+                          </TableHead>
+                        ))}
                         <TableHead className="w-12" />
                       </TableRow>
                     </TableHeader>
