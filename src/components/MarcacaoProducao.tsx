@@ -41,6 +41,12 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import { cn } from "@/lib/utils";
 import { Trash2, Check, LogOut, Search, ChevronDown, Plus } from "lucide-react";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
+import {
+  ColumnFilter,
+  applyColumnFilters,
+  valueOf,
+  type ColumnFilterState,
+} from "@/components/ColumnFilter";
 
 /** Native select: mobile browsers render their own picker, avoiding the
  * portal/scroll-lock crashes seen with the custom dropdown on some devices. */
