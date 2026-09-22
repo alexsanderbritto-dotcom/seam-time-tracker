@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { db } from "@/lib/db";
 import { readSession, useMarcadorSession } from "@/lib/marcador-session";
+import { broadcastNovoAviso } from "@/lib/avisos-notify";
 import { toast } from "sonner";
 import { CheckCircle2, ChevronDown, MessageSquareWarning } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -71,12 +72,20 @@ function AvisosPage() {
   const create = useMutation({
     mutationFn: async () => {
       const s = readSession();
+      const conteudo = texto.trim();
       const { error } = await db.from("avisos").insert({
-        texto: texto.trim(),
+        texto: conteudo,
         criado_por: s?.id ?? null,
         criado_por_nome: s?.nome ?? "Marcador",
       });
       if (error) throw new Error(error.message);
+      // Avisa em tempo real todos os outros marcadores conectados.
+      broadcastNovoAviso({
+        id: crypto.randomUUID(),
+        texto: conteudo,
+        autor: s?.nome ?? "Marcador",
+        autorId: s?.id ?? null,
+      });
     },
     onSuccess: () => {
       setTexto("");
