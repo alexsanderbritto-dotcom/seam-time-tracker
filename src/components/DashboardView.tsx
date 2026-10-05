@@ -13,6 +13,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChevronDown, Plus } from "lucide-react";
@@ -388,10 +394,17 @@ export function DashboardView({
             const d = info.byOp.get(opId);
             const breakdown = d
               ? Array.from(d.byLote.entries()).map(([k, qty]) => {
+                  const productId = k.startsWith("p:")
+                    ? k.slice(2)
+                    : (loteProduct.get(k) ?? "");
                   const opInterna = k.startsWith("p:")
                     ? productOpInterna.get(k.slice(2)) ?? ""
                     : loteOpInterna.get(k) ?? "";
-                  return { opInterna: opInterna || "—", qty };
+                  return {
+                    opInterna: opInterna || "—",
+                    productName: productNames.get(productId) ?? "Produto",
+                    qty,
+                  };
                 })
               : [];
             return {
