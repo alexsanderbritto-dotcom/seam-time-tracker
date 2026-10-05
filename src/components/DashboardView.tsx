@@ -13,7 +13,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChevronDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -315,6 +320,10 @@ export function DashboardView({
     for (const l of esteiraLotes) loteOpInterna.set(l.id, l.opInterna ?? "");
     const productOpInterna = new Map<string, string>();
     for (const p of products) productOpInterna.set(p.id, p.op_interna ?? "");
+    // Nome do produto e vínculo lote -> produto para o detalhamento clicável da batida
+    const productNames = new Map(products.map((p) => [p.id, p.name] as const));
+    const loteProduct = new Map<string, string>();
+    for (const l of esteiraLotes) loteProduct.set(l.id, l.product.id);
 
     return emps
       .map((emp) => {
@@ -388,10 +397,17 @@ export function DashboardView({
             const d = info.byOp.get(opId);
             const breakdown = d
               ? Array.from(d.byLote.entries()).map(([k, qty]) => {
+                  const productId = k.startsWith("p:")
+                    ? k.slice(2)
+                    : (loteProduct.get(k) ?? "");
                   const opInterna = k.startsWith("p:")
                     ? productOpInterna.get(k.slice(2)) ?? ""
                     : loteOpInterna.get(k) ?? "";
-                  return { opInterna: opInterna || "—", qty };
+                  return {
+                    opInterna: opInterna || "—",
+                    productName: productNames.get(productId) ?? "Produto",
+                    qty,
+                  };
                 })
               : [];
             return {
@@ -783,46 +799,37 @@ export function DashboardView({
                                 {!c.active ? (
                                   <span className="text-muted-foreground">–</span>
                                 ) : (
-                                  <CellTip
-                                    trigger={
-                                      <span
-                                        tabIndex={0}
-                                        className="block cursor-default leading-tight outline-none focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm"
-                                      >
-                                        <span className={`tabular-nums ${perfClass(c.produced, c.estimated)}`}>
-                                          {c.produced}
-                                          <span className="text-muted-foreground">
-                                            {" / "}
-                                            {c.estimated != null ? Math.round(c.estimated) : "—"}
-                                          </span>
+                                  <CellDetail
+                                    title={`${emp.name} · ${r.name}`}
+                                    subtitle={
+                                      `${slots[i]!.start}–${slots[i]!.end}` +
+                                      (slots[i]!.overtime ? " (extra)" : "")
+                                    }
+                                    produced={c.produced}
+                                    estimated={c.estimated}
+                                    pct={c.opPct}
+                                    adjusted={c.adjusted}
+                                    breakdown={c.breakdown}
+                                  >
+                                    <span
+                                      tabIndex={0}
+                                      className="block cursor-pointer leading-tight outline-none focus-visible:ring-2 focus-visible:ring-ring/60 rounded-sm"
+                                    >
+                                      <span className={`tabular-nums ${perfClass(c.produced, c.estimated)}`}>
+                                        {c.produced}
+                                        <span className="text-muted-foreground">
+                                          {" / "}
+                                          {c.estimated != null ? Math.round(c.estimated) : "—"}
                                         </span>
-                                        <div className="text-[10px] tabular-nums text-muted-foreground">
-                                          {c.opPct != null ? `${c.opPct.toFixed(1)}%` : "—"}
-                                          {c.adjusted != null
-                                            ? ` · aj. ${Math.round(c.adjusted)}`
-                                            : ""}
-                                        </div>
                                       </span>
-                                    }
-                                    content={
-                                      <div className="space-y-1">
-                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                                          Detalhamento por OP Interna
-                                        </p>
-                                        {c.breakdown.length === 0 ? (
-                                          <p className="text-xs text-muted-foreground">Sem detalhamento.</p>
-                                        ) : (
-                                          c.breakdown.map((b, bi) => (
-                                            <p key={bi} className="font-mono text-xs tabular-nums">
-                                              <span className="font-semibold">{b.qty}</span>
-                                              <span className="text-muted-foreground">/</span>
-                                              {b.opInterna}
-                                            </p>
-                                          ))
-                                        )}
+                                      <div className="text-[10px] tabular-nums text-muted-foreground">
+                                        {c.opPct != null ? `${c.opPct.toFixed(1)}%` : "—"}
+                                        {c.adjusted != null
+                                          ? ` · aj. ${Math.round(c.adjusted)}`
+                                          : ""}
                                       </div>
-                                    }
-                                  />
+                                    </span>
+                                  </CellDetail>
                                 )}
                               </TableCell>
                             ))}
@@ -1078,32 +1085,135 @@ export function DashboardView({
 }
 
 
-/** Tooltip que também funciona no toque: vira popover no mobile. */
-function CellTip({ trigger, content }: { trigger: ReactNode; content: ReactNode }) {
+type BreakdownItem = { opInterna: string; productName: string; qty: number };
+
+/** Batida clicável: tooltip no hover/toque e modal com o detalhamento ao clicar. */
+function CellDetail({
+  title,
+  subtitle,
+  produced,
+  estimated,
+  pct,
+  adjusted,
+  breakdown,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  produced: number;
+  estimated: number | null;
+  pct: number | null;
+  adjusted: number | null;
+  breakdown: BreakdownItem[];
+  children: ReactNode;
+}) {
   const isMobile = useIsMobile();
-  if (isMobile) {
-    return (
-      <Popover>
-        <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-        <PopoverContent
-          side="bottom"
-          align="center"
-          className="w-[240px] border border-border bg-popover p-2 text-popover-foreground shadow-lg"
+  const [open, setOpen] = useState(false);
+  const hoverTip = (
+    <div className="space-y-1">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        Detalhamento por OP Interna
+      </p>
+      {breakdown.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Sem detalhamento.</p>
+      ) : (
+        breakdown.map((b, bi) => (
+          <p key={bi} className="text-xs">
+            <span className="font-semibold tabular-nums">{b.qty}</span>
+            <span className="text-muted-foreground"> · </span>
+            {b.productName}
+            <span className="text-muted-foreground"> — OP {b.opInterna}</span>
+          </p>
+        ))
+      )}
+      <p className="border-t border-border pt-1 text-[10px] text-muted-foreground">
+        Clique para abrir o detalhe completo
+      </p>
+    </div>
+  );
+
+  const content = breakdown.length === 0 ? (
+    <p className="text-sm text-muted-foreground">Sem detalhamento para esta batida.</p>
+  ) : (
+    <ul className="space-y-2">
+      {breakdown.map((b, bi) => (
+        <li
+          key={bi}
+          className="flex items-baseline justify-between gap-3 rounded-md border border-border bg-muted/30 px-3 py-2"
         >
-          {content}
-        </PopoverContent>
-      </Popover>
-    );
-  }
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">{b.productName}</p>
+            <p className="font-mono text-xs text-muted-foreground">
+              OP Interna {b.opInterna}
+            </p>
+          </div>
+          <p className="shrink-0 text-lg font-semibold tabular-nums">{b.qty}</p>
+        </li>
+      ))}
+    </ul>
+  );
+
+  const Trigger = (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className="block cursor-pointer rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+      aria-label={`Detalhar batida de ${title} no horário ${subtitle}`}
+      title="Clique para abrir o detalhe"
+    >
+      {children}
+    </button>
+  );
+
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>{trigger}</TooltipTrigger>
-      <TooltipContent
-        side="bottom"
-        className="max-w-[240px] border border-border bg-popover text-popover-foreground shadow-lg"
-      >
-        {content}
-      </TooltipContent>
-    </Tooltip>
+    <>
+      {isMobile ? null : (
+        <Tooltip>
+          <TooltipTrigger asChild>{Trigger}</TooltipTrigger>
+          <TooltipContent
+            side="bottom"
+            className="max-w-[260px] border border-border bg-popover text-popover-foreground shadow-lg"
+          >
+            {hoverTip}
+          </TooltipContent>
+        </Tooltip>
+      )}
+      {!isMobile ? null : Trigger}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-base">{title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="font-mono text-xs text-muted-foreground">{subtitle}</p>
+            <div className="flex items-baseline justify-between gap-3 rounded-md border border-border px-3 py-2">
+              <p className="text-xs text-muted-foreground">Batida nesta hora</p>
+              <div className="text-right">
+                <p className="text-lg font-semibold tabular-nums">
+                  {produced}
+                  <span className="text-sm font-normal text-muted-foreground">
+                    {" / "}
+                    {estimated != null ? Math.round(estimated) : "—"}
+                  </span>
+                </p>
+                {pct != null ? (
+                  <p className="text-xs text-muted-foreground">
+                    {pct.toFixed(1)}%
+                    {adjusted != null ? ` · aj. ${Math.round(adjusted)}` : ""}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Produtos / OPs nesta hora
+              </p>
+              {content}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
