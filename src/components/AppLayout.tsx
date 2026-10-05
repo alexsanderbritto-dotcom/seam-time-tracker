@@ -17,6 +17,8 @@ import {
   Unlink,
   Megaphone,
   BarChart3,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -57,6 +59,7 @@ export function AppLayout({
 }) {
   const { session, ready, isAdmin, isSetor, isPainel, setorId, setorNome } = useMarcadorSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
 
   // Conta de cargo "Painel" só acessa o módulo Painel.
