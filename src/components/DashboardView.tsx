@@ -1168,18 +1168,7 @@ function CellDetail({
 
   return (
     <>
-      {isMobile ? (
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>{Trigger}</PopoverTrigger>
-          <PopoverContent
-            side="bottom"
-            align="center"
-            className="w-[240px] border border-border bg-popover p-2 text-popover-foreground shadow-lg"
-          >
-            {hoverTip}
-          </PopoverContent>
-        </Popover>
-      ) : (
+      {isMobile ? null : (
         <Tooltip>
           <TooltipTrigger asChild>{Trigger}</TooltipTrigger>
           <TooltipContent
@@ -1190,6 +1179,7 @@ function CellDetail({
           </TooltipContent>
         </Tooltip>
       )}
+      {!isMobile ? null : Trigger}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-sm">
