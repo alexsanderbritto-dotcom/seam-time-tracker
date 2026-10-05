@@ -129,21 +129,33 @@ export function AppLayout({
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside
-        className={`sticky top-0 h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground ${
-          isPainel ? "hidden" : "hidden md:flex"
-        }`}
-      >
-        <div className="flex items-center gap-2 border-b border-sidebar-border px-5 py-5">
-          <Factory className="h-5 w-5 text-sidebar-primary" />
-          <span className="text-sm font-semibold tracking-tight">Controle de Produção</span>
-        </div>
-        {navList()}
-        {footer}
-      </aside>
+      {sidebarOpen && !isPainel ? (
+        <aside
+          className={`sticky top-0 h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground ${
+            isPainel ? "hidden" : "hidden md:flex"
+          }`}
+        >
+          <div className="flex items-center gap-2 border-b border-sidebar-border px-5 py-5">
+            <Factory className="h-5 w-5 text-sidebar-primary" />
+            <span className="text-sm font-semibold tracking-tight">Controle de Produção</span>
+          </div>
+          {navList()}
+          {footer}
+        </aside>
+      ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-b border-border bg-card px-4 py-3 md:flex md:px-5 md:py-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hidden h-9 w-9 md:inline-flex"
+            onClick={() => setSidebarOpen((open) => !open)}
+            aria-label={sidebarOpen ? "Ocultar menu lateral" : "Mostrar menu lateral"}
+            title={sidebarOpen ? "Ocultar menu lateral" : "Mostrar menu lateral"}
+          >
+            {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
+          </Button>
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild>
               <Button
