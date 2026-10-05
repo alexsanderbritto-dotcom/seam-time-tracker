@@ -321,6 +321,10 @@ export function DashboardView({
     for (const l of esteiraLotes) loteOpInterna.set(l.id, l.opInterna ?? "");
     const productOpInterna = new Map<string, string>();
     for (const p of products) productOpInterna.set(p.id, p.op_interna ?? "");
+    // Nome do produto e vínculo lote -> produto para o detalhamento clicável da batida
+    const productNames = new Map(products.map((p) => [p.id, p.name] as const));
+    const loteProduct = new Map<string, string>();
+    for (const l of esteiraLotes) loteProduct.set(l.id, l.product.id);
 
     return emps
       .map((emp) => {
