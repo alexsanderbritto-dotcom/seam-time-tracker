@@ -1189,19 +1189,21 @@ function CellDetail({
             <p className="font-mono text-xs text-muted-foreground">{subtitle}</p>
             <div className="flex items-baseline justify-between gap-3 rounded-md border border-border px-3 py-2">
               <p className="text-xs text-muted-foreground">Batida nesta hora</p>
-              <p className="text-lg font-semibold tabular-nums">
-                {produced}
-                <span className="text-sm font-normal text-muted-foreground">
-                  {" / "}
-                  {estimated != null ? Math.round(estimated) : "—"}
-                </span>
+              <div className="text-right">
+                <p className="text-lg font-semibold tabular-nums">
+                  {produced}
+                  <span className="text-sm font-normal text-muted-foreground">
+                    {" / "}
+                    {estimated != null ? Math.round(estimated) : "—"}
+                  </span>
+                </p>
                 {pct != null ? (
-                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {pct.toFixed(1)}%
                     {adjusted != null ? ` · aj. ${Math.round(adjusted)}` : ""}
-                  </span>
+                  </p>
                 ) : null}
-              </p>
+              </div>
             </div>
             <div>
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
