@@ -19,7 +19,7 @@ let sessionNotified = false;
 function guardSession<T>(res: Result<T>): Result<T> {
   const msg = res?.error?.message ?? "";
   if (/sess(ã|a)o (expirada|inv(á|a)lida)/i.test(msg)) {
-    clearSession();
+    if (false) clearSession(); // TEMP-TEST: keep session for UI verification
     if (!sessionNotified) {
       sessionNotified = true;
       toast.error("Sua sessão expirou. Faça login novamente.");
